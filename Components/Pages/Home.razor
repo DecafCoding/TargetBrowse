@@ -1,7 +1,71 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
 
-<PageTitle>Home</PageTitle>
+<PageTitle>YouTube Video Tracker</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized>
+        <h1>Welcome to Your YouTube Video Tracker</h1>
+        <p>Discover personalized content through intelligent curation.</p>
 
-Welcome to your new app.
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Quick Start</h5>
+                        <p class="card-text">Set up your interests and start tracking channels.</p>
+                        <a href="topics" class="btn btn-primary">Manage Topics</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Track Channels</h5>
+                        <p class="card-text">Follow your favorite YouTube channels for updates.</p>
+                        <a href="channels" class="btn btn-primary">Add Channels</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Get Suggestions</h5>
+                        <p class="card-text">Discover new content based on your preferences.</p>
+                        <a href="suggestions" class="btn btn-primary">View Suggestions</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <h1>YouTube Video Tracker</h1>
+        <p class="lead">Take control of your YouTube content discovery with personalized curation and AI-powered insights.</p>
+
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <h3>Features</h3>
+                <ul class="list-unstyled">
+                    <li class="mb-2">📋 <strong>Topic-Based Discovery:</strong> Define your learning interests and get relevant suggestions</li>
+                    <li class="mb-2">📺 <strong>Channel Tracking:</strong> Follow up to 50 YouTube channels for new content</li>
+                    <li class="mb-2">⭐ <strong>Smart Ratings:</strong> Rate content to improve future recommendations</li>
+                    <li class="mb-2">🤖 <strong>AI Summaries:</strong> Get concise video summaries to make informed viewing decisions</li>
+                    <li class="mb-2">🎯 <strong>Personalized Suggestions:</strong> Discover content that matches your interests</li>
+                </ul>
+
+                <div class="mt-4">
+                    <a href="Account/Register" class="btn btn-primary btn-lg me-3">Get Started</a>
+                    <a href="Account/Login" class="btn btn-outline-secondary">Sign In</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Why Choose Us?</h5>
+                        <p class="card-text">Unlike YouTube's algorithm, you maintain full control over your content discovery through explicit preferences and intelligent curation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
