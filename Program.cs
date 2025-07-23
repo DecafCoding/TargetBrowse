@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
+using TargetBrowse.Services;
 
 namespace TargetBrowse;
 
@@ -59,6 +60,7 @@ public class Program
             .AddDefaultTokenProviders();
 
         builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+        builder.Services.AddScoped<IThemeService, ThemeService>();
 
         var app = builder.Build();
 

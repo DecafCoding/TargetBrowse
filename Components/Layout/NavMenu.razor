@@ -1,4 +1,5 @@
-﻿@implements IDisposable
+﻿@* Components/Layout/NavMenu.razor *@
+@implements IDisposable
 
 @inject NavigationManager NavigationManager
 
@@ -67,6 +68,13 @@
                                     </NavLink>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
+                                
+                                <!-- Theme Selector -->
+                                <li>
+                                    <ThemeSelector />
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                
                                 <li>
                                     <form action="Account/Logout" method="post" class="d-inline">
                                         <AntiforgeryToken />

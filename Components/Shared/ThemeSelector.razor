@@ -1,0 +1,115 @@
+﻿@* Components/Shared/ThemeSelector.razor *@
+@using TargetBrowse.Services
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<div class="dropdown-submenu">
+    <h6 class="dropdown-header">
+        <i class="@GetCurrentThemeIcon() me-2"></i>
+        Theme
+    </h6>
+
+    @foreach (var theme in _themes)
+    {
+        <a class="dropdown-item d-flex align-items-center @(theme.Value == _currentTheme ? "active" : "")"
+           href="#" @onclick="() => ChangeTheme(theme.Value)" @onclick:preventDefault="true">
+            <i class="@theme.Icon me-2"></i>
+            @theme.Name
+            @if (theme.Value == _currentTheme)
+            {
+                <i class="bi bi-check ms-auto"></i>
+            }
+        </a>
+    }
+</div>
+
+@code {
+    private string _currentTheme = "auto";
+    private bool _hasRendered = false;
+
+    private readonly List<ThemeOption> _themes = new()
+    {
+        new("Auto", "auto", "bi-circle-half"),
+        new("Light", "light", "bi-sun-fill"),
+        new("Dark", "dark", "bi-moon-fill")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get initial theme (will use cached value during pre-rendering)
+        _currentTheme = await ThemeService.GetThemeAsync();
+        ThemeService.ThemeChanged += OnThemeChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _hasRendered = true;
+            // Now we can safely call JavaScript - refresh theme from localStorage
+            var actualTheme = await ThemeService.GetThemeAsync();
+            if (actualTheme != _currentTheme)
+            {
+                _currentTheme = actualTheme;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ChangeTheme(string theme)
+    {
+        await ThemeService.SetThemeAsync(theme);
+    }
+
+    private void OnThemeChanged(string newTheme)
+    {
+        _currentTheme = newTheme;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetCurrentThemeIcon()
+    {
+        var theme = _themes.FirstOrDefault(t => t.Value == _currentTheme);
+        return theme?.Icon ?? "bi-circle-half";
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+
+    private record ThemeOption(string Name, string Value, string Icon);
+}
+
+@* CSS for dropdown submenu styling *@
+<style>
+    .dropdown-submenu .dropdown-header {
+        font-size: 0.875rem;
+        color: var(--bs-secondary);
+        padding: 0.25rem 1rem;
+        margin-bottom: 0.25rem;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    .dropdown-submenu .dropdown-item {
+        padding: 0.5rem 1.5rem;
+        font-size: 0.875rem;
+        transition: all 0.15s ease-in-out;
+    }
+
+        .dropdown-submenu .dropdown-item:hover {
+            background-color: var(--bs-secondary-bg);
+            transform: translateX(2px);
+        }
+
+        .dropdown-submenu .dropdown-item.active {
+            background-color: var(--bs-primary-bg-subtle);
+            color: var(--bs-primary-text-emphasis);
+            font-weight: 500;
+        }
+
+        .dropdown-submenu .dropdown-item i:last-child {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+</style>
