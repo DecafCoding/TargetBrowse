@@ -60,7 +60,10 @@ public class Program
             .AddDefaultTokenProviders();
 
         builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+        // YouTube Video Tracker Services
         builder.Services.AddScoped<IThemeService, ThemeService>();
+        builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
 
         var app = builder.Build();
 

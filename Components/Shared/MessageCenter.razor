@@ -1,0 +1,101 @@
+﻿@* Components/Shared/MessageCenter.razor *@
+@using TargetBrowse.Services
+@using TargetBrowse.Services.Models
+@inject IMessageCenterService MessageCenterService
+@implements IDisposable
+
+@if (_currentMessage != null)
+{
+    <div class="message-center-container">
+        <div class="alert @_currentMessage.GetBootstrapClass() alert-dismissible d-flex align-items-center" role="alert">
+            <i class="@_currentMessage.GetIconClass() me-2" aria-hidden="true"></i>
+            <div class="flex-grow-1">
+                @_currentMessage.GetFullMessage()
+            </div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="ClearMessage"></button>
+        </div>
+    </div>
+}
+
+@code {
+    private MessageState? _currentMessage;
+
+    protected override void OnInitialized()
+    {
+        // Get any existing message
+        _currentMessage = MessageCenterService.GetCurrentMessage();
+
+        // Subscribe to message changes
+        MessageCenterService.MessageChanged += OnMessageChanged;
+    }
+
+    /// <summary>
+    /// Handles message changes from the service.
+    /// Updates component state and triggers re-render.
+    /// </summary>
+    private void OnMessageChanged(MessageState? newMessage)
+    {
+        _currentMessage = newMessage;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Clears the current message when user clicks the close button.
+    /// </summary>
+    private async Task ClearMessage()
+    {
+        await MessageCenterService.ClearMessageAsync();
+    }
+
+    public void Dispose()
+    {
+        MessageCenterService.MessageChanged -= OnMessageChanged;
+    }
+}
+
+<style>
+    .message-center-container {
+        position: relative;
+        z-index: 1040; /* Above most content, below modals */
+        margin-bottom: 1rem;
+    }
+
+    .message-center-container .alert {
+        margin-bottom: 0;
+        border-radius: 0.375rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .message-center-container .alert i {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .message-center-container .btn-close {
+        flex-shrink: 0;
+    }
+
+    /* Smooth slide-down animation for new messages */
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 576px) {
+        .message-center-container .alert {
+            font-size: 0.875rem;
+        }
+
+        .message-center-container .alert i {
+            font-size: 1rem;
+        }
+    }
+</style>
