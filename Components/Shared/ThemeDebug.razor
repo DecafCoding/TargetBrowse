@@ -1,0 +1,66 @@
+﻿@* Components/Shared/ThemeDebug.razor - Add this temporarily to your layout for debugging *@
+@using TargetBrowse.Services
+@inject IThemeService ThemeService
+@inject IJSRuntime JSRuntime
+
+<div class="alert alert-info mt-2" style="font-size: 0.875rem;">
+    <strong>Theme Debug:</strong> Current = @_currentTheme |
+    JS Available = @_jsAvailable |
+    <button class="btn btn-sm btn-primary" @onclick="TestTheme">Test Dark</button>
+    <button class="btn btn-sm btn-secondary" @onclick="TestLight">Test Light</button>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="CheckJS">Check JS</button>
+</div>
+
+@code {
+    private string _currentTheme = "unknown";
+    private bool _jsAvailable = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshStatus();
+        }
+    }
+
+    private async Task RefreshStatus()
+    {
+        try
+        {
+            _currentTheme = await ThemeService.GetThemeAsync();
+            _jsAvailable = true;
+        }
+        catch (Exception ex)
+        {
+            _currentTheme = $"Error: {ex.Message}";
+            _jsAvailable = false;
+        }
+        StateHasChanged();
+    }
+
+    private async Task TestTheme()
+    {
+        await ThemeService.SetThemeAsync("dark");
+        await RefreshStatus();
+    }
+
+    private async Task TestLight()
+    {
+        await ThemeService.SetThemeAsync("light");
+        await RefreshStatus();
+    }
+
+    private async Task CheckJS()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "JavaScript is working!");
+            _jsAvailable = true;
+        }
+        catch
+        {
+            _jsAvailable = false;
+        }
+        StateHasChanged();
+    }
+}
