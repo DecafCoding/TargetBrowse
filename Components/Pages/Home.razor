@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Authorization
+@inject IMessageCenterService MessageCenterService
 
 <PageTitle>YouTube Video Tracker</PageTitle>
 
@@ -37,6 +38,55 @@
                 </div>
             </div>
         </div>
+
+        <!-- Message Center Demo Section (for development/testing) -->
+        @if (showMessageDemo)
+        {
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Message Center Demo</h5>
+                            <small class="text-muted">Test the message center functionality</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-auto">
+                                    <button class="btn btn-success btn-sm" @onclick="ShowSuccessMessage">
+                                        Show Success
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-danger btn-sm" @onclick="ShowErrorMessage">
+                                        Show Error
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-warning btn-sm" @onclick="ShowWarningMessage">
+                                        Show Warning
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-info btn-sm" @onclick="ShowInfoMessage">
+                                        Show Info
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-secondary btn-sm" @onclick="ShowApiLimitMessage">
+                                        Show API Limit
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearMessage">
+                                        Clear Message
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <h1>YouTube Video Tracker</h1>
@@ -69,3 +119,39 @@
         </div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    // Show message demo section for development/testing
+    // Remove this in production or make it admin-only
+    private bool showMessageDemo = true;
+
+    private async Task ShowSuccessMessage()
+    {
+        await MessageCenterService.ShowSuccessAsync("Operation completed successfully! Your changes have been saved.");
+    }
+
+    private async Task ShowErrorMessage()
+    {
+        await MessageCenterService.ShowErrorAsync("Unable to connect to YouTube API. Please check your internet connection and try again.");
+    }
+
+    private async Task ShowWarningMessage()
+    {
+        await MessageCenterService.ShowWarningAsync("You have reached 8 out of 10 topics. Consider removing unused topics before adding new ones.");
+    }
+
+    private async Task ShowInfoMessage()
+    {
+        await MessageCenterService.ShowInfoAsync("Your account setup is complete. You can now start tracking channels and requesting suggestions.");
+    }
+
+    private async Task ShowApiLimitMessage()
+    {
+        await MessageCenterService.ShowApiLimitAsync("YouTube Data API", DateTime.UtcNow.AddHours(2));
+    }
+
+    private async Task ClearMessage()
+    {
+        await MessageCenterService.ClearMessageAsync();
+    }
+}

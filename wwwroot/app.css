@@ -191,3 +191,101 @@ header {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+/* ===== THEME SUPPORT ===== */
+
+/* Light theme (default) */
+:root,
+[data-bs-theme="light"] {
+    --bs-body-bg: #ffffff;
+    --bs-body-color: #212529;
+    --custom-sidebar-bg: #f8f9fa;
+    --custom-card-bg: #ffffff;
+    --custom-border-color: #dee2e6;
+}
+
+/* Dark theme */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #212529;
+    --bs-body-color: #ffffff;
+    --custom-sidebar-bg: #343a40;
+    --custom-card-bg: #495057;
+    --custom-border-color: #495057;
+}
+
+/* Auto theme - inherit from system preference */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-bs-theme]) {
+        --bs-body-bg: #212529;
+        --bs-body-color: #ffffff;
+        --custom-sidebar-bg: #343a40;
+        --custom-card-bg: #495057;
+        --custom-border-color: #495057;
+    }
+}
+
+/* Apply theme variables to body and html */
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure main content area uses theme background */
+.main-content {
+    background-color: var(--custom-sidebar-bg);
+    min-height: calc(100vh - 56px); /* Adjust based on navbar height */
+    transition: background-color 0.3s ease;
+}
+
+/* Update card backgrounds for dark theme */
+.card {
+    background-color: var(--custom-card-bg);
+    border-color: var(--custom-border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Ensure dropdown menus work in dark theme */
+[data-bs-theme="dark"] .dropdown-menu {
+    --bs-dropdown-bg: var(--bs-gray-800);
+    --bs-dropdown-border-color: var(--bs-gray-600);
+}
+
+/* Fix navbar in dark theme if needed */
+[data-bs-theme="dark"] .navbar-dark {
+    --bs-navbar-color: rgba(255, 255, 255, 0.9);
+    --bs-navbar-hover-color: rgba(255, 255, 255, 1);
+}
+
+/* Ensure proper contrast for alerts in dark theme */
+[data-bs-theme="dark"] .alert-info {
+    --bs-alert-bg: #0c2d48;
+    --bs-alert-border-color: #0f3460;
+    --bs-alert-color: #9ec5e8;
+}
+
+/* Fix form controls in dark theme */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-gray-600);
+    color: var(--bs-body-color);
+}
+
+    [data-bs-theme="dark"] .form-control:focus,
+    [data-bs-theme="dark"] .form-select:focus {
+        background-color: var(--bs-gray-700);
+        border-color: var(--bs-primary);
+    }
+
+/* Fix any custom components that might not inherit properly */
+[data-bs-theme="dark"] .blazor-error-boundary {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Smooth transitions for theme changes */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

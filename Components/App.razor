@@ -12,6 +12,25 @@
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="PageRenderMode" />
+    <script>
+        // Apply saved theme immediately to prevent FOUC
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('targetbrowse-theme') || 'auto';
+                const htmlElement = document.documentElement;
+
+                if (savedTheme === 'auto') {
+                    htmlElement.removeAttribute('data-bs-theme');
+                    htmlElement.classList.add('theme-auto');
+                } else {
+                    htmlElement.setAttribute('data-bs-theme', savedTheme);
+                    htmlElement.classList.add(`theme-${savedTheme}`);
+                }
+            } catch (e) {
+                // Ignore errors in case localStorage is not available
+            }
+        })();
+    </script>
 </head>
 
 <body>
