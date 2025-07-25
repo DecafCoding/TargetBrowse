@@ -70,7 +70,6 @@ public class Program
         builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
 
         // Topic Management Feature Services
-        builder.Services.AddScoped<TargetBrowse.Features.Topics.Services.ITopicService, TargetBrowse.Features.Topics.Services.TopicService>();
 
         var app = builder.Build();
 
