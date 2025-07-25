@@ -65,6 +65,13 @@ public class Program
         builder.Services.AddScoped<IThemeService, ThemeService>();
         builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
 
+        // YouTube Video Tracker Services
+        builder.Services.AddScoped<IThemeService, ThemeService>();
+        builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
+
+        // Topic Management Feature Services
+        builder.Services.AddScoped<TargetBrowse.Features.Topics.Services.ITopicService, TargetBrowse.Features.Topics.Services.TopicService>();
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.

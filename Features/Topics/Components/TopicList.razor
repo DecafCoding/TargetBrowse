@@ -1,0 +1,322 @@
+﻿@using TargetBrowse.Features.Topics.Services
+@using TargetBrowse.Features.Topics.Models
+@using TargetBrowse.Features.Topics.Validators
+@using Microsoft.JSInterop
+@inject ITopicService TopicService
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Your Topics</h5>
+        <small class="text-muted">@Topics.Count topic@(Topics.Count == 1 ? "" : "s")</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            @foreach (var topic in Topics)
+            {
+                <div class="list-group-item">
+                    @if (topic.IsEditing)
+                    {
+                        <!-- Edit Mode -->
+                        <EditForm Model="@topic" OnValidSubmit="() => SaveEdit(topic)">
+                            <div class="row g-2 align-items-center">
+                                <div class="col">
+                                    <div class="form-floating">
+                                        <InputText @bind="topic.Name" 
+                                                  id="edit-@topic.Id" 
+                                                  class="form-control @GetValidationClass(topic)"
+                                                  placeholder="Topic name"
+                                                  maxlength="100" />
+                                        <label for="edit-@topic.Id">Topic Name</label>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(GetValidationError(topic)))
+                                    {
+                                        <div class="text-danger small mt-1">@GetValidationError(topic)</div>
+                                    }
+                                </div>
+                                <div class="col-auto">
+                                    <div class="btn-group" role="group">
+                                        <button type="submit" 
+                                                class="btn btn-success btn-sm"
+                                                disabled="@(!IsTopicValid(topic) || _isProcessing)">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-secondary btn-sm"
+                                                @onclick="() => CancelEdit(topic)"
+                                                disabled="@_isProcessing">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <!-- View Mode -->
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="d-flex align-items-center">
+                                    <h6 class="mb-0">@topic.Name</h6>
+                                    <small class="text-muted ms-auto">
+                                        Added @topic.CreatedAt.ToString("MMM d, yyyy")
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="btn-group" role="group">
+                                    <button type="button" 
+                                            class="btn btn-outline-primary btn-sm"
+                                            @onclick="() => StartEdit(topic)"
+                                            disabled="@_isProcessing"
+                                            title="Edit topic">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ConfirmDelete(topic)"
+                                            disabled="@_isProcessing"
+                                            title="Delete topic">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (_topicToDelete != null)
+                {
+                    <p>Are you sure you want to delete the topic <strong>"@_topicToDelete.Name"</strong>?</p>
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> This action cannot be undone. The topic will be removed from your suggestions system.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled="@_isProcessing">
+                    Cancel
+                </button>
+                <button type="button" 
+                        class="btn btn-danger" 
+                        @onclick="ExecuteDelete"
+                        disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash me-2"></i>
+                        <span>Delete Topic</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<TopicDto> Topics { get; set; } = new();
+    [Parameter] public EventCallback<TopicDto> OnTopicUpdated { get; set; }
+    [Parameter] public EventCallback<Guid> OnTopicDeleted { get; set; }
+    [Parameter] public string UserId { get; set; } = string.Empty;
+
+    private Dictionary<Guid, string> _originalNames = new();
+    private Dictionary<Guid, string> _validationErrors = new();
+    private TopicDto? _topicToDelete;
+    private bool _isProcessing = false;
+
+    /// <summary>
+    /// Starts editing mode for a topic
+    /// </summary>
+    private void StartEdit(TopicDto topic)
+    {
+        // Store original name for cancellation
+        _originalNames[topic.Id] = topic.Name;
+        
+        // Clear any existing validation errors
+        _validationErrors.Remove(topic.Id);
+        
+        // Set editing mode
+        topic.IsEditing = true;
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Cancels editing and restores original name
+    /// </summary>
+    private void CancelEdit(TopicDto topic)
+    {
+        // Restore original name
+        if (_originalNames.TryGetValue(topic.Id, out var originalName))
+        {
+            topic.Name = originalName;
+            _originalNames.Remove(topic.Id);
+        }
+        
+        // Clear validation errors
+        _validationErrors.Remove(topic.Id);
+        
+        // Exit editing mode
+        topic.IsEditing = false;
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Saves the edited topic
+    /// </summary>
+    private async Task SaveEdit(TopicDto topic)
+    {
+        if (_isProcessing)
+            return;
+
+        try
+        {
+            _isProcessing = true;
+            _validationErrors.Remove(topic.Id);
+
+            var result = await TopicService.UpdateTopicAsync(UserId, topic.Id, topic.Name);
+            
+            if (result.IsValid)
+            {
+                // Exit editing mode
+                topic.IsEditing = false;
+                _originalNames.Remove(topic.Id);
+                
+                // Notify parent
+                await OnTopicUpdated.InvokeAsync(topic);
+            }
+            else
+            {
+                // Show validation error
+                _validationErrors[topic.Id] = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _validationErrors[topic.Id] = "An error occurred while updating the topic.";
+            Console.WriteLine($"Error updating topic: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Shows delete confirmation modal
+    /// </summary>
+    private async Task ConfirmDelete(TopicDto topic)
+    {
+        _topicToDelete = topic;
+        await JSRuntime.InvokeVoidAsync("eval", 
+            "new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show()");
+    }
+
+    /// <summary>
+    /// Executes the delete operation
+    /// </summary>
+    private async Task ExecuteDelete()
+    {
+        if (_topicToDelete == null || _isProcessing)
+            return;
+
+        try
+        {
+            _isProcessing = true;
+
+            var success = await TopicService.DeleteTopicAsync(UserId, _topicToDelete.Id);
+            
+            if (success)
+            {
+                // Close modal
+                await JSRuntime.InvokeVoidAsync("eval", 
+                    "bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide()");
+                
+                // Notify parent
+                await OnTopicDeleted.InvokeAsync(_topicToDelete.Id);
+                
+                _topicToDelete = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting topic: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Gets validation CSS class for a topic input
+    /// </summary>
+    private string GetValidationClass(TopicDto topic)
+    {
+        if (string.IsNullOrEmpty(topic.Name))
+            return string.Empty;
+
+        return IsTopicValid(topic) ? "is-valid" : "is-invalid";
+    }
+
+    /// <summary>
+    /// Gets validation error message for a topic
+    /// </summary>
+    private string GetValidationError(TopicDto topic)
+    {
+        return _validationErrors.GetValueOrDefault(topic.Id, string.Empty);
+    }
+
+    /// <summary>
+    /// Checks if a topic is valid
+    /// </summary>
+    private bool IsTopicValid(TopicDto topic)
+    {
+        if (string.IsNullOrWhiteSpace(topic.Name))
+            return false;
+
+        var validation = TopicValidator.ValidateTopicName(topic.Name);
+        if (!validation.IsValid)
+        {
+            _validationErrors[topic.Id] = validation.ErrorMessage;
+            return false;
+        }
+
+        // Check uniqueness (excluding current topic)
+        var normalizedName = TopicValidator.NormalizeTopicName(topic.Name);
+        var isDuplicate = Topics.Any(t => 
+            t.Id != topic.Id && 
+            string.Equals(TopicValidator.NormalizeTopicName(t.Name), normalizedName, StringComparison.OrdinalIgnoreCase));
+
+        if (isDuplicate)
+        {
+            _validationErrors[topic.Id] = "You already have a topic with this name.";
+            return false;
+        }
+
+        _validationErrors.Remove(topic.Id);
+        return true;
+    }
+}
