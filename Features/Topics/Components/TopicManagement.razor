@@ -1,0 +1,237 @@
+﻿@page "/topics"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Topics.Services
+@using TargetBrowse.Features.Topics.Models
+@using TargetBrowse.Features.Topics.Components
+@using TargetBrowse.Services
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@inject ITopicService TopicService
+@inject IMessageCenterService MessageCenterService
+
+<PageTitle>My Topics - YouTube Video Tracker</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="h2 mb-1">My Topics</h1>
+                        <p class="text-muted mb-0">Define your learning interests to get personalized content suggestions</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-@GetLimitBadgeColor() fs-6">@_topics.Count/@_maxTopics topics</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading topics...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Add Topic Form -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Add New Topic</h5>
+                            <AddTopicForm OnTopicAdded="OnTopicAdded" 
+                                          CanAddMore="@_canAddMore" 
+                                          CurrentCount="@_topics.Count" 
+                                          MaxTopics="@_maxTopics"
+                                          UserId="@_currentUserId" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Topics List -->
+            <div class="row">
+                <div class="col-12">
+                    @if (_topics.Any())
+                    {
+                        <TopicList Topics="@_topics" 
+                                  OnTopicUpdated="OnTopicUpdated" 
+                                  OnTopicDeleted="OnTopicDeleted"
+                                  UserId="@_currentUserId" />
+                    }
+                    else
+                    {
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <div class="mb-4">
+                                    <i class="bi bi-lightbulb display-1 text-muted"></i>
+                                </div>
+                                <h4 class="text-muted mb-3">No topics yet</h4>
+                                <p class="text-muted mb-4">
+                                    Start by adding topics that interest you. These will help us suggest relevant YouTube content.
+                                </p>
+                                <div class="text-muted small">
+                                    <p class="mb-1"><strong>Examples of good topics:</strong></p>
+                                    <p class="mb-0">Machine Learning, Web Development, Photography, Cooking, Personal Finance</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (_topics.Any())
+            {
+                <!-- Next Steps Section -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-2">
+                                    <i class="bi bi-arrow-right-circle me-2"></i>Next Steps
+                                </h6>
+                                <p class="card-text small text-muted mb-2">
+                                    Great! You have @_topics.Count topic@(_topics.Count == 1 ? "" : "s") set up. 
+                                    Now you can:
+                                </p>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="/channels" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-plus-circle me-1"></i>Track Channels
+                                    </a>
+                                    <a href="/suggestions" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-magic me-1"></i>Get Suggestions
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-warning">
+            <h4>Access Denied</h4>
+            <p>You must be logged in to manage your topics.</p>
+            <a href="/Account/Login" class="btn btn-primary">Login</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<TopicDto> _topics = new();
+    private bool _isLoading = true;
+    private bool _canAddMore = true;
+    private int _maxTopics = 10;
+    private string _currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // We'll load topics in OnAfterRenderAsync when we have the auth context
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadUserTopics();
+        }
+    }
+
+    /// <summary>
+    /// Loads all topics for the current user
+    /// </summary>
+    private async Task LoadUserTopics()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged(); // Update UI to show loading
+
+            // Get the user ID from the authentication state
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            _currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+            if (string.IsNullOrEmpty(_currentUserId))
+            {
+                await MessageCenterService.ShowErrorAsync("Unable to identify current user. Please try logging out and back in.");
+                return;
+            }
+
+            // Load topics and check limits
+            _topics = await TopicService.GetUserTopicsAsync(_currentUserId);
+            _canAddMore = await TopicService.CanAddTopicAsync(_currentUserId);
+
+        }
+        catch (Exception ex)
+        {
+            await MessageCenterService.ShowErrorAsync("Failed to load topics. Please try again.");
+            Console.WriteLine($"Error loading topics: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles when a new topic is added
+    /// </summary>
+    private async Task OnTopicAdded(TopicDto newTopic)
+    {
+        _topics.Add(newTopic);
+        _canAddMore = await TopicService.CanAddTopicAsync(_currentUserId);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles when a topic is updated
+    /// </summary>
+    private void OnTopicUpdated(TopicDto updatedTopic)
+    {
+        var index = _topics.FindIndex(t => t.Id == updatedTopic.Id);
+        if (index >= 0)
+        {
+            _topics[index] = updatedTopic;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles when a topic is deleted
+    /// </summary>
+    private async Task OnTopicDeleted(Guid topicId)
+    {
+        _topics.RemoveAll(t => t.Id == topicId);
+        _canAddMore = await TopicService.CanAddTopicAsync(_currentUserId);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets the appropriate badge color based on topic limit usage
+    /// </summary>
+    private string GetLimitBadgeColor()
+    {
+        var percentage = (double)_topics.Count / _maxTopics;
+        return percentage switch
+        {
+            >= 0.9 => "danger",   // 9-10 topics (90%+)
+            >= 0.7 => "warning",  // 7-8 topics (70-89%)
+            >= 0.5 => "info",     // 5-6 topics (50-69%)
+            _ => "success"        // 0-4 topics (under 50%)
+        };
+    }
+
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+}

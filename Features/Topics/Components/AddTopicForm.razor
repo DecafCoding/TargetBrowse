@@ -1,0 +1,147 @@
+﻿@using TargetBrowse.Features.Topics.Services
+@using TargetBrowse.Features.Topics.Models
+@using TargetBrowse.Features.Topics.Validators
+@using TargetBrowse.Components.Account
+@inject ITopicService TopicService
+@inject IdentityUserAccessor UserAccessor
+
+<EditForm Model="@_newTopic" OnValidSubmit="HandleSubmit" FormName="add-topic-form">
+    <DataAnnotationsValidator />
+    
+    <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+            <div class="form-floating">
+                <InputText @bind="_newTopic.Name" 
+                          id="topicName" 
+                          class="form-control @GetValidationClass()"
+                          placeholder="Enter topic name"
+                          disabled="@(!CanAddMore || _isSubmitting)"
+                          maxlength="100" />
+                <label for="topicName">Topic Name</label>
+            </div>
+            <ValidationMessage For="@(() => _newTopic.Name)" class="text-danger small mt-1" />
+            @if (!string.IsNullOrEmpty(_clientValidationError))
+            {
+                <div class="text-danger small mt-1">@_clientValidationError</div>
+            }
+        </div>
+        
+        <div class="col-md-4">
+            <button type="submit" 
+                    class="btn btn-primary w-100" 
+                    disabled="@(!CanAddMore || _isSubmitting || !IsFormValid())">
+                @if (_isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Adding...</span>
+                }
+                else
+                {
+                    <i class="bi bi-plus-circle me-2"></i>
+                    <span>Add Topic</span>
+                }
+            </button>
+        </div>
+    </div>
+    
+    @if (!CanAddMore)
+    {
+        <div class="alert alert-warning mt-3 mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Limit reached:</strong> You can have up to @MaxTopics topics. 
+            Remove an existing topic to add a new one.
+        </div>
+    }
+    else if (CurrentCount >= MaxTopics * 0.8) // Warning at 80% capacity
+    {
+        <div class="alert alert-info mt-3 mb-0" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            You're approaching the limit of @MaxTopics topics (@CurrentCount/@MaxTopics used).
+        </div>
+    }
+</EditForm>
+
+@code {
+    [Parameter] public EventCallback<TopicDto> OnTopicAdded { get; set; }
+    [Parameter] public bool CanAddMore { get; set; } = true;
+    [Parameter] public int CurrentCount { get; set; } = 0;
+    [Parameter] public int MaxTopics { get; set; } = 10;
+    [Parameter] public string UserId { get; set; } = string.Empty;
+
+    private TopicDto _newTopic = new();
+    private bool _isSubmitting = false;
+    private string _clientValidationError = string.Empty;
+
+    /// <summary>
+    /// Handles form submission with validation and topic creation
+    /// </summary>
+    private async Task HandleSubmit()
+    {
+        if (_isSubmitting || !CanAddMore)
+            return;
+
+        try
+        {
+            _isSubmitting = true;
+            _clientValidationError = string.Empty;
+
+            // Client-side validation
+            var clientValidation = TopicValidator.ValidateTopicName(_newTopic.Name);
+            if (!clientValidation.IsValid)
+            {
+                _clientValidationError = clientValidation.ErrorMessage;
+                return;
+            }
+
+            // Server-side validation and creation
+            var result = await TopicService.AddTopicAsync(UserId, _newTopic.Name);
+            
+            if (result.IsValid && result.CreatedTopic != null)
+            {
+                // Notify parent component
+                await OnTopicAdded.InvokeAsync(result.CreatedTopic);
+                
+                // Reset form
+                _newTopic = new TopicDto();
+            }
+            else
+            {
+                _clientValidationError = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _clientValidationError = "An unexpected error occurred. Please try again.";
+            Console.WriteLine($"Error adding topic: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Gets CSS validation class for the input field
+    /// </summary>
+    private string GetValidationClass()
+    {
+        if (string.IsNullOrEmpty(_newTopic.Name))
+            return string.Empty;
+
+        var validation = TopicValidator.ValidateTopicName(_newTopic.Name);
+        return validation.IsValid ? "is-valid" : "is-invalid";
+    }
+
+    /// <summary>
+    /// Checks if the form is valid for submission
+    /// </summary>
+    private bool IsFormValid()
+    {
+        if (string.IsNullOrWhiteSpace(_newTopic.Name))
+            return false;
+
+        var validation = TopicValidator.ValidateTopicName(_newTopic.Name);
+        return validation.IsValid;
+    }
+}
