@@ -95,6 +95,54 @@ public class TopicService : ITopicService
     }
 
     /// <summary>
+    /// Deletes a topic for the specified user using soft delete pattern.
+    /// </summary>
+    public async Task<bool> DeleteTopicAsync(string userId, Guid topicId)
+    {
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                await _messageCenterService.ShowErrorAsync("User authentication required.");
+                return false;
+            }
+
+            if (topicId == Guid.Empty)
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid topic selected.");
+                return false;
+            }
+
+            // Find the topic and ensure user owns it
+            var topic = await _context.Topics
+                .Where(t => t.Id == topicId && t.UserId == userId && !t.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (topic == null)
+            {
+                await _messageCenterService.ShowWarningAsync("Topic not found or you don't have permission to delete it.");
+                return false;
+            }
+
+            // Perform soft delete
+            topic.IsDeleted = true;
+            await _context.SaveChangesAsync();
+
+            await _messageCenterService.ShowSuccessAsync($"Topic '{topic.Name}' deleted successfully!");
+
+            _logger.LogInformation("User {UserId} deleted topic: {TopicName} (ID: {TopicId})", userId, topic.Name, topicId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting topic {TopicId} for user {UserId}", topicId, userId);
+            await _messageCenterService.ShowErrorAsync("An error occurred while deleting the topic. Please try again.");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Gets all topics for the specified user ordered by creation date (newest first).
     /// </summary>
     public async Task<List<TopicDisplayModel>> GetUserTopicsAsync(string userId)
