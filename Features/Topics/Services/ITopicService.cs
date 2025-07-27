@@ -18,6 +18,15 @@ public interface ITopicService
     Task<bool> AddTopicAsync(string userId, string topicName);
 
     /// <summary>
+    /// Deletes a topic for the specified user.
+    /// Uses soft delete to maintain data integrity.
+    /// </summary>
+    /// <param name="userId">User ID requesting the deletion</param>
+    /// <param name="topicId">ID of the topic to delete</param>
+    /// <returns>True if successful, false if validation failed or topic not found</returns>
+    Task<bool> DeleteTopicAsync(string userId, Guid topicId);
+
+    /// <summary>
     /// Gets all topics for the specified user ordered by creation date (newest first).
     /// Returns display models suitable for UI presentation.
     /// </summary>

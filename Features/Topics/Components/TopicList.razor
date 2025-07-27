@@ -45,13 +45,25 @@
                     <div class="list-group-item d-flex justify-content-between align-items-start px-0 py-3">
                         <div class="me-auto">
                             <h6 class="mb-0">@topic.Name</h6>
+                            <small class="text-muted">Added @topic.CreatedAtDisplay</small>
                         </div>
 
-                        <!-- Future: Edit/Delete actions will go here -->
+                        <!-- Delete Action -->
                         <div class="ms-3">
-                            <small class="text-muted">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </small>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    @onclick="() => ShowDeleteConfirmation(topic)"
+                                    disabled="@IsDeleting"
+                                    title="Delete topic">
+                                @if (IsDeleting && _topicToDelete?.Id == topic.Id)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-trash"></i>
+                                }
+                            </button>
                         </div>
                     </div>
                 }
@@ -87,6 +99,58 @@
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+@if (_showDeleteModal && _topicToDelete != null)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" aria-labelledby="deleteModalTitle" aria-hidden="false">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalTitle">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        Confirm Delete
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="HideDeleteConfirmation"
+                            disabled="@IsDeleting"
+                            aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Are you sure you want to delete the topic:</p>
+                    <p class="fw-bold text-danger mb-3">"@_topicToDelete.Name"</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This action cannot be undone. Any suggestions based on this topic will no longer be generated.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="HideDeleteConfirmation"
+                            disabled="@IsDeleting">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            @onclick="ConfirmDelete"
+                            disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        Delete Topic
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop show" @onclick="HideDeleteConfirmation"></div>
+}
+
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -96,6 +160,9 @@
 
     private List<TopicDisplayModel> Topics { get; set; } = new();
     private bool IsLoading { get; set; } = true;
+    private bool IsDeleting { get; set; } = false;
+    private bool _showDeleteModal { get; set; } = false;
+    private TopicDisplayModel? _topicToDelete { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,6 +176,69 @@
     public async Task RefreshAsync()
     {
         await LoadTopicsAsync();
+    }
+
+    /// <summary>
+    /// Shows the delete confirmation modal for the specified topic.
+    /// </summary>
+    private void ShowDeleteConfirmation(TopicDisplayModel topic)
+    {
+        if (IsDeleting) return;
+
+        _topicToDelete = topic;
+        _showDeleteModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides the delete confirmation modal and resets state.
+    /// </summary>
+    private void HideDeleteConfirmation()
+    {
+        if (IsDeleting) return;
+
+        _showDeleteModal = false;
+        _topicToDelete = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Confirms the deletion and calls the service to delete the topic.
+    /// </summary>
+    private async Task ConfirmDelete()
+    {
+        if (IsDeleting || _topicToDelete == null) return;
+
+        try
+        {
+            IsDeleting = true;
+            StateHasChanged();
+
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var success = await TopicService.DeleteTopicAsync(userId, _topicToDelete.Id);
+
+                if (success)
+                {
+                    // Refresh the topic list to reflect the deletion
+                    await LoadTopicsAsync();
+
+                    // Notify parent component of topic changes
+                    if (OnTopicsChanged.HasDelegate)
+                    {
+                        await OnTopicsChanged.InvokeAsync();
+                    }
+                }
+            }
+        }
+        finally
+        {
+            IsDeleting = false;
+            HideDeleteConfirmation();
+        }
     }
 
     /// <summary>
@@ -156,3 +286,30 @@
         };
     }
 }
+
+<style>
+    /* Modal styling to ensure proper display */
+    .modal.show {
+        display: block !important;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0.5;
+    }
+
+    /* Delete button hover effect */
+    .btn-outline-danger:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s ease;
+    }
+
+    /* Topic item hover effect */
+    .list-group-item:hover {
+        background-color: var(--bs-light);
+    }
+
+    /* Loading state for delete button */
+    .btn-outline-danger:disabled {
+        opacity: 0.6;
+    }
+</style>
