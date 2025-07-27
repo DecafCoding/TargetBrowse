@@ -1,4 +1,6 @@
-﻿namespace TargetBrowse.Features.Topics.Services;
+﻿using TargetBrowse.Features.Topics.Models;
+
+namespace TargetBrowse.Features.Topics.Services;
 
 /// <summary>
 /// Service interface for topic management operations.
@@ -14,6 +16,14 @@ public interface ITopicService
     /// <param name="topicName">Name of the topic to add</param>
     /// <returns>True if successful, false if validation failed</returns>
     Task<bool> AddTopicAsync(string userId, string topicName);
+
+    /// <summary>
+    /// Gets all topics for the specified user ordered by creation date (newest first).
+    /// Returns display models suitable for UI presentation.
+    /// </summary>
+    /// <param name="userId">User ID to get topics for</param>
+    /// <returns>List of topics for display, empty list if none found</returns>
+    Task<List<TopicDisplayModel>> GetUserTopicsAsync(string userId);
 
     /// <summary>
     /// Gets the current count of topics for a user.
