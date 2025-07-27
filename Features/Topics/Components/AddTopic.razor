@@ -17,29 +17,23 @@
     <div class="card-body">
         <EditForm Model="@TopicModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
-            
+
             <div class="mb-3">
                 <label for="topicName" class="form-label">Topic Name</label>
-                <InputText @bind-Value="TopicModel.Name" 
-                          class="form-control" 
-                          id="topicName" 
-                          placeholder="Enter topic name (e.g., Machine Learning, Web Development)" 
-                          disabled="@IsSubmitting" />
+                <InputText @bind-Value="TopicModel.Name"
+                           class="form-control"
+                           id="topicName"
+                           placeholder="Enter topic name (e.g., Machine Learning, Web Development)"
+                           disabled="@IsSubmitting" />
                 <ValidationMessage For="@(() => TopicModel.Name)" class="text-danger" />
                 <div class="form-text">
                     Topics help us find relevant YouTube content for you. Be specific for better suggestions.
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    @if (CurrentTopicCount >= 0)
-                    {
-                        <span>@CurrentTopicCount / 10 topics used</span>
-                    }
-                </div>
-                <button type="submit" 
-                        class="btn btn-primary" 
+            <div class="d-flex justify-content-end">
+                <button type="submit"
+                        class="btn btn-primary"
                         disabled="@IsSubmitting">
                     @if (IsSubmitting)
                     {
@@ -56,13 +50,16 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
+    [Parameter]
+    public EventCallback OnTopicAdded { get; set; }
+
     private AddTopicModel TopicModel { get; set; } = new();
     private bool IsSubmitting { get; set; } = false;
-    private int CurrentTopicCount { get; set; } = -1;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTopicCount();
+        // Component initialization - no topic count loading needed
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -93,38 +90,20 @@
 
             if (success)
             {
-                // Reset form and refresh topic count
+                // Reset form and notify parent component
                 TopicModel.Reset();
-                await LoadTopicCount();
+
+                // Notify parent component that a topic was added
+                if (OnTopicAdded.HasDelegate)
+                {
+                    await OnTopicAdded.InvokeAsync();
+                }
             }
         }
         finally
         {
             IsSubmitting = false;
             StateHasChanged();
-        }
-    }
-
-    /// <summary>
-    /// Loads the current topic count for the user to display progress.
-    /// </summary>
-    private async Task LoadTopicCount()
-    {
-        try
-        {
-            var authState = await AuthenticationStateTask!;
-            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                CurrentTopicCount = await TopicService.GetTopicCountAsync(userId);
-                StateHasChanged();
-            }
-        }
-        catch
-        {
-            // If we can't load the count, it's not critical - just hide the counter
-            CurrentTopicCount = -1;
         }
     }
 }

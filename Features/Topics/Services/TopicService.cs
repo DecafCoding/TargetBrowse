@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Topics.Models;
 using TargetBrowse.Services;
 
 namespace TargetBrowse.Features.Topics.Services;
@@ -90,6 +91,41 @@ public class TopicService : ITopicService
             _logger.LogError(ex, "Error adding topic {TopicName} for user {UserId}", topicName, userId);
             await _messageCenterService.ShowErrorAsync("An error occurred while adding the topic. Please try again.");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets all topics for the specified user ordered by creation date (newest first).
+    /// </summary>
+    public async Task<List<TopicDisplayModel>> GetUserTopicsAsync(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("GetUserTopicsAsync called with null or empty userId");
+                return new List<TopicDisplayModel>();
+            }
+
+            var topics = await _context.Topics
+                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new TopicDisplayModel
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    CreatedAt = t.CreatedAt
+                })
+                .ToListAsync();
+
+            _logger.LogDebug("Retrieved {TopicCount} topics for user {UserId}", topics.Count, userId);
+            return topics;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving topics for user {UserId}", userId);
+            await _messageCenterService.ShowErrorAsync("Unable to load your topics. Please refresh the page and try again.");
+            return new List<TopicDisplayModel>();
         }
     }
 

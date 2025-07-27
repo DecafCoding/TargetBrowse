@@ -17,29 +17,15 @@
 
 <div class="row">
     <div class="col-lg-6">
-        <!-- Add Topic Component -->
-        <AddTopic />
-        
-        <!-- Future: Topic List Component will go here -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-list-ul me-2"></i>
-                    Your Topics
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center py-4">
-                    <i class="bi bi-lightbulb text-muted" style="font-size: 3rem;"></i>
-                    <h6 class="mt-3 text-muted">Topic list coming soon</h6>
-                    <p class="text-muted small mb-0">
-                        In the next iteration, you'll be able to view, edit, and remove your topics here.
-                    </p>
-                </div>
-            </div>
+        <!-- Topic List Component (moved to top) -->
+        <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
+
+        <!-- Add Topic Component (moved below list) -->
+        <div class="mt-4">
+            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
         </div>
     </div>
-    
+
     <div class="col-lg-6">
         <!-- Help and Tips -->
         <div class="card">
@@ -95,6 +81,28 @@
 </div>
 
 @code {
-    // This page serves as the main container for topic management
-    // Currently includes AddTopic component with placeholder for future features
+    private AddTopic? AddTopicComponent;
+    private TopicList? TopicListComponent;
+
+    /// <summary>
+    /// Handles when a new topic is successfully added.
+    /// Refreshes the topic list to show the new topic.
+    /// </summary>
+    private async Task HandleTopicAdded()
+    {
+        if (TopicListComponent != null)
+        {
+            await TopicListComponent.RefreshAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles when topics change (loaded, added, etc.).
+    /// Can be used for additional coordination between components.
+    /// </summary>
+    private async Task HandleTopicsChanged()
+    {
+        // Future: Could update global topic count, analytics, etc.
+        await Task.CompletedTask;
+    }
 }
