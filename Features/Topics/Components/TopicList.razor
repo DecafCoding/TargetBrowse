@@ -38,37 +38,62 @@
         }
         else
         {
-            <!-- Topic List -->
-            <div class="list-group list-group-flush">
-                @foreach (var topic in Topics)
-                {
-                    <div class="list-group-item d-flex justify-content-between align-items-start px-0 py-3">
-                        <div class="me-auto">
-                            <h6 class="mb-0">@topic.Name</h6>
-                            <small class="text-muted">Added @topic.CreatedAtDisplay</small>
-                        </div>
+            <!-- Topic Table -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="border-0">Topic</th>
+                            <th scope="col" class="border-0">Age</th>
+                            <th scope="col" class="border-0 text-center">Suggestions</th>
+                            <th scope="col" class="border-0 text-center" style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var topic in Topics)
+                        {
+                            <tr>
+                                <!-- Topic Name -->
+                                <td>
+                                    <div class="fw-medium">@topic.Name</div>
+                                </td>
 
-                        <!-- Delete Action -->
-                        <div class="ms-3">
-                            <button type="button"
-                                    class="btn btn-outline-danger btn-sm"
-                                    @onclick="() => ShowDeleteConfirmation(topic)"
-                                    disabled="@IsDeleting"
-                                    title="Delete topic">
-                                @if (IsDeleting && _topicToDelete?.Id == topic.Id)
-                                {
-                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-trash"></i>
-                                }
-                            </button>
-                        </div>
-                    </div>
-                }
+                                <!-- Topic Age -->
+                                <td class="text-muted">
+                                    @topic.CreatedAtDisplay
+                                </td>
+
+                                <!-- Suggestions (placeholder) -->
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">Coming Soon</span>
+                                </td>
+
+                                <!-- Delete Action -->
+                                <td class="text-center">
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ShowDeleteConfirmation(topic)"
+                                            disabled="@IsDeleting"
+                                            title="Delete topic">
+                                        @if (IsDeleting && _topicToDelete?.Id == topic.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-trash"></i>
+                                        }
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
+        }
 
+        @if (Topics.Any())
+        {
             <!-- Topic Limit Information -->
             <div class="mt-3 pt-3 border-top">
                 <div class="d-flex justify-content-between align-items-center">
@@ -297,19 +322,53 @@
         opacity: 0.5;
     }
 
+    /* Table styling improvements */
+    .table > tbody > tr > td {
+        vertical-align: middle;
+        border-top: 1px solid var(--bs-border-color);
+    }
+
+    .table > thead > tr > th {
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
     /* Delete button hover effect */
     .btn-outline-danger:hover {
         transform: translateY(-1px);
         transition: transform 0.2s ease;
     }
 
-    /* Topic item hover effect */
-    .list-group-item:hover {
+    /* Table row hover effect */
+    .table-hover tbody tr:hover {
         background-color: var(--bs-light);
+    }
+
+    /* Badge styling for suggestions placeholder */
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
     }
 
     /* Loading state for delete button */
     .btn-outline-danger:disabled {
         opacity: 0.6;
+    }
+
+    /* Responsive table improvements */
+    @@media (max-width: 768px) {
+        .table-responsive
+
+    {
+        font-size: 0.9rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+
     }
 </style>

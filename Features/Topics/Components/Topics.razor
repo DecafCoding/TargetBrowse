@@ -17,7 +17,7 @@
 
 <div class="row">
     <div class="col-lg-6">
-        <!-- Topic List Component (moved to top) -->
+        <!-- Topic List Component (converted to table) -->
         <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
 
         <!-- Add Topic Component (moved below list) -->
@@ -36,24 +36,22 @@
                 </h5>
             </div>
             <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-3">
-                        <strong><i class="bi bi-check-circle text-success me-2"></i>Be Specific:</strong>
-                        <br><small class="text-muted">"Machine Learning" instead of "Technology"</small>
-                    </li>
-                    <li class="mb-3">
-                        <strong><i class="bi bi-check-circle text-success me-2"></i>Use Keywords:</strong>
-                        <br><small class="text-muted">Terms you'd search for on YouTube</small>
-                    </li>
-                    <li class="mb-3">
-                        <strong><i class="bi bi-check-circle text-success me-2"></i>Multiple Topics:</strong>
-                        <br><small class="text-muted">Add 3-5 topics for better coverage</small>
-                    </li>
-                    <li class="mb-0">
-                        <strong><i class="bi bi-check-circle text-success me-2"></i>Stay Relevant:</strong>
-                        <br><small class="text-muted">Focus on your current learning goals</small>
-                    </li>
-                </ul>
+                <div class="mb-3">
+                    <strong><i class="bi bi-check-circle text-success me-2"></i>Be Specific:</strong>
+                    <span class="text-muted">"Machine Learning" instead of "Technology"</span>
+                </div>
+                <div class="mb-3">
+                    <strong><i class="bi bi-check-circle text-success me-2"></i>Use Keywords:</strong>
+                    <span class="text-muted">Terms you'd search for on YouTube</span>
+                </div>
+                <div class="mb-3">
+                    <strong><i class="bi bi-check-circle text-success me-2"></i>Multiple Topics:</strong>
+                    <span class="text-muted">Add 3-5 topics for better coverage</span>
+                </div>
+                <div class="mb-0">
+                    <strong><i class="bi bi-check-circle text-success me-2"></i>Stay Relevant:</strong>
+                    <span class="text-muted">Focus on your current learning goals</span>
+                </div>
             </div>
         </div>
 
