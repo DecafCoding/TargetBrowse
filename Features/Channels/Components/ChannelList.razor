@@ -44,11 +44,11 @@
                     <thead class="table-light">
                         <tr>
                             <th scope="col" class="border-0">Channel</th>
-                            <th scope="col" class="border-0">Subscribers</th>
+                            <th scope="col" class="border-0">Subs</th>
                             <th scope="col" class="border-0">Videos</th>
-                            <th scope="col" class="border-0">Tracked Since</th>
-                            <th scope="col" class="border-0 text-center">Links</th>
-                            <th scope="col" class="border-0 text-center" style="width: 80px;">Action</th>
+                            <th scope="col" class="border-0">Age</th>
+                            <th scope="col" class="border-0 text-center">Details</th>
+                            <th scope="col" class="border-0 text-center" style="width: 80px;">Delete</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,13 +81,11 @@
 
                                 <!-- Subscriber Count -->
                                 <td class="text-muted">
-                                    <i class="bi bi-people me-1"></i>
                                     @channel.SubscriberCountDisplay
                                 </td>
 
                                 <!-- Video Count -->
                                 <td class="text-muted">
-                                    <i class="bi bi-play-circle me-1"></i>
                                     @channel.VideoCountDisplay
                                 </td>
 
