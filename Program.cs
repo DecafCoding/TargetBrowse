@@ -71,6 +71,7 @@ public class Program
 
         // Topic Management Feature Services
         builder.Services.AddScoped<Features.Topics.Services.ITopicService, Features.Topics.Services.TopicService>();
+        builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
 
         var app = builder.Build();
 

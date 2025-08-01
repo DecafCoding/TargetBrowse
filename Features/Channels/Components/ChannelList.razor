@@ -1,0 +1,494 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.Channels.Models
+@using TargetBrowse.Features.Channels.Services
+@inject IChannelService ChannelService
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Tracked Channels
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (IsLoading)
+        {
+            <!-- Loading State -->
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading tracked channels...</span>
+                </div>
+                <p class="text-muted mt-2 mb-0">Loading your tracked channels...</p>
+            </div>
+        }
+        else if (!TrackedChannels.Any())
+        {
+            <!-- Empty State -->
+            <div class="text-center py-4">
+                <i class="bi bi-youtube text-muted" style="font-size: 3rem;"></i>
+                <h6 class="mt-3 text-muted">No channels tracked yet</h6>
+                <p class="text-muted small mb-0">
+                    Search for YouTube channels above to start tracking your favorites and get personalized content suggestions.
+                </p>
+            </div>
+        }
+        else
+        {
+            <!-- Channel Table -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="border-0">Channel</th>
+                            <th scope="col" class="border-0">Subscribers</th>
+                            <th scope="col" class="border-0">Videos</th>
+                            <th scope="col" class="border-0">Tracked Since</th>
+                            <th scope="col" class="border-0 text-center">Links</th>
+                            <th scope="col" class="border-0 text-center" style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var channel in TrackedChannels)
+                        {
+                            <tr>
+                                <!-- Channel Info -->
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(channel.ThumbnailUrl))
+                                        {
+                                            <img src="@channel.ThumbnailUrl"
+                                                 alt="@channel.Name thumbnail"
+                                                 class="rounded me-3"
+                                                 style="width: 40px; height: 40px; object-fit: cover;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person-circle text-white"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div class="fw-medium">@channel.Name</div>
+                                            <div class="text-muted small">@channel.ShortDescription</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Subscriber Count -->
+                                <td class="text-muted">
+                                    <i class="bi bi-people me-1"></i>
+                                    @channel.SubscriberCountDisplay
+                                </td>
+
+                                <!-- Video Count -->
+                                <td class="text-muted">
+                                    <i class="bi bi-play-circle me-1"></i>
+                                    @channel.VideoCountDisplay
+                                </td>
+
+                                <!-- Tracked Since -->
+                                <td class="text-muted">
+                                    @channel.TrackedSinceDisplay
+                                </td>
+
+                                <!-- Links -->
+                                <td class="text-center">
+                                    <a href="@channel.YouTubeUrl"
+                                       target="_blank"
+                                       class="btn btn-outline-secondary btn-sm"
+                                       title="View on YouTube">
+                                        <i class="bi bi-youtube"></i>
+                                    </a>
+                                </td>
+
+                                <!-- Remove Action -->
+                                <td class="text-center">
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ShowRemoveConfirmation(channel)"
+                                            disabled="@IsRemoving"
+                                            title="Remove from tracking">
+                                        @if (IsRemoving && _channelToRemove?.Id == channel.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-trash"></i>
+                                        }
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (TrackedChannels.Any())
+        {
+            <!-- Channel Limit Information -->
+            <div class="mt-3 pt-3 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        @TrackedChannels.Count of 50 channels tracked
+                    </small>
+                    @if (TrackedChannels.Count >= 45)
+                    {
+                        <small class="text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Approaching limit
+                        </small>
+                    }
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar @GetProgressBarClass()"
+                         role="progressbar"
+                         style="width: @(TrackedChannels.Count * 2)%"
+                         aria-valuenow="@TrackedChannels.Count"
+                         aria-valuemin="0"
+                         aria-valuemax="50">
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Remove Confirmation Modal -->
+@if (_showRemoveModal && _channelToRemove != null)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" aria-labelledby="removeModalTitle" aria-hidden="false">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeModalTitle">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        Confirm Remove
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="HideRemoveConfirmation"
+                            disabled="@IsRemoving"
+                            aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-3">
+                        @if (!string.IsNullOrEmpty(_channelToRemove.ThumbnailUrl))
+                        {
+                            <img src="@_channelToRemove.ThumbnailUrl"
+                                 alt="@_channelToRemove.Name thumbnail"
+                                 class="rounded me-3"
+                                 style="width: 50px; height: 50px; object-fit: cover;" />
+                        }
+                        <div>
+                            <h6 class="mb-1">@_channelToRemove.Name</h6>
+                            <small class="text-muted">@_channelToRemove.SubscriberCountDisplay subscribers</small>
+                        </div>
+                    </div>
+                    <p class="mb-2">Are you sure you want to remove this channel from your tracking list?</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        You'll no longer receive suggestions from this channel, but you can add it back anytime.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="HideRemoveConfirmation"
+                            disabled="@IsRemoving">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            @onclick="ConfirmRemove"
+                            disabled="@IsRemoving">
+                        @if (IsRemoving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        Remove Channel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop show" @onclick="HideRemoveConfirmation"></div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter]
+    public EventCallback OnChannelsChanged { get; set; }
+
+    private List<ChannelDisplayModel> TrackedChannels { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsRemoving { get; set; } = false;
+    private bool _showRemoveModal { get; set; } = false;
+    private ChannelDisplayModel? _channelToRemove { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTrackedChannelsAsync();
+    }
+
+    /// <summary>
+    /// Public method to refresh the tracked channels list.
+    /// Called by parent component when channels are added/modified.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await LoadTrackedChannelsAsync();
+    }
+
+    /// <summary>
+    /// Shows the remove confirmation modal for the specified channel.
+    /// </summary>
+    private void ShowRemoveConfirmation(ChannelDisplayModel channel)
+    {
+        if (IsRemoving) return;
+
+        _channelToRemove = channel;
+        _showRemoveModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides the remove confirmation modal and resets state.
+    /// </summary>
+    private void HideRemoveConfirmation()
+    {
+        if (IsRemoving) return;
+
+        _showRemoveModal = false;
+        _channelToRemove = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Confirms the removal and calls the service to remove the channel.
+    /// For now, shows UI feedback only - will implement real functionality in next phase.
+    /// </summary>
+    private async Task ConfirmRemove()
+    {
+        if (IsRemoving || _channelToRemove == null) return;
+
+        try
+        {
+            IsRemoving = true;
+            StateHasChanged();
+
+            // Simulate removal delay
+            await Task.Delay(1000);
+
+            // Remove from local list for UI demonstration
+            TrackedChannels.Remove(_channelToRemove);
+
+            // Notify parent component of channel changes
+            if (OnChannelsChanged.HasDelegate)
+            {
+                await OnChannelsChanged.InvokeAsync();
+            }
+
+            // Show success message (placeholder)
+            // Will integrate with MessageCenterService in next phase
+        }
+        finally
+        {
+            IsRemoving = false;
+            HideRemoveConfirmation();
+        }
+    }
+
+    /// <summary>
+    /// Loads tracked channels for the current user from the service.
+    /// For now, shows mock data - will implement real service calls in next phase.
+    /// </summary>
+    private async Task LoadTrackedChannelsAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StateHasChanged();
+
+            // Simulate loading delay
+            await Task.Delay(800);
+
+            // Generate mock tracked channels for UI demonstration
+            TrackedChannels = GenerateMockTrackedChannels();
+
+            // Notify parent component of channel changes (for count updates)
+            if (OnChannelsChanged.HasDelegate)
+            {
+                await OnChannelsChanged.InvokeAsync();
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Gets the appropriate CSS class for the progress bar based on channel count.
+    /// </summary>
+    private string GetProgressBarClass()
+    {
+        return TrackedChannels.Count switch
+        {
+            >= 45 => "bg-danger",
+            >= 35 => "bg-warning",
+            >= 25 => "bg-info",
+            _ => "bg-success"
+        };
+    }
+
+    /// <summary>
+    /// Generates mock tracked channels for UI demonstration.
+    /// Will be replaced with real service calls.
+    /// </summary>
+    private static List<ChannelDisplayModel> GenerateMockTrackedChannels()
+    {
+        var mockChannels = new List<ChannelDisplayModel>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                YouTubeChannelId = "UC_x5XG1OV2P6uZZ5FSM9Ttw",
+                Name = "Google for Developers",
+                Description = "Google for Developers is where you can discover all the ways you can use Google developer tools, platforms, and APIs.",
+                ThumbnailUrl = "https://via.placeholder.com/88x88/4285F4/FFFFFF?text=G",
+                SubscriberCount = 2340000,
+                VideoCount = 4500,
+                PublishedAt = DateTime.UtcNow.AddYears(-8),
+                TrackedSince = DateTime.UtcNow.AddDays(-45),
+                IsTracked = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                YouTubeChannelId = "UCRPMAPhquse1Ah79DI90rNg",
+                Name = "Microsoft Visual Studio",
+                Description = "The official channel for Microsoft Visual Studio. Tips, tricks, and tutorials for developers.",
+                ThumbnailUrl = "https://via.placeholder.com/88x88/5C2D91/FFFFFF?text=VS",
+                SubscriberCount = 890000,
+                VideoCount = 2100,
+                PublishedAt = DateTime.UtcNow.AddYears(-6),
+                TrackedSince = DateTime.UtcNow.AddDays(-23),
+                IsTracked = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                YouTubeChannelId = "UC0vBXGSyV14uvJ4hECDOl0Q",
+                Name = "Traversy Media",
+                Description = "Web development and programming tutorials. HTML, CSS, JavaScript, React, Node.js and more.",
+                ThumbnailUrl = "https://via.placeholder.com/88x88/FF6B35/FFFFFF?text=TM",
+                SubscriberCount = 2100000,
+                VideoCount = 1200,
+                PublishedAt = DateTime.UtcNow.AddYears(-12),
+                TrackedSince = DateTime.UtcNow.AddDays(-12),
+                IsTracked = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                YouTubeChannelId = "UCWv7vMbMWH4-V0ZXdmDpPBA",
+                Name = "Programming with Mosh",
+                Description = "Code with Mosh is a platform for learning programming and software engineering skills.",
+                ThumbnailUrl = "https://via.placeholder.com/88x88/1DB954/FFFFFF?text=M",
+                SubscriberCount = 3200000,
+                VideoCount = 850,
+                PublishedAt = DateTime.UtcNow.AddYears(-9),
+                TrackedSince = DateTime.UtcNow.AddDays(-5),
+                IsTracked = true
+            }
+        };
+
+        return mockChannels;
+    }
+}
+
+<style>
+    /* Modal styling to ensure proper display */
+    .modal.show {
+        display: block !important;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0.5;
+    }
+
+    /* Table styling improvements */
+    .table > tbody > tr > td {
+        vertical-align: middle;
+        border-top: 1px solid var(--bs-border-color);
+    }
+
+    .table > thead > tr > th {
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    /* Channel thumbnail styling */
+    .table img, .modal img {
+        border: 1px solid var(--bs-border-color);
+    }
+
+    /* Remove button hover effect */
+    .btn-outline-danger:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s ease;
+    }
+
+    /* Table row hover effect */
+    .table-hover tbody tr:hover {
+        background-color: var(--bs-light);
+    }
+
+    /* Loading state for remove button */
+    .btn-outline-danger:disabled {
+        opacity: 0.6;
+    }
+
+    /* Responsive table improvements */
+    @@media (max-width: 768px) {
+        .table-responsive
+
+    {
+        font-size: 0.9rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+
+    /* Stack channel info on mobile */
+    .table .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+        .table .d-flex img,
+        .table .d-flex > div:first-child {
+            margin-bottom: 0.5rem;
+        }
+
+    }
+</style>
