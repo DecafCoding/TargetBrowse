@@ -1,0 +1,311 @@
+@page "/channels"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+<PageTitle>Channel Tracking - YouTube Video Tracker</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">Channel Tracking</h1>
+        <p class="text-muted mb-0">
+            Track up to 50 YouTube channels to get personalized content suggestions when new videos are published.
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Channel Search Component -->
+        <div class="mb-4">
+            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
+        </div>
+
+        <!-- Channel List Component -->
+        <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Help and Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Channel Tracking Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong><i class="bi bi-search text-primary me-2"></i>Search Methods:</strong>
+                    <ul class="small text-muted mt-1 mb-0">
+                        <li>Enter channel name (e.g., "TED")</li>
+                        <li>Paste YouTube channel URL</li>
+                        <li>Use creator's exact channel name</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <strong><i class="bi bi-bell text-success me-2"></i>Smart Suggestions:</strong>
+                    <span class="text-muted small">Get notified when tracked channels upload new videos</span>
+                </div>
+                <div class="mb-3">
+                    <strong><i class="bi bi-star text-warning me-2"></i>Rate Content:</strong>
+                    <span class="text-muted small">Rate channels to improve future recommendations</span>
+                </div>
+                <div class="mb-0">
+                    <strong><i class="bi bi-sliders text-info me-2"></i>Quality Control:</strong>
+                    <span class="text-muted small">Remove channels anytime to keep your list curated</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Channel Statistics -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Your Channel Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-1">@_trackedChannelCount</h4>
+                            <small class="text-muted">Channels Tracked</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-1">@(50 - _trackedChannelCount)</h4>
+                        <small class="text-muted">Slots Available</small>
+                    </div>
+                </div>
+
+                @if (_trackedChannelCount > 0)
+                {
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar @GetStatsProgressBarClass()"
+                                 role="progressbar"
+                                 style="width: @((_trackedChannelCount / 50.0) * 100)%"
+                                 aria-valuenow="@_trackedChannelCount"
+                                 aria-valuemin="0"
+                                 aria-valuemax="50">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">@_trackedChannelCount of 50 used</small>
+                            @if (_trackedChannelCount >= 45)
+                            {
+                                <small class="text-warning">
+                                    <i class="bi bi-exclamation-triangle"></i> Nearly full
+                                </small>
+                            }
+                            else if (_trackedChannelCount >= 25)
+                            {
+                                <small class="text-info">Half full</small>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Feature Preview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-rocket me-2"></i>
+                    Coming Soon
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Features we're working on:
+                </p>
+                <ul class="list-unstyled small text-muted mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Automatic new video detection
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Channel performance analytics
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Bulk channel management
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Channel categorization
+                    </li>
+                    <li class="mb-0">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Export/import channel lists
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" disabled>
+                        <i class="bi bi-download me-2"></i>
+                        Export Channel List
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                        <i class="bi bi-upload me-2"></i>
+                        Import Channels
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" disabled>
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Check for Updates
+                    </button>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="bi bi-info-circle me-1"></i>
+                    These features will be available soon
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ChannelSearch? ChannelSearchComponent;
+    private ChannelList? ChannelListComponent;
+    private int _trackedChannelCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with mock data for now
+        await UpdateChannelCount();
+    }
+
+    /// <summary>
+    /// Handles when a new channel is successfully added.
+    /// Refreshes the channel list and updates statistics.
+    /// </summary>
+    private async Task HandleChannelAdded()
+    {
+        if (ChannelListComponent != null)
+        {
+            await ChannelListComponent.RefreshAsync();
+        }
+        await UpdateChannelCount();
+    }
+
+    /// <summary>
+    /// Handles when channels change (loaded, added, removed, etc.).
+    /// Updates the statistics display.
+    /// </summary>
+    private async Task HandleChannelsChanged()
+    {
+        await UpdateChannelCount();
+    }
+
+    /// <summary>
+    /// Updates the tracked channel count for statistics display.
+    /// For now, uses mock count - will implement real service calls in next phase.
+    /// </summary>
+    private async Task UpdateChannelCount()
+    {
+        // Mock channel count for UI demonstration
+        // Will replace with real service call: await ChannelService.GetTrackedChannelCountAsync(userId);
+        await Task.Delay(10); // Simulate async call
+        _trackedChannelCount = 4; // Mock count based on our sample data
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets the appropriate CSS class for the statistics progress bar.
+    /// </summary>
+    private string GetStatsProgressBarClass()
+    {
+        var percentage = (_trackedChannelCount / 50.0) * 100;
+        return percentage switch
+        {
+            >= 90 => "bg-danger",
+            >= 70 => "bg-warning",
+            >= 50 => "bg-info",
+            _ => "bg-success"
+        };
+    }
+}
+
+<style>
+    /* Custom styling for the channels page */
+
+    /* Statistics card improvements */
+    .card .border-end {
+        border-right: 1px solid var(--bs-border-color) !important;
+    }
+
+    /* Progress bar enhancements */
+    .progress {
+        background-color: var(--bs-secondary-bg);
+    }
+
+    /* Quick action buttons */
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    /* Icon spacing improvements */
+    .card-title i {
+        color: var(--bs-primary);
+    }
+
+    /* Feature list styling */
+    .list-unstyled .bi-check-circle {
+        font-size: 0.9rem;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 992px) {
+        .col-lg-8, .col-lg-4
+
+    {
+        margin-bottom: 1.5rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    }
+
+    @@media (max-width: 576px) {
+        .d-flex.justify-content-between.align-items-center
+
+    {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .d-flex.justify-content-between.align-items-center > div:first-child {
+        margin-bottom: 1rem;
+    }
+
+    }
+
+    /* Animation for statistics updates */
+    .progress-bar {
+        transition: width 0.6s ease;
+    }
+
+    /* Card header icon color theming */
+    [data-bs-theme="dark"] .card-title i {
+        color: var(--bs-primary-text-emphasis);
+    }
+</style>
