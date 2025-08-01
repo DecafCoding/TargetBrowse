@@ -17,13 +17,13 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <!-- Channel Search Component -->
+        <!-- Channel List Component (moved to top) -->
         <div class="mb-4">
-            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
+            <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
         </div>
 
-        <!-- Channel List Component -->
-        <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
+        <!-- Channel Search Component (moved below list) -->
+        <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
     </div>
 
     <div class="col-lg-4">
@@ -38,11 +38,7 @@
             <div class="card-body">
                 <div class="mb-3">
                     <strong><i class="bi bi-search text-primary me-2"></i>Search Methods:</strong>
-                    <ul class="small text-muted mt-1 mb-0">
-                        <li>Enter channel name (e.g., "TED")</li>
-                        <li>Paste YouTube channel URL</li>
-                        <li>Use creator's exact channel name</li>
-                    </ul>
+                    <span class="text-muted small">Enter a channel name or YouTube channel URL</span>
                 </div>
                 <div class="mb-3">
                     <strong><i class="bi bi-bell text-success me-2"></i>Smart Suggestions:</strong>
@@ -56,58 +52,6 @@
                     <strong><i class="bi bi-sliders text-info me-2"></i>Quality Control:</strong>
                     <span class="text-muted small">Remove channels anytime to keep your list curated</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Channel Statistics -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>
-                    Your Channel Stats
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <h4 class="text-primary mb-1">@_trackedChannelCount</h4>
-                            <small class="text-muted">Channels Tracked</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <h4 class="text-success mb-1">@(50 - _trackedChannelCount)</h4>
-                        <small class="text-muted">Slots Available</small>
-                    </div>
-                </div>
-
-                @if (_trackedChannelCount > 0)
-                {
-                    <div class="mt-3 pt-3 border-top">
-                        <div class="progress mb-2" style="height: 8px;">
-                            <div class="progress-bar @GetStatsProgressBarClass()"
-                                 role="progressbar"
-                                 style="width: @((_trackedChannelCount / 50.0) * 100)%"
-                                 aria-valuenow="@_trackedChannelCount"
-                                 aria-valuemin="0"
-                                 aria-valuemax="50">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <small class="text-muted">@_trackedChannelCount of 50 used</small>
-                            @if (_trackedChannelCount >= 45)
-                            {
-                                <small class="text-warning">
-                                    <i class="bi bi-exclamation-triangle"></i> Nearly full
-                                </small>
-                            }
-                            else if (_trackedChannelCount >= 25)
-                            {
-                                <small class="text-info">Half full</small>
-                            }
-                        </div>
-                    </div>
-                }
             </div>
         </div>
 
@@ -158,10 +102,6 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-primary btn-sm" disabled>
-                        <i class="bi bi-download me-2"></i>
-                        Export Channel List
-                    </button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
                         <i class="bi bi-upload me-2"></i>
                         Import Channels
@@ -183,17 +123,16 @@
 @code {
     private ChannelSearch? ChannelSearchComponent;
     private ChannelList? ChannelListComponent;
-    private int _trackedChannelCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        // Initialize with mock data for now
-        await UpdateChannelCount();
+        // Component initialization
+        await Task.CompletedTask;
     }
 
     /// <summary>
     /// Handles when a new channel is successfully added.
-    /// Refreshes the channel list and updates statistics.
+    /// Refreshes the channel list to show the new channel.
     /// </summary>
     private async Task HandleChannelAdded()
     {
@@ -201,59 +140,21 @@
         {
             await ChannelListComponent.RefreshAsync();
         }
-        await UpdateChannelCount();
     }
 
     /// <summary>
     /// Handles when channels change (loaded, added, removed, etc.).
-    /// Updates the statistics display.
+    /// Can be used for additional coordination between components.
     /// </summary>
     private async Task HandleChannelsChanged()
     {
-        await UpdateChannelCount();
-    }
-
-    /// <summary>
-    /// Updates the tracked channel count for statistics display.
-    /// For now, uses mock count - will implement real service calls in next phase.
-    /// </summary>
-    private async Task UpdateChannelCount()
-    {
-        // Mock channel count for UI demonstration
-        // Will replace with real service call: await ChannelService.GetTrackedChannelCountAsync(userId);
-        await Task.Delay(10); // Simulate async call
-        _trackedChannelCount = 4; // Mock count based on our sample data
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Gets the appropriate CSS class for the statistics progress bar.
-    /// </summary>
-    private string GetStatsProgressBarClass()
-    {
-        var percentage = (_trackedChannelCount / 50.0) * 100;
-        return percentage switch
-        {
-            >= 90 => "bg-danger",
-            >= 70 => "bg-warning",
-            >= 50 => "bg-info",
-            _ => "bg-success"
-        };
+        // Future: Could update global channel count, analytics, etc.
+        await Task.CompletedTask;
     }
 }
 
 <style>
     /* Custom styling for the channels page */
-
-    /* Statistics card improvements */
-    .card .border-end {
-        border-right: 1px solid var(--bs-border-color) !important;
-    }
-
-    /* Progress bar enhancements */
-    .progress {
-        background-color: var(--bs-secondary-bg);
-    }
 
     /* Quick action buttons */
     .btn:disabled {
@@ -297,11 +198,6 @@
         margin-bottom: 1rem;
     }
 
-    }
-
-    /* Animation for statistics updates */
-    .progress-bar {
-        transition: width 0.6s ease;
     }
 
     /* Card header icon color theming */
