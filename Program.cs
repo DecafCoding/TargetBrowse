@@ -1,3 +1,4 @@
+using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,8 @@ using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
 using TargetBrowse.Services;
+using TargetBrowse.Services.YouTube.Models;
+using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse;
 
@@ -76,6 +79,13 @@ public class Program
         // Channels Feature Services
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
         builder.Services.AddScoped<Features.Channels.Data.IChannelRepository, Features.Channels.Data.ChannelRepository>();
+
+        // YouTube API Configuration
+        builder.Services.Configure<YouTubeApiSettings>(
+            builder.Configuration.GetSection("YouTube"));
+
+        // YouTube Service
+        builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>();
 
         var app = builder.Build();
 

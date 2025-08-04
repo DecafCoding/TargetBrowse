@@ -6,7 +6,7 @@ namespace TargetBrowse.Services.YouTube;
 /// Service interface for YouTube Data API v3 integration.
 /// Handles channel search, information retrieval, and API quota management.
 /// </summary>
-public interface IYouTubeService
+public interface IYouTubeApiService
 {
     /// <summary>
     /// Searches for YouTube channels by name or keyword.
