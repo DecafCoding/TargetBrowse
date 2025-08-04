@@ -11,11 +11,11 @@ namespace TargetBrowse.Services.YouTube;
 /// Implementation of YouTube Data API v3 service.
 /// Handles channel search, information retrieval, and quota management.
 /// </summary>
-public class YouTubeService : IYouTubeService, IDisposable
+public class YouTubeApiService : IYouTubeApiService, IDisposable
 {
-    private readonly YouTubeService _youTubeClient;
+    private readonly Google.Apis.YouTube.v3.YouTubeService _youTubeClient;
     private readonly YouTubeApiSettings _settings;
-    private readonly ILogger<YouTubeService> _logger;
+    private readonly ILogger<YouTubeApiService> _logger;
     private readonly SemaphoreSlim _rateLimitSemaphore;
 
     // Simple in-memory quota tracking for MVP
@@ -26,7 +26,7 @@ public class YouTubeService : IYouTubeService, IDisposable
     private const int SearchCost = 100;
     private const int ChannelDetailsCost = 1;
 
-    public YouTubeService(IOptions<YouTubeApiSettings> settings, ILogger<YouTubeService> logger)
+    public YouTubeApiService(IOptions<YouTubeApiSettings> settings, ILogger<YouTubeApiService> logger)
     {
         _settings = settings.Value;
         _logger = logger;
@@ -97,7 +97,7 @@ public class YouTubeService : IYouTubeService, IDisposable
                             Name = searchItem.Snippet.Title,
                             Description = searchItem.Snippet.Description ?? string.Empty,
                             ThumbnailUrl = searchItem.Snippet.Thumbnails?.Default__?.Url,
-                            PublishedAt = searchItem.Snippet.PublishedAt?.ToDateTime() ?? DateTime.MinValue,
+                            PublishedAt = searchItem.Snippet.PublishedAtDateTimeOffset?.DateTime ?? DateTime.MinValue,
                             SubscriberCount = detailedChannel?.SubscriberCount,
                             VideoCount = detailedChannel?.VideoCount
                         };
@@ -168,7 +168,7 @@ public class YouTubeService : IYouTubeService, IDisposable
                     Name = channel.Snippet.Title,
                     Description = channel.Snippet.Description ?? string.Empty,
                     ThumbnailUrl = channel.Snippet.Thumbnails?.Default__?.Url,
-                    PublishedAt = channel.Snippet.PublishedAt?.ToDateTime() ?? DateTime.MinValue,
+                    PublishedAt = channel.Snippet.PublishedAtDateTimeOffset?.DateTime ?? DateTime.MinValue,
                     SubscriberCount = channel.Statistics?.SubscriberCount,
                     VideoCount = channel.Statistics?.VideoCount,
                     CustomUrl = channel.Snippet.CustomUrl
@@ -230,7 +230,7 @@ public class YouTubeService : IYouTubeService, IDisposable
                     Name = channel.Snippet.Title,
                     Description = channel.Snippet.Description ?? string.Empty,
                     ThumbnailUrl = channel.Snippet.Thumbnails?.Default__?.Url,
-                    PublishedAt = channel.Snippet.PublishedAt?.ToDateTime() ?? DateTime.MinValue,
+                    PublishedAt = channel.Snippet.PublishedAtDateTimeOffset?.DateTime ?? DateTime.MinValue,
                     SubscriberCount = channel.Statistics?.SubscriberCount,
                     VideoCount = channel.Statistics?.VideoCount,
                     CustomUrl = channel.Snippet.CustomUrl
