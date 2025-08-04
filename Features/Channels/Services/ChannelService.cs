@@ -1,143 +1,41 @@
-﻿using TargetBrowse.Features.Channels.Models;
+﻿using Google.Apis.YouTube.v3;
+using Microsoft.Extensions.Logging;
+using TargetBrowse.Features.Channels.Data;
+using TargetBrowse.Features.Channels.Models;
+using TargetBrowse.Features.Channels.Utilities;
 using TargetBrowse.Services;
+using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
 
 /// <summary>
-/// Dummy implementation of channel service for UI testing and review.
-/// Provides realistic mock data and simulated delays to demonstrate UI behavior.
-/// This will be replaced with real implementation in the next phase.
+/// Real implementation of channel service with YouTube API integration.
+/// Handles channel search, tracking, and database operations.
 /// </summary>
 public class ChannelService : IChannelService
 {
+    private readonly IYouTubeService _youTubeService;
+    private readonly IChannelRepository _channelRepository;
     private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<ChannelService> _logger;
 
-    // Mock data stores for demonstration
-    private static readonly List<ChannelDisplayModel> _mockSearchDatabase = new();
-    private static readonly Dictionary<string, List<ChannelDisplayModel>> _userTrackedChannels = new();
+    private const int MaxChannelsPerUser = 50;
 
-    static ChannelService()
+    public ChannelService(
+        IYouTubeService youTubeService,
+        IChannelRepository channelRepository,
+        IMessageCenterService messageCenterService,
+        ILogger<ChannelService> logger)
     {
-        InitializeMockData();
-    }
-
-    public ChannelService(IMessageCenterService messageCenterService, ILogger<ChannelService> logger)
-    {
+        _youTubeService = youTubeService;
+        _channelRepository = channelRepository;
         _messageCenterService = messageCenterService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Simulates YouTube channel search with realistic results and delays.
-    /// </summary>
-    public async Task<List<ChannelDisplayModel>> SearchChannelsAsync(string searchQuery)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(searchQuery))
-                return new List<ChannelDisplayModel>();
-
-            // Simulate API delay
-            await Task.Delay(Random.Shared.Next(800, 2000));
-
-            // Filter mock data based on search query
-            var results = _mockSearchDatabase
-                .Where(c => c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                           c.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-                .Take(5)
-                .ToList();
-
-            // If no matches, generate dynamic results based on search term
-            if (!results.Any())
-            {
-                results = GenerateDynamicSearchResults(searchQuery);
-            }
-
-            _logger.LogInformation("Mock search for '{SearchQuery}' returned {ResultCount} channels", searchQuery, results.Count);
-            return results;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during mock channel search for query: {SearchQuery}", searchQuery);
-            await _messageCenterService.ShowErrorAsync("Search failed. Please try again.");
-            return new List<ChannelDisplayModel>();
-        }
-    }
-
-    /// <summary>
-    /// Simulates adding a channel to user's tracking list with validation.
-    /// </summary>
-    public async Task<bool> AddChannelToTrackingAsync(string userId, AddChannelModel channelModel)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                await _messageCenterService.ShowErrorAsync("User authentication required.");
-                return false;
-            }
-
-            if (!channelModel.IsValid())
-            {
-                await _messageCenterService.ShowErrorAsync("Invalid channel data.");
-                return false;
-            }
-
-            // Simulate processing delay
-            await Task.Delay(Random.Shared.Next(500, 1200));
-
-            // Check current tracking count
-            var currentCount = await GetTrackedChannelCountAsync(userId);
-            if (currentCount >= 50)
-            {
-                await _messageCenterService.ShowWarningAsync("You have reached the maximum limit of 50 tracked channels. Remove some channels before adding new ones.");
-                return false;
-            }
-
-            // Check for duplicates
-            if (await IsChannelTrackedAsync(userId, channelModel.YouTubeChannelId))
-            {
-                await _messageCenterService.ShowWarningAsync($"Channel '{channelModel.Name}' is already in your tracking list.");
-                return false;
-            }
-
-            // Add to mock tracking list
-            if (!_userTrackedChannels.ContainsKey(userId))
-            {
-                _userTrackedChannels[userId] = new List<ChannelDisplayModel>();
-            }
-
-            var trackedChannel = new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = channelModel.YouTubeChannelId,
-                Name = channelModel.Name,
-                Description = channelModel.Description ?? "No description available",
-                ThumbnailUrl = channelModel.ThumbnailUrl,
-                SubscriberCount = channelModel.SubscriberCount,
-                VideoCount = channelModel.VideoCount,
-                PublishedAt = channelModel.PublishedAt,
-                TrackedSince = DateTime.UtcNow,
-                IsTracked = true
-            };
-
-            _userTrackedChannels[userId].Add(trackedChannel);
-
-            await _messageCenterService.ShowSuccessAsync($"Channel '{channelModel.Name}' added to your tracking list!");
-            _logger.LogInformation("User {UserId} added channel: {ChannelName}", userId, channelModel.Name);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error adding channel {ChannelName} for user {UserId}", channelModel.Name, userId);
-            await _messageCenterService.ShowErrorAsync("Failed to add channel. Please try again.");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Simulates removing a channel from user's tracking list.
+    /// Removes a channel from the user's tracking list.
     /// </summary>
     public async Task<bool> RemoveChannelFromTrackingAsync(string userId, Guid channelId)
     {
@@ -149,27 +47,35 @@ public class ChannelService : IChannelService
                 return false;
             }
 
-            // Simulate processing delay
-            await Task.Delay(Random.Shared.Next(300, 800));
+            if (channelId == Guid.Empty)
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid channel selected.");
+                return false;
+            }
 
-            if (!_userTrackedChannels.ContainsKey(userId))
+            // Get the channel information for feedback
+            var userChannel = await _channelRepository.GetUserChannelRelationshipAsync(userId, channelId);
+            if (userChannel?.Channel == null)
             {
                 await _messageCenterService.ShowWarningAsync("Channel not found in your tracking list.");
                 return false;
             }
 
-            var channel = _userTrackedChannels[userId].FirstOrDefault(c => c.Id == channelId);
-            if (channel == null)
+            // Remove the tracking relationship
+            var success = await _channelRepository.RemoveChannelFromUserTrackingAsync(userId, channelId);
+
+            if (success)
+            {
+                await _messageCenterService.ShowSuccessAsync($"Channel '{userChannel.Channel.Name}' removed from your tracking list.");
+                _logger.LogInformation("User {UserId} removed channel: {ChannelName} ({ChannelId})",
+                    userId, userChannel.Channel.Name, channelId);
+                return true;
+            }
+            else
             {
                 await _messageCenterService.ShowWarningAsync("Channel not found in your tracking list.");
                 return false;
             }
-
-            _userTrackedChannels[userId].Remove(channel);
-
-            await _messageCenterService.ShowSuccessAsync($"Channel '{channel.Name}' removed from your tracking list.");
-            _logger.LogInformation("User {UserId} removed channel: {ChannelName}", userId, channel.Name);
-            return true;
         }
         catch (Exception ex)
         {
@@ -180,52 +86,55 @@ public class ChannelService : IChannelService
     }
 
     /// <summary>
-    /// Gets all tracked channels for a user.
+    /// Gets all channels tracked by the specified user.
     /// </summary>
     public async Task<List<ChannelDisplayModel>> GetTrackedChannelsAsync(string userId)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(userId))
-                return new List<ChannelDisplayModel>();
-
-            // Simulate loading delay
-            await Task.Delay(Random.Shared.Next(200, 600));
-
-            if (!_userTrackedChannels.ContainsKey(userId))
             {
-                // Initialize with some sample data for demo
-                _userTrackedChannels[userId] = GenerateInitialTrackedChannels();
+                return new List<ChannelDisplayModel>();
             }
 
-            var channels = _userTrackedChannels[userId]
-                .OrderByDescending(c => c.TrackedSince)
-                .ToList();
+            var trackedChannels = await _channelRepository.GetTrackedChannelsByUserAsync(userId);
+            var displayModels = new List<ChannelDisplayModel>();
 
-            _logger.LogDebug("Retrieved {ChannelCount} tracked channels for user {UserId}", channels.Count, userId);
-            return channels;
+            foreach (var channel in trackedChannels)
+            {
+                // Get the tracking relationship for each channel
+                var userChannel = await _channelRepository.GetUserChannelRelationshipAsync(userId, channel.Id);
+
+                if (userChannel != null)
+                {
+                    displayModels.Add(ChannelMappingService.MapToDisplayModel(channel, userChannel));
+                }
+                else
+                {
+                    // Fallback if relationship not found
+                    displayModels.Add(ChannelMappingService.MapToDisplayModel(channel, isTracked: true));
+                }
+            }
+
+            _logger.LogDebug("Retrieved {ChannelCount} tracked channels for user {UserId}", displayModels.Count, userId);
+            return displayModels;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving tracked channels for user {UserId}", userId);
-            await _messageCenterService.ShowErrorAsync("Failed to load tracked channels. Please refresh the page.");
+            await _messageCenterService.ShowErrorAsync("Failed to load tracked channels. Please refresh the page and try again.");
             return new List<ChannelDisplayModel>();
         }
     }
 
     /// <summary>
-    /// Gets the count of tracked channels for a user.
+    /// Gets the current count of tracked channels for a user.
     /// </summary>
     public async Task<int> GetTrackedChannelCountAsync(string userId)
     {
         try
         {
-            await Task.Delay(50); // Minimal delay for count queries
-
-            if (!_userTrackedChannels.ContainsKey(userId))
-                return 0;
-
-            return _userTrackedChannels[userId].Count;
+            return await _channelRepository.GetTrackedChannelCountAsync(userId);
         }
         catch (Exception ex)
         {
@@ -235,19 +144,13 @@ public class ChannelService : IChannelService
     }
 
     /// <summary>
-    /// Checks if a channel is already tracked by the user.
+    /// Checks if a channel is already being tracked by the user.
     /// </summary>
     public async Task<bool> IsChannelTrackedAsync(string userId, string youTubeChannelId)
     {
         try
         {
-            await Task.Delay(50); // Minimal delay for existence checks
-
-            if (!_userTrackedChannels.ContainsKey(userId))
-                return false;
-
-            return _userTrackedChannels[userId]
-                .Any(c => c.YouTubeChannelId.Equals(youTubeChannelId, StringComparison.OrdinalIgnoreCase));
+            return await _channelRepository.IsChannelTrackedByUserAsync(userId, youTubeChannelId);
         }
         catch (Exception ex)
         {
@@ -263,18 +166,27 @@ public class ChannelService : IChannelService
     {
         try
         {
-            // Simulate API delay
-            await Task.Delay(Random.Shared.Next(300, 800));
-
-            var channel = _mockSearchDatabase
-                .FirstOrDefault(c => c.YouTubeChannelId.Equals(youTubeChannelId, StringComparison.OrdinalIgnoreCase));
-
-            if (channel != null)
+            if (string.IsNullOrWhiteSpace(youTubeChannelId))
             {
-                _logger.LogDebug("Retrieved details for channel {ChannelId}", youTubeChannelId);
+                return null;
             }
 
-            return channel;
+            // First check our database
+            var channelEntity = await _channelRepository.GetChannelByYouTubeIdAsync(youTubeChannelId);
+            if (channelEntity != null)
+            {
+                return ChannelMappingService.MapToDisplayModel(channelEntity);
+            }
+
+            // If not in database, get from YouTube API
+            var apiResult = await _youTubeService.GetChannelByIdAsync(youTubeChannelId);
+
+            if (!apiResult.IsSuccess || apiResult.Data == null)
+            {
+                return null;
+            }
+
+            return ChannelMappingService.MapToDisplayModel(apiResult.Data);
         }
         catch (Exception ex)
         {
@@ -284,190 +196,187 @@ public class ChannelService : IChannelService
     }
 
     /// <summary>
-    /// Initializes the mock search database with realistic channel data.
+    /// Searches for a channel using URL parsing results.
     /// </summary>
-    private static void InitializeMockData()
+    private async Task<YouTubeApiResult<YouTubeChannelResponse?>> SearchByUrlAsync(YouTubeUrlParser.ParseResult parseResult)
     {
-        _mockSearchDatabase.AddRange(new[]
+        return parseResult.Type switch
         {
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC_x5XG1OV2P6uZZ5FSM9Ttw",
-                Name = "Google for Developers",
-                Description = "Google for Developers is where you can discover all the ways you can use Google developer tools, platforms, and APIs to create amazing experiences for users and grow your business.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/4285F4/FFFFFF?text=G",
-                SubscriberCount = 2340000,
-                VideoCount = 4500,
-                PublishedAt = DateTime.UtcNow.AddYears(-8)
-            },
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCRPMAPhquse1Ah79DI90rNg",
-                Name = "Microsoft Visual Studio",
-                Description = "The official channel for Microsoft Visual Studio. Tips, tricks, and tutorials for developers using Visual Studio and .NET technologies.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/5C2D91/FFFFFF?text=VS",
-                SubscriberCount = 890000,
-                VideoCount = 2100,
-                PublishedAt = DateTime.UtcNow.AddYears(-6)
-            },
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC0vBXGSyV14uvJ4hECDOl0Q",
-                Name = "Traversy Media",
-                Description = "Web development and programming tutorials. HTML, CSS, JavaScript, React, Node.js and more. Practical projects and tips for developers.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/FF6B35/FFFFFF?text=TM",
-                SubscriberCount = 2100000,
-                VideoCount = 1200,
-                PublishedAt = DateTime.UtcNow.AddYears(-12)
-            },
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCWv7vMbMWH4-V0ZXdmDpPBA",
-                Name = "Programming with Mosh",
-                Description = "Code with Mosh is a platform for learning programming and software engineering skills. Clear, concise tutorials for modern developers.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/1DB954/FFFFFF?text=M",
-                SubscriberCount = 3200000,
-                VideoCount = 850,
-                PublishedAt = DateTime.UtcNow.AddYears(-9)
-            },
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCMXOVXQVkjH-23FBjKDbMzA",
-                Name = "TED",
-                Description = "The TED Talks channel features the best talks and performances from the TED Conference, where the world's leading thinkers give the talk of their lives.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/E62B1E/FFFFFF?text=TED",
-                SubscriberCount = 22500000,
-                VideoCount = 5200,
-                PublishedAt = DateTime.UtcNow.AddYears(-15)
-            },
-            new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCJbPGzawDH1njbqV-D5HqKw",
-                Name = "thenewboston",
-                Description = "Educational videos on programming, web development, and computer science. Thousands of free tutorials to help you learn to code.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/2E7D32/FFFFFF?text=TNB",
-                SubscriberCount = 2700000,
-                VideoCount = 4300,
-                PublishedAt = DateTime.UtcNow.AddYears(-13)
-            }
-        });
-    }
-
-    /// <summary>
-    /// Generates dynamic search results when no predefined matches are found.
-    /// </summary>
-    private static List<ChannelDisplayModel> GenerateDynamicSearchResults(string searchQuery)
-    {
-        var results = new List<ChannelDisplayModel>();
-        var random = new Random();
-        var resultCount = random.Next(2, 6);
-
-        for (int i = 0; i < resultCount; i++)
-        {
-            var subscriberCount = (ulong)random.Next(1000, 5_000_000);
-            var videoCount = (ulong)random.Next(50, 2000);
-            var channelAge = random.Next(1, 10);
-
-            results.Add(new ChannelDisplayModel
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = $"UC{Guid.NewGuid().ToString("N")[..22]}",
-                Name = $"{searchQuery} {GetChannelSuffix(i)}",
-                Description = $"This channel focuses on {searchQuery.ToLower()} content and provides educational videos, tutorials, and insights for viewers interested in {searchQuery.ToLower()}. Regular uploads with high-quality content.",
-                ThumbnailUrl = $"https://via.placeholder.com/88x88/{GetRandomColor()}/FFFFFF?text={searchQuery.Take(2).ToArray()[0]}",
-                SubscriberCount = subscriberCount,
-                VideoCount = videoCount,
-                PublishedAt = DateTime.UtcNow.AddYears(-channelAge),
-                IsTracked = false
-            });
-        }
-
-        return results;
-    }
-
-    /// <summary>
-    /// Generates initial tracked channels for new users to demonstrate the UI.
-    /// </summary>
-    private static List<ChannelDisplayModel> GenerateInitialTrackedChannels()
-    {
-        return new List<ChannelDisplayModel>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC_x5XG1OV2P6uZZ5FSM9Ttw",
-                Name = "Google for Developers",
-                Description = "Google for Developers is where you can discover all the ways you can use Google developer tools, platforms, and APIs.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/4285F4/FFFFFF?text=G",
-                SubscriberCount = 2340000,
-                VideoCount = 4500,
-                PublishedAt = DateTime.UtcNow.AddYears(-8),
-                TrackedSince = DateTime.UtcNow.AddDays(-45),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCRPMAPhquse1Ah79DI90rNg",
-                Name = "Microsoft Visual Studio",
-                Description = "The official channel for Microsoft Visual Studio. Tips, tricks, and tutorials for developers.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/5C2D91/FFFFFF?text=VS",
-                SubscriberCount = 890000,
-                VideoCount = 2100,
-                PublishedAt = DateTime.UtcNow.AddYears(-6),
-                TrackedSince = DateTime.UtcNow.AddDays(-23),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC0vBXGSyV14uvJ4hECDOl0Q",
-                Name = "Traversy Media",
-                Description = "Web development and programming tutorials. HTML, CSS, JavaScript, React, Node.js and more.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/FF6B35/FFFFFF?text=TM",
-                SubscriberCount = 2100000,
-                VideoCount = 1200,
-                PublishedAt = DateTime.UtcNow.AddYears(-12),
-                TrackedSince = DateTime.UtcNow.AddDays(-12),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCWv7vMbMWH4-V0ZXdmDpPBA",
-                Name = "Programming with Mosh",
-                Description = "Code with Mosh is a platform for learning programming and software engineering skills.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/1DB954/FFFFFF?text=M",
-                SubscriberCount = 3200000,
-                VideoCount = 850,
-                PublishedAt = DateTime.UtcNow.AddYears(-9),
-                TrackedSince = DateTime.UtcNow.AddDays(-5),
-                IsTracked = true
-            }
+            YouTubeUrlParser.ParseType.ChannelId => await _youTubeService.GetChannelByIdAsync(parseResult.ChannelId!),
+            YouTubeUrlParser.ParseType.Username => await _youTubeService.GetChannelByUsernameAsync(parseResult.Username!),
+            YouTubeUrlParser.ParseType.Handle => await _youTubeService.GetChannelByHandleAsync(parseResult.Handle!),
+            YouTubeUrlParser.ParseType.CustomUrl => await _youTubeService.GetChannelByCustomUrlAsync(parseResult.CustomUrl!),
+            _ => YouTubeApiResult<YouTubeChannelResponse?>.Failure("Unsupported URL format.")
         };
     }
 
     /// <summary>
-    /// Helper method to get channel name suffixes for generated results.
+    /// Handles API errors and provides appropriate user feedback.
     /// </summary>
-    private static string GetChannelSuffix(int index)
+    private async Task HandleApiError<T>(YouTubeApiResult<T> result, string searchQuery)
     {
-        var suffixes = new[] { "Official", "Academy", "Tutorials", "Hub", "Channel", "TV", "Studio", "Learning" };
-        return suffixes[index % suffixes.Length];
+        if (result.IsQuotaExceeded)
+        {
+            await _messageCenterService.ShowApiLimitAsync("YouTube Data API", DateTime.UtcNow.AddDays(1));
+        }
+        else if (result.IsInvalidChannel)
+        {
+            await _messageCenterService.ShowWarningAsync($"Channel not found for '{searchQuery}'. Please check the URL or try a different search term.");
+        }
+        else
+        {
+            await _messageCenterService.ShowErrorAsync(result.ErrorMessage ?? "An error occurred while searching YouTube. Please try again.");
+        }
+
+        _logger.LogWarning("YouTube API error for search '{SearchQuery}': {ErrorMessage}",
+            searchQuery, result.ErrorMessage);
+    }
+    /// Searches for YouTube channels by name or analyzes a YouTube URL.
+    /// </summary>
+    public async Task<List<ChannelDisplayModel>> SearchChannelsAsync(string searchQuery)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+            {
+                return new List<ChannelDisplayModel>();
+            }
+
+            // Parse the search query to determine if it's a URL or search term
+            var parseResult = YouTubeUrlParser.Parse(searchQuery);
+
+            if (!parseResult.IsValid)
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid search query. Please enter a channel name or valid YouTube URL.");
+                return new List<ChannelDisplayModel>();
+            }
+
+            YouTubeApiResult<List<YouTubeChannelResponse>>? searchResult = null;
+            YouTubeApiResult<YouTubeChannelResponse?>? directResult = null;
+
+            if (parseResult.IsUrl)
+            {
+                // Handle URL-based searches
+                directResult = await SearchByUrlAsync(parseResult);
+            }
+            else
+            {
+                // Handle text-based searches
+                searchResult = await _youTubeService.SearchChannelsAsync(parseResult.SearchTerm);
+            }
+
+            // Process results
+            var channels = new List<YouTubeChannelResponse>();
+
+            if (directResult != null)
+            {
+                if (!directResult.IsSuccess)
+                {
+                    await HandleApiError(directResult, parseResult.SearchTerm);
+                    return new List<ChannelDisplayModel>();
+                }
+
+                if (directResult.Data != null)
+                {
+                    channels.Add(directResult.Data);
+                }
+            }
+            else if (searchResult != null)
+            {
+                if (!searchResult.IsSuccess)
+                {
+                    await HandleApiError(searchResult, parseResult.SearchTerm);
+                    return new List<ChannelDisplayModel>();
+                }
+
+                channels.AddRange(searchResult.Data ?? new List<YouTubeChannelResponse>());
+            }
+
+            if (!channels.Any())
+            {
+                await _messageCenterService.ShowInfoAsync($"No channels found for '{searchQuery}'. Try a different search term or check the URL.");
+                return new List<ChannelDisplayModel>();
+            }
+
+            // Convert to display models
+            var displayModels = channels
+                .Where(ChannelMappingService.IsValidYouTubeChannelResponse)
+                .Select(channel => ChannelMappingService.MapToDisplayModel(channel))
+                .ToList();
+
+            _logger.LogInformation("YouTube search for '{SearchQuery}' returned {ResultCount} channels",
+                searchQuery, displayModels.Count);
+
+            return displayModels;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during channel search for query: {SearchQuery}", searchQuery);
+            await _messageCenterService.ShowErrorAsync("An error occurred while searching for channels. Please try again.");
+            return new List<ChannelDisplayModel>();
+        }
     }
 
     /// <summary>
-    /// Helper method to get random colors for placeholder thumbnails.
+    /// Adds a channel to the user's tracking list.
     /// </summary>
-    private static string GetRandomColor()
+    public async Task<bool> AddChannelToTrackingAsync(string userId, AddChannelModel channelModel)
     {
-        var colors = new[] { "0066CC", "E91E63", "9C27B0", "673AB7", "3F51B5", "2196F3", "03A9F4", "00BCD4", "009688", "4CAF50", "8BC34A", "CDDC39", "FF9800", "FF5722" };
-        return colors[Random.Shared.Next(colors.Length)];
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                await _messageCenterService.ShowErrorAsync("User authentication required.");
+                return false;
+            }
+
+            if (!ChannelMappingService.IsValidAddChannelModel(channelModel))
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid channel data. Please try searching again.");
+                return false;
+            }
+
+            // Check current tracking count
+            var currentCount = await _channelRepository.GetTrackedChannelCountAsync(userId);
+            if (currentCount >= MaxChannelsPerUser)
+            {
+                await _messageCenterService.ShowWarningAsync($"You have reached the maximum limit of {MaxChannelsPerUser} tracked channels. Remove some channels before adding new ones.");
+                return false;
+            }
+
+            // Check for duplicates
+            if (await _channelRepository.IsChannelTrackedByUserAsync(userId, channelModel.YouTubeChannelId))
+            {
+                await _messageCenterService.ShowWarningAsync($"Channel '{channelModel.Name}' is already in your tracking list.");
+                return false;
+            }
+
+            // Find or create the channel in the database
+            var channelEntity = await _channelRepository.FindOrCreateChannelAsync(
+                channelModel.YouTubeChannelId,
+                channelModel.Name,
+                channelModel.Description,
+                channelModel.ThumbnailUrl,
+                channelModel.SubscriberCount,
+                channelModel.VideoCount,
+                channelModel.PublishedAt);
+
+            // Add the user-channel relationship
+            await _channelRepository.AddChannelToUserTrackingAsync(userId, channelEntity.Id);
+
+            await _messageCenterService.ShowSuccessAsync($"Channel '{channelModel.Name}' added to your tracking list!");
+
+            _logger.LogInformation("User {UserId} added channel: {ChannelName} ({YouTubeChannelId})",
+                userId, channelModel.Name, channelModel.YouTubeChannelId);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding channel {ChannelName} for user {UserId}", channelModel.Name, userId);
+            await _messageCenterService.ShowErrorAsync("Failed to add channel. Please try again.");
+            return false;
+        }
     }
 }

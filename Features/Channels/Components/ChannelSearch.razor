@@ -25,7 +25,7 @@
                     <InputText @bind-Value="SearchModel.SearchQuery"
                                class="form-control"
                                id="searchQuery"
-                               placeholder="Enter channel name or paste YouTube channel URL"
+                               placeholder="Enter channel name or paste YouTube channel URL..."
                                disabled="@IsSearching" />
                     <button type="submit"
                             class="btn btn-primary"
@@ -44,7 +44,7 @@
                 <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
                 <div class="form-text">
                     <i class="bi bi-info-circle me-1"></i>
-                    You can search by channel name or paste a YouTube channel URL
+                    Search by channel name or paste a YouTube channel URL (youtube.com/channel/, youtube.com/, etc.)
                 </div>
             </div>
         </EditForm>
@@ -52,119 +52,80 @@
         <!-- Search Results -->
         @if (HasSearched)
         {
-            @if (IsSearching)
+            @if (SearchResults.Any())
             {
-                <!-- Loading State -->
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Searching channels...</span>
-                    </div>
-                    <p class="text-muted mt-2 mb-0">Searching YouTube for channels...</p>
-                </div>
-            }
-            else if (!SearchResults.Any())
-            {
-                <!-- No Results State -->
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <div>
-                        No channels found for "<strong>@LastSearchQuery</strong>".
-                        Try searching with different keywords or check the YouTube URL.
-                    </div>
-                </div>
-            }
-            else
-            {
-                <!-- Search Results -->
-                <div class="border-top pt-3">
-                    <h6 class="text-muted mb-3">
-                        Found @SearchResults.Count channel@(SearchResults.Count == 1 ? "" : "s") for "@LastSearchQuery"
+                <div class="mt-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Search Results (@SearchResults.Count found)
                     </h6>
-
+                    
                     <div class="row g-3">
                         @foreach (var channel in SearchResults)
                         {
                             <div class="col-12">
-                                <div class="card h-100 @(channel.IsTracked ? "border-success" : "")">
+                                <div class="card border">
                                     <div class="card-body">
                                         <div class="row align-items-center">
-                                            <!-- Channel Thumbnail -->
-                                            <div class="col-auto">
-                                                @if (!string.IsNullOrEmpty(channel.ThumbnailUrl))
-                                                {
-                                                    <img src="@channel.ThumbnailUrl"
-                                                         alt="@channel.Name thumbnail"
-                                                         class="rounded"
-                                                         style="width: 60px; height: 60px; object-fit: cover;" />
-                                                }
-                                                else
-                                                {
-                                                    <div class="bg-secondary rounded d-flex align-items-center justify-content-center"
-                                                         style="width: 60px; height: 60px;">
-                                                        <i class="bi bi-person-circle text-white" style="font-size: 1.5rem;"></i>
+                                            <!-- Channel Info -->
+                                            <div class="col-md-8">
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(channel.ThumbnailUrl))
+                                                    {
+                                                        <img src="@channel.ThumbnailUrl"
+                                                             alt="@channel.Name thumbnail"
+                                                             class="rounded me-3"
+                                                             style="width: 60px; height: 60px; object-fit: cover;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center"
+                                                             style="width: 60px; height: 60px;">
+                                                            <i class="bi bi-person-circle text-white fs-4"></i>
+                                                        </div>
+                                                    }
+                                                    <div>
+                                                        <h6 class="mb-1">@channel.Name</h6>
+                                                        <p class="text-muted small mb-1">@channel.ShortDescription</p>
+                                                        <div class="d-flex gap-3 small text-muted">
+                                                            <span>
+                                                                <i class="bi bi-people me-1"></i>
+                                                                @channel.SubscriberCountDisplay subscribers
+                                                            </span>
+                                                            <span>
+                                                                <i class="bi bi-play-circle me-1"></i>
+                                                                @channel.VideoCountDisplay videos
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                }
+                                                </div>
                                             </div>
 
-                                            <!-- Channel Information -->
-                                            <div class="col">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <h6 class="card-title mb-1">
-                                                            @channel.Name
-                                                            @if (channel.IsTracked)
-                                                            {
-                                                                <span class="badge bg-success ms-2">Tracked</span>
-                                                            }
-                                                        </h6>
-                                                        <div class="text-muted small mb-2">
-                                                            <i class="bi bi-people me-1"></i>
-                                                            @channel.SubscriberCountDisplay subscribers
-                                                            <span class="mx-2">•</span>
-                                                            <i class="bi bi-play-circle me-1"></i>
-                                                            @channel.VideoCountDisplay videos
-                                                        </div>
-                                                        <p class="card-text small text-muted mb-0">
-                                                            @channel.ShortDescription
-                                                        </p>
-                                                    </div>
-
-                                                    <!-- Action Buttons -->
-                                                    <div class="ms-3">
-                                                        <div class="d-flex flex-column gap-2">
-                                                            @if (!channel.IsTracked)
-                                                            {
-                                                                <button type="button"
-                                                                        class="btn btn-outline-primary btn-sm"
-                                                                        @onclick="() => AddToTracking(channel)"
-                                                                        disabled="@IsAddingChannel">
-                                                                    @if (IsAddingChannel && _channelBeingAdded?.YouTubeChannelId == channel.YouTubeChannelId)
-                                                                    {
-                                                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <i class="bi bi-plus-circle me-1"></i>
-                                                                    }
-                                                                    Add to Tracking
-                                                                </button>
-                                                            }
-                                                            else
-                                                            {
-                                                                <button type="button" class="btn btn-success btn-sm" disabled>
-                                                                    <i class="bi bi-check-circle me-1"></i>
-                                                                    Already Tracked
-                                                                </button>
-                                                            }
-
-                                                            <a href="@channel.YouTubeUrl"
-                                                               target="_blank"
-                                                               class="btn btn-outline-secondary btn-sm">
-                                                                <i class="bi bi-youtube me-1"></i>
-                                                                View on YouTube
-                                                            </a>
-                                                        </div>
-                                                    </div>
+                                            <!-- Action Buttons -->
+                                            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                                                <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                                                    <a href="@channel.YouTubeUrl"
+                                                       target="_blank"
+                                                       class="btn btn-outline-secondary btn-sm"
+                                                       title="View on YouTube">
+                                                        <i class="bi bi-youtube me-1"></i>
+                                                        View
+                                                    </a>
+                                                    <button type="button"
+                                                            class="btn btn-primary btn-sm"
+                                                            @onclick="() => AddChannelToTracking(channel)"
+                                                            disabled="@(IsAdding && _channelBeingAdded?.YouTubeChannelId == channel.YouTubeChannelId)">
+                                                        @if (IsAdding && _channelBeingAdded?.YouTubeChannelId == channel.YouTubeChannelId)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                            <text>Adding...</text>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-plus-circle me-1"></i>
+                                                            <text>Track</text>
+                                                        }
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -173,6 +134,17 @@
                             </div>
                         }
                     </div>
+                </div>
+            }
+            else if (!IsSearching)
+            {
+                <!-- No Results -->
+                <div class="mt-4 text-center py-4">
+                    <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3 text-muted">No channels found</h6>
+                    <p class="text-muted small mb-0">
+                        Try a different search term or check your URL format. Make sure the channel exists and is public.
+                    </p>
                 </div>
             }
         }
@@ -189,14 +161,12 @@
     private ChannelSearchModel SearchModel { get; set; } = new();
     private List<ChannelDisplayModel> SearchResults { get; set; } = new();
     private bool IsSearching { get; set; } = false;
-    private bool IsAddingChannel { get; set; } = false;
+    private bool IsAdding { get; set; } = false;
     private bool HasSearched { get; set; } = false;
-    private string LastSearchQuery { get; set; } = string.Empty;
     private ChannelDisplayModel? _channelBeingAdded;
 
     /// <summary>
     /// Handles the search form submission.
-    /// For now, shows mock data - will implement real search in next phase.
     /// </summary>
     private async Task HandleSearch()
     {
@@ -205,15 +175,20 @@
         try
         {
             IsSearching = true;
-            HasSearched = true;
-            LastSearchQuery = SearchModel.SearchQuery;
+            HasSearched = false;
+            SearchResults.Clear();
             StateHasChanged();
 
-            // Simulate API delay
-            await Task.Delay(1500);
+            // Perform the search
+            var results = await ChannelService.SearchChannelsAsync(SearchModel.SearchQuery);
+            SearchResults = results ?? new List<ChannelDisplayModel>();
+            HasSearched = true;
 
-            // Mock search results for UI demonstration
-            SearchResults = GenerateMockSearchResults(SearchModel.SearchQuery);
+            // Clear search form if results found
+            if (SearchResults.Any())
+            {
+                SearchModel.Reset();
+            }
         }
         finally
         {
@@ -223,74 +198,114 @@
     }
 
     /// <summary>
-    /// Handles adding a channel to the user's tracking list.
-    /// For now, shows UI feedback only - will implement real functionality in next phase.
+    /// Adds a channel to the user's tracking list.
     /// </summary>
-    private async Task AddToTracking(ChannelDisplayModel channel)
+    private async Task AddChannelToTracking(ChannelDisplayModel channel)
     {
-        if (IsAddingChannel) return;
+        if (IsAdding) return;
 
         try
         {
-            IsAddingChannel = true;
+            IsAdding = true;
             _channelBeingAdded = channel;
             StateHasChanged();
 
-            // Simulate adding to tracking
-            await Task.Delay(1000);
+            // Get current user
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Update the channel to show as tracked
-            channel.IsTracked = true;
-            channel.TrackedSince = DateTime.UtcNow;
-
-            // Notify parent component
-            if (OnChannelAdded.HasDelegate)
+            if (string.IsNullOrEmpty(userId))
             {
-                await OnChannelAdded.InvokeAsync();
+                // This shouldn't happen with [Authorize] attribute, but safety first
+                return;
             }
 
-            // Show success message (placeholder)
-            // Will integrate with MessageCenterService in next phase
+            // Convert to AddChannelModel and add to tracking
+            var addChannelModel = AddChannelModel.FromDisplayModel(channel);
+            var success = await ChannelService.AddChannelToTrackingAsync(userId, addChannelModel);
+
+            if (success)
+            {
+                // Remove the added channel from search results
+                SearchResults.Remove(channel);
+
+                // Notify parent component that a channel was added
+                if (OnChannelAdded.HasDelegate)
+                {
+                    await OnChannelAdded.InvokeAsync();
+                }
+            }
         }
         finally
         {
-            IsAddingChannel = false;
+            IsAdding = false;
             _channelBeingAdded = null;
             StateHasChanged();
         }
     }
+}
 
-    /// <summary>
-    /// Generates mock search results for UI demonstration.
-    /// Will be replaced with real YouTube API integration.
-    /// </summary>
-    private static List<ChannelDisplayModel> GenerateMockSearchResults(string searchQuery)
-    {
-        var random = new Random();
-        var mockChannels = new List<ChannelDisplayModel>();
+<style>
+    /* Search result cards */
+    .card.border {
+        border: 1px solid var(--bs-border-color) !important;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
 
-        // Generate 3-5 mock results based on search query
-        var resultCount = random.Next(3, 6);
-
-        for (int i = 0; i < resultCount; i++)
-        {
-            var subscriberCount = (ulong)random.Next(1000, 5_000_000);
-            var videoCount = (ulong)random.Next(50, 2000);
-
-            mockChannels.Add(new ChannelDisplayModel
-                {
-                    Id = Guid.NewGuid(),
-                    YouTubeChannelId = $"UC{Guid.NewGuid().ToString("N")[..22]}",
-                    Name = $"{searchQuery} Channel {i + 1}",
-                    Description = $"This is a mock channel description for {searchQuery}. This channel covers topics related to {searchQuery} and provides educational content for viewers interested in learning more about this subject.",
-                    ThumbnailUrl = $"https://via.placeholder.com/88x88/0066CC/FFFFFF?text={searchQuery[0]}",
-                    SubscriberCount = subscriberCount,
-                    VideoCount = videoCount,
-                    PublishedAt = DateTime.UtcNow.AddDays(-random.Next(365, 3650)),
-                    IsTracked = i == 0 && random.NextDouble() > 0.7 // Randomly make first result tracked sometimes
-                });
+        .card.border:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-color: var(--bs-primary);
         }
 
-        return mockChannels;
+    /* Channel thumbnail styling */
+    .card img {
+        border: 1px solid var(--bs-border-color);
     }
-}
+
+    /* Search input styling */
+    .input-group .form-control:focus {
+        border-color: var(--bs-primary);
+        box-shadow: none;
+    }
+
+    .input-group .btn-primary {
+        border-color: var(--bs-primary);
+    }
+
+    /* Loading states */
+    .btn:disabled {
+        cursor: not-allowed;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .card-body .row {
+            text-align: center;
+        }
+
+        .d-flex.align-items-center {
+            flex-direction: column;
+            text-align: center;
+        }
+
+            .d-flex.align-items-center img,
+            .d-flex.align-items-center > div:first-child {
+                margin-bottom: 1rem;
+                margin-right: 0 !important;
+            }
+
+        .btn-group-vertical .btn {
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .card.border {
+        border-color: var(--bs-gray-600) !important;
+    }
+
+        [data-bs-theme="dark"] .card.border:hover {
+            border-color: var(--bs-primary);
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+        }
+</style>

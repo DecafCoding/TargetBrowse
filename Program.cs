@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+
 using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
@@ -69,9 +70,12 @@ public class Program
         builder.Services.AddScoped<IThemeService, ThemeService>();
         builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
 
-        // Topic Management Feature Services
+        // Topic Feature Services
         builder.Services.AddScoped<Features.Topics.Services.ITopicService, Features.Topics.Services.TopicService>();
+
+        // Channels Feature Services
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
+        builder.Services.AddScoped<Features.Channels.Data.IChannelRepository, Features.Channels.Data.ChannelRepository>();
 
         var app = builder.Build();
 
