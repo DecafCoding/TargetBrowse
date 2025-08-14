@@ -252,12 +252,6 @@ public class ChannelRepository : IChannelRepository
                 existingChannel.SubscriberCount = subscriberCount;
                 existingChannel.VideoCount = videoCount;
 
-                // Only update description if provided and different
-                if (!string.IsNullOrWhiteSpace(description))
-                {
-                    existingChannel.ThumbnailUrl = description;
-                }
-
                 // Only update published date if provided and different
                 if (publishedAt.HasValue && publishedAt.Value != default)
                 {

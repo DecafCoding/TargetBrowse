@@ -41,7 +41,7 @@ public class ChannelMappingService
             Id = channelEntity.Id,
             YouTubeChannelId = channelEntity.YouTubeChannelId,
             Name = channelEntity.Name,
-            Description = "Channel description", // TODO: Fix when entity has proper Description field
+            Description = "Channel from our database", // TODO: Add Description field to ChannelEntity
             ThumbnailUrl = channelEntity.ThumbnailUrl,
             SubscriberCount = channelEntity.SubscriberCount,
             VideoCount = channelEntity.VideoCount,
@@ -61,7 +61,7 @@ public class ChannelMappingService
             Id = channelEntity.Id,
             YouTubeChannelId = channelEntity.YouTubeChannelId,
             Name = channelEntity.Name,
-            Description = channelEntity.ThumbnailUrl ?? string.Empty, // Note: Fix this mapping when entity is corrected
+            Description = "Channel from our database", // TODO: Add Description field to ChannelEntity
             ThumbnailUrl = channelEntity.ThumbnailUrl,
             SubscriberCount = channelEntity.SubscriberCount,
             VideoCount = channelEntity.VideoCount,
@@ -111,7 +111,6 @@ public class ChannelMappingService
     public static void UpdateChannelEntity(ChannelEntity channelEntity, YouTubeChannelResponse youTubeChannel)
     {
         channelEntity.Name = youTubeChannel.Name;
-        channelEntity.ThumbnailUrl = youTubeChannel.Description; // Note: Fix this mapping when entity is corrected
         channelEntity.ThumbnailUrl = youTubeChannel.ThumbnailUrl;
         channelEntity.SubscriberCount = youTubeChannel.SubscriberCount;
         channelEntity.VideoCount = youTubeChannel.VideoCount;
