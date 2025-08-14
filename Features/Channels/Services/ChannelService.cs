@@ -1,5 +1,4 @@
-﻿using Google.Apis.YouTube.v3;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Utilities;
@@ -32,6 +31,156 @@ public class ChannelService : IChannelService
         _channelRepository = channelRepository;
         _messageCenterService = messageCenterService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Searches for YouTube channels by name or analyzes a YouTube URL.
+    /// </summary>
+    public async Task<List<ChannelDisplayModel>> SearchChannelsAsync(string searchQuery)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+            {
+                return new List<ChannelDisplayModel>();
+            }
+
+            // Parse the search query to determine if it's a URL or search term
+            var parseResult = YouTubeUrlParser.Parse(searchQuery);
+
+            if (!parseResult.IsValid)
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid search query. Please enter a channel name or valid YouTube URL.");
+                return new List<ChannelDisplayModel>();
+            }
+
+            YouTubeApiResult<List<YouTubeChannelResponse>>? searchResult = null;
+            YouTubeApiResult<YouTubeChannelResponse?>? directResult = null;
+
+            if (parseResult.IsUrl)
+            {
+                // Handle URL-based searches
+                directResult = await SearchByUrlAsync(parseResult);
+            }
+            else
+            {
+                // Handle text-based searches
+                searchResult = await _youTubeService.SearchChannelsAsync(parseResult.SearchTerm);
+            }
+
+            // Process results
+            var channels = new List<YouTubeChannelResponse>();
+
+            if (directResult != null)
+            {
+                if (!directResult.IsSuccess)
+                {
+                    await HandleApiError(directResult, parseResult.SearchTerm);
+                    return new List<ChannelDisplayModel>();
+                }
+
+                if (directResult.Data != null)
+                {
+                    channels.Add(directResult.Data);
+                }
+            }
+            else if (searchResult != null)
+            {
+                if (!searchResult.IsSuccess)
+                {
+                    await HandleApiError(searchResult, parseResult.SearchTerm);
+                    return new List<ChannelDisplayModel>();
+                }
+
+                channels.AddRange(searchResult.Data ?? new List<YouTubeChannelResponse>());
+            }
+
+            if (!channels.Any())
+            {
+                await _messageCenterService.ShowInfoAsync($"No channels found for '{searchQuery}'. Try a different search term or check the URL.");
+                return new List<ChannelDisplayModel>();
+            }
+
+            // Convert to display models
+            var displayModels = channels
+                .Where(ChannelMappingService.IsValidYouTubeChannelResponse)
+                .Select(channel => ChannelMappingService.MapToDisplayModel(channel))
+                .ToList();
+
+            _logger.LogInformation("YouTube search for '{SearchQuery}' returned {ResultCount} channels",
+                searchQuery, displayModels.Count);
+
+            return displayModels;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during channel search for query: {SearchQuery}", searchQuery);
+            await _messageCenterService.ShowErrorAsync("An error occurred while searching for channels. Please try again.");
+            return new List<ChannelDisplayModel>();
+        }
+    }
+
+    /// <summary>
+    /// Adds a channel to the user's tracking list.
+    /// </summary>
+    public async Task<bool> AddChannelToTrackingAsync(string userId, AddChannelModel channelModel)
+    {
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                await _messageCenterService.ShowErrorAsync("User authentication required.");
+                return false;
+            }
+
+            if (!ChannelMappingService.IsValidAddChannelModel(channelModel))
+            {
+                await _messageCenterService.ShowErrorAsync("Invalid channel data. Please try searching again.");
+                return false;
+            }
+
+            // Check current tracking count
+            var currentCount = await _channelRepository.GetTrackedChannelCountAsync(userId);
+            if (currentCount >= MaxChannelsPerUser)
+            {
+                await _messageCenterService.ShowWarningAsync($"You have reached the maximum limit of {MaxChannelsPerUser} tracked channels. Remove some channels before adding new ones.");
+                return false;
+            }
+
+            // Check for duplicates
+            if (await _channelRepository.IsChannelTrackedByUserAsync(userId, channelModel.YouTubeChannelId))
+            {
+                await _messageCenterService.ShowWarningAsync($"Channel '{channelModel.Name}' is already in your tracking list.");
+                return false;
+            }
+
+            // Find or create the channel in the database
+            var channelEntity = await _channelRepository.FindOrCreateChannelAsync(
+                channelModel.YouTubeChannelId,
+                channelModel.Name,
+                channelModel.Description,
+                channelModel.ThumbnailUrl,
+                channelModel.SubscriberCount,
+                channelModel.VideoCount,
+                channelModel.PublishedAt);
+
+            // Add the user-channel relationship
+            await _channelRepository.AddChannelToUserTrackingAsync(userId, channelEntity.Id);
+
+            await _messageCenterService.ShowSuccessAsync($"Channel '{channelModel.Name}' added to your tracking list!");
+
+            _logger.LogInformation("User {UserId} added channel: {ChannelName} ({YouTubeChannelId})",
+                userId, channelModel.Name, channelModel.YouTubeChannelId);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding channel {ChannelName} for user {UserId}", channelModel.Name, userId);
+            await _messageCenterService.ShowErrorAsync("Failed to add channel. Please try again.");
+            return false;
+        }
     }
 
     /// <summary>
@@ -230,153 +379,5 @@ public class ChannelService : IChannelService
 
         _logger.LogWarning("YouTube API error for search '{SearchQuery}': {ErrorMessage}",
             searchQuery, result.ErrorMessage);
-    }
-    /// Searches for YouTube channels by name or analyzes a YouTube URL.
-    /// </summary>
-    public async Task<List<ChannelDisplayModel>> SearchChannelsAsync(string searchQuery)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(searchQuery))
-            {
-                return new List<ChannelDisplayModel>();
-            }
-
-            // Parse the search query to determine if it's a URL or search term
-            var parseResult = YouTubeUrlParser.Parse(searchQuery);
-
-            if (!parseResult.IsValid)
-            {
-                await _messageCenterService.ShowErrorAsync("Invalid search query. Please enter a channel name or valid YouTube URL.");
-                return new List<ChannelDisplayModel>();
-            }
-
-            YouTubeApiResult<List<YouTubeChannelResponse>>? searchResult = null;
-            YouTubeApiResult<YouTubeChannelResponse?>? directResult = null;
-
-            if (parseResult.IsUrl)
-            {
-                // Handle URL-based searches
-                directResult = await SearchByUrlAsync(parseResult);
-            }
-            else
-            {
-                // Handle text-based searches
-                searchResult = await _youTubeService.SearchChannelsAsync(parseResult.SearchTerm);
-            }
-
-            // Process results
-            var channels = new List<YouTubeChannelResponse>();
-
-            if (directResult != null)
-            {
-                if (!directResult.IsSuccess)
-                {
-                    await HandleApiError(directResult, parseResult.SearchTerm);
-                    return new List<ChannelDisplayModel>();
-                }
-
-                if (directResult.Data != null)
-                {
-                    channels.Add(directResult.Data);
-                }
-            }
-            else if (searchResult != null)
-            {
-                if (!searchResult.IsSuccess)
-                {
-                    await HandleApiError(searchResult, parseResult.SearchTerm);
-                    return new List<ChannelDisplayModel>();
-                }
-
-                channels.AddRange(searchResult.Data ?? new List<YouTubeChannelResponse>());
-            }
-
-            if (!channels.Any())
-            {
-                await _messageCenterService.ShowInfoAsync($"No channels found for '{searchQuery}'. Try a different search term or check the URL.");
-                return new List<ChannelDisplayModel>();
-            }
-
-            // Convert to display models
-            var displayModels = channels
-                .Where(ChannelMappingService.IsValidYouTubeChannelResponse)
-                .Select(channel => ChannelMappingService.MapToDisplayModel(channel))
-                .ToList();
-
-            _logger.LogInformation("YouTube search for '{SearchQuery}' returned {ResultCount} channels",
-                searchQuery, displayModels.Count);
-
-            return displayModels;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during channel search for query: {SearchQuery}", searchQuery);
-            await _messageCenterService.ShowErrorAsync("An error occurred while searching for channels. Please try again.");
-            return new List<ChannelDisplayModel>();
-        }
-    }
-
-    /// <summary>
-    /// Adds a channel to the user's tracking list.
-    /// </summary>
-    public async Task<bool> AddChannelToTrackingAsync(string userId, AddChannelModel channelModel)
-    {
-        try
-        {
-            // Validate input
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                await _messageCenterService.ShowErrorAsync("User authentication required.");
-                return false;
-            }
-
-            if (!ChannelMappingService.IsValidAddChannelModel(channelModel))
-            {
-                await _messageCenterService.ShowErrorAsync("Invalid channel data. Please try searching again.");
-                return false;
-            }
-
-            // Check current tracking count
-            var currentCount = await _channelRepository.GetTrackedChannelCountAsync(userId);
-            if (currentCount >= MaxChannelsPerUser)
-            {
-                await _messageCenterService.ShowWarningAsync($"You have reached the maximum limit of {MaxChannelsPerUser} tracked channels. Remove some channels before adding new ones.");
-                return false;
-            }
-
-            // Check for duplicates
-            if (await _channelRepository.IsChannelTrackedByUserAsync(userId, channelModel.YouTubeChannelId))
-            {
-                await _messageCenterService.ShowWarningAsync($"Channel '{channelModel.Name}' is already in your tracking list.");
-                return false;
-            }
-
-            // Find or create the channel in the database
-            var channelEntity = await _channelRepository.FindOrCreateChannelAsync(
-                channelModel.YouTubeChannelId,
-                channelModel.Name,
-                channelModel.Description,
-                channelModel.ThumbnailUrl,
-                channelModel.SubscriberCount,
-                channelModel.VideoCount,
-                channelModel.PublishedAt);
-
-            // Add the user-channel relationship
-            await _channelRepository.AddChannelToUserTrackingAsync(userId, channelEntity.Id);
-
-            await _messageCenterService.ShowSuccessAsync($"Channel '{channelModel.Name}' added to your tracking list!");
-
-            _logger.LogInformation("User {UserId} added channel: {ChannelName} ({YouTubeChannelId})",
-                userId, channelModel.Name, channelModel.YouTubeChannelId);
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error adding channel {ChannelName} for user {UserId}", channelModel.Name, userId);
-            await _messageCenterService.ShowErrorAsync("Failed to add channel. Please try again.");
-            return false;
-        }
     }
 }

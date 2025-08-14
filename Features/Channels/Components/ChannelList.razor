@@ -277,7 +277,6 @@
 
     /// <summary>
     /// Confirms the removal and calls the service to remove the channel.
-    /// For now, shows UI feedback only - will implement real functionality in next phase.
     /// </summary>
     private async Task ConfirmRemove()
     {
@@ -288,20 +287,26 @@
             IsRemoving = true;
             StateHasChanged();
 
-            // Simulate removal delay
-            await Task.Delay(1000);
+            // Get current user
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Remove from local list for UI demonstration
-            TrackedChannels.Remove(_channelToRemove);
-
-            // Notify parent component of channel changes
-            if (OnChannelsChanged.HasDelegate)
+            if (!string.IsNullOrEmpty(userId))
             {
-                await OnChannelsChanged.InvokeAsync();
-            }
+                var success = await ChannelService.RemoveChannelFromTrackingAsync(userId, _channelToRemove.Id);
 
-            // Show success message (placeholder)
-            // Will integrate with MessageCenterService in next phase
+                if (success)
+                {
+                    // Refresh the channels list to reflect the removal
+                    await LoadTrackedChannelsAsync();
+
+                    // Notify parent component of channel changes
+                    if (OnChannelsChanged.HasDelegate)
+                    {
+                        await OnChannelsChanged.InvokeAsync();
+                    }
+                }
+            }
         }
         finally
         {
@@ -312,7 +317,6 @@
 
     /// <summary>
     /// Loads tracked channels for the current user from the service.
-    /// For now, shows mock data - will implement real service calls in next phase.
     /// </summary>
     private async Task LoadTrackedChannelsAsync()
     {
@@ -321,16 +325,18 @@
             IsLoading = true;
             StateHasChanged();
 
-            // Simulate loading delay
-            await Task.Delay(800);
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Generate mock tracked channels for UI demonstration
-            TrackedChannels = GenerateMockTrackedChannels();
-
-            // Notify parent component of channel changes (for count updates)
-            if (OnChannelsChanged.HasDelegate)
+            if (!string.IsNullOrEmpty(userId))
             {
-                await OnChannelsChanged.InvokeAsync();
+                TrackedChannels = await ChannelService.GetTrackedChannelsAsync(userId);
+
+                // Notify parent component of channel changes (for count updates)
+                if (OnChannelsChanged.HasDelegate)
+                {
+                    await OnChannelsChanged.InvokeAsync();
+                }
             }
         }
         finally
@@ -352,71 +358,6 @@
             >= 25 => "bg-info",
             _ => "bg-success"
         };
-    }
-
-    /// <summary>
-    /// Generates mock tracked channels for UI demonstration.
-    /// Will be replaced with real service calls.
-    /// </summary>
-    private static List<ChannelDisplayModel> GenerateMockTrackedChannels()
-    {
-        var mockChannels = new List<ChannelDisplayModel>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC_x5XG1OV2P6uZZ5FSM9Ttw",
-                Name = "Google for Developers",
-                Description = "Google for Developers is where you can discover all the ways you can use Google developer tools, platforms, and APIs.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/4285F4/FFFFFF?text=G",
-                SubscriberCount = 2340000,
-                VideoCount = 4500,
-                PublishedAt = DateTime.UtcNow.AddYears(-8),
-                TrackedSince = DateTime.UtcNow.AddDays(-45),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCRPMAPhquse1Ah79DI90rNg",
-                Name = "Microsoft Visual Studio",
-                Description = "The official channel for Microsoft Visual Studio. Tips, tricks, and tutorials for developers.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/5C2D91/FFFFFF?text=VS",
-                SubscriberCount = 890000,
-                VideoCount = 2100,
-                PublishedAt = DateTime.UtcNow.AddYears(-6),
-                TrackedSince = DateTime.UtcNow.AddDays(-23),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UC0vBXGSyV14uvJ4hECDOl0Q",
-                Name = "Traversy Media",
-                Description = "Web development and programming tutorials. HTML, CSS, JavaScript, React, Node.js and more.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/FF6B35/FFFFFF?text=TM",
-                SubscriberCount = 2100000,
-                VideoCount = 1200,
-                PublishedAt = DateTime.UtcNow.AddYears(-12),
-                TrackedSince = DateTime.UtcNow.AddDays(-12),
-                IsTracked = true
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                YouTubeChannelId = "UCWv7vMbMWH4-V0ZXdmDpPBA",
-                Name = "Programming with Mosh",
-                Description = "Code with Mosh is a platform for learning programming and software engineering skills.",
-                ThumbnailUrl = "https://via.placeholder.com/88x88/1DB954/FFFFFF?text=M",
-                SubscriberCount = 3200000,
-                VideoCount = 850,
-                PublishedAt = DateTime.UtcNow.AddYears(-9),
-                TrackedSince = DateTime.UtcNow.AddDays(-5),
-                IsTracked = true
-            }
-        };
-
-        return mockChannels;
     }
 }
 
