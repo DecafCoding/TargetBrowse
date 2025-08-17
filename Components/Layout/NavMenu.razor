@@ -1,4 +1,4 @@
-﻿@* Components/Layout/NavMenu.razor *@
+@* Components/Layout/NavMenu.razor *@
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
@@ -43,10 +43,24 @@
                             </NavLink>
                         </li>
 
-                        <li class="nav-item">
-                            <NavLink class="nav-link" href="library">
-                                Video Library
-                            </NavLink>
+                        <!-- Video Library Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="videosDropdown" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                Videos
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="videosDropdown">
+                                <li>
+                                    <NavLink class="dropdown-item" href="video-search">
+                                        <i class="bi bi-search me-2"></i> Search Videos
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink class="dropdown-item" href="video-library">
+                                        <i class="bi bi-collection-play me-2"></i> My Library
+                                    </NavLink>
+                                </li>
+                            </ul>
                         </li>
                     </Authorized>
                 </AuthorizeView>

@@ -3,7 +3,7 @@ using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Utilities;
 using TargetBrowse.Services;
-using TargetBrowse.Services.YouTube;
+
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -14,7 +14,7 @@ namespace TargetBrowse.Features.Channels.Services;
 /// </summary>
 public class ChannelService : IChannelService
 {
-    private readonly IYouTubeApiService _youTubeService;
+    private readonly IChannelYouTubeService _youTubeService;
     private readonly IChannelRepository _channelRepository;
     private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<ChannelService> _logger;
@@ -22,7 +22,7 @@ public class ChannelService : IChannelService
     private const int MaxChannelsPerUser = 50;
 
     public ChannelService(
-        IYouTubeApiService youTubeService,
+        IChannelYouTubeService youTubeService,
         IChannelRepository channelRepository,
         IMessageCenterService messageCenterService,
         ILogger<ChannelService> logger)

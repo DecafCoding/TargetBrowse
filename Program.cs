@@ -69,10 +69,6 @@ public class Program
         builder.Services.AddScoped<IThemeService, ThemeService>();
         builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
 
-        // YouTube Video Tracker Services
-        builder.Services.AddScoped<IThemeService, ThemeService>();
-        builder.Services.AddScoped<IMessageCenterService, MessageCenterService>();
-
         // Topic Feature Services
         builder.Services.AddScoped<Features.Topics.Services.ITopicService, Features.Topics.Services.TopicService>();
 
@@ -80,12 +76,18 @@ public class Program
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
         builder.Services.AddScoped<Features.Channels.Data.IChannelRepository, Features.Channels.Data.ChannelRepository>();
 
+        // Videos Feature Services
+        builder.Services.AddScoped<Features.Videos.Services.IVideoService, Features.Videos.Services.VideoService>();
+        builder.Services.AddScoped<Features.Videos.Data.IVideoRepository, Features.Videos.Data.VideoRepository>();
+
         // YouTube API Configuration
         builder.Services.Configure<YouTubeApiSettings>(
             builder.Configuration.GetSection("YouTube"));
 
-        // YouTube Service
-        builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>();
+        // YouTube Services
+        builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>(); // Main API service (to be deprecated when all features have their own)
+        builder.Services.AddScoped<Features.Channels.Services.IChannelYouTubeService, Features.Channels.Services.ChannelYouTubeService>(); // For Channels feature
+        builder.Services.AddScoped<Features.Videos.Services.IVideoYouTubeService, Features.Videos.Services.VideoYouTubeService>(); // For Videos feature
 
         var app = builder.Build();
 
