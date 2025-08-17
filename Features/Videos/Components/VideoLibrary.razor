@@ -1,0 +1,316 @@
+@inject IVideoService VideoService
+@inject IMessageCenterService MessageCenter
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-collection-play me-2"></i>
+                My Video Library
+                @if (Videos.Any())
+                {
+                    <span class="badge bg-primary ms-2">@Videos.Count</span>
+                }
+            </h5>
+            
+            @if (Videos.Any())
+            {
+                <div class="btn-group" role="group">
+                    <button type="button" 
+                           class="btn btn-outline-secondary btn-sm" 
+                           @onclick="ToggleViewMode">
+                        <i class="bi @(IsGridView ? "bi-list" : "bi-grid-3x3-gap") me-1"></i>
+                        @(IsGridView ? "List" : "Grid")
+                    </button>
+                    <button type="button" 
+                           class="btn btn-outline-secondary btn-sm" 
+                           @onclick="RefreshAsync">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Refresh
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="card-body">
+        @if (IsLoading)
+        {
+            <!-- Loading State -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-3 text-muted">Loading your video library...</div>
+            </div>
+        }
+        else if (!Videos.Any())
+        {
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="bi bi-collection-play text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3 text-muted">Your video library is empty</h5>
+                <p class="text-muted mb-4">
+                    Start building your collection by searching for videos above and adding them to your library.
+                </p>
+                <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                    <button type="button" class="btn btn-primary" @onclick="ScrollToSearch">
+                        <i class="bi bi-search me-2"></i>
+                        Search for Videos
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled>
+                        <i class="bi bi-upload me-2"></i>
+                        Import from Playlist
+                    </button>
+                </div>
+                <small class="text-muted mt-3 d-block">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Playlist import feature coming soon
+                </small>
+            </div>
+        }
+        else
+        {
+            <!-- Library Search -->
+            <div class="mb-4">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control" 
+                           placeholder="Search your library..."
+                           @bind="LibrarySearchQuery"
+                           @oninput="OnLibrarySearchInput" />
+                    @if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
+                    {
+                        <button class="btn btn-outline-secondary" 
+                               type="button" 
+                               @onclick="ClearLibrarySearch">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Video Count and Filters -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted small">
+                    @if (FilteredVideos.Count != Videos.Count)
+                    {
+                        <span>Showing @FilteredVideos.Count of @Videos.Count videos</span>
+                    }
+                    else
+                    {
+                        <span>@Videos.Count videos in your library</span>
+                    }
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                           type="button" 
+                           data-bs-toggle="dropdown">
+                        <i class="bi bi-funnel me-1"></i>
+                        Sort: @CurrentSortOption
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><button class="dropdown-item" @onclick="SortByDateAdded">Date Added</button></li>
+                        <li><button class="dropdown-item" @onclick="SortByTitle">Title</button></li>
+                        <li><button class="dropdown-item" @onclick="SortByDuration">Duration</button></li>
+                        <li><button class="dropdown-item" @onclick="SortByViews">Views</button></li>
+                        <li><button class="dropdown-item" @onclick="SortByPublished">Published Date</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Video Grid/List -->
+            <div class="@(IsGridView ? "row" : "")">
+                @foreach (var video in FilteredVideos)
+                {
+                    @if (IsGridView)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <VideoLibraryItem Video="@video" 
+                                            IsGridView="true"
+                                            OnVideoRemoved="@HandleVideoRemoved" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <VideoLibraryItem Video="@video" 
+                                            IsGridView="false"
+                                            OnVideoRemoved="@HandleVideoRemoved" />
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Load More (if needed for large libraries) -->
+            @if (FilteredVideos.Count >= 20)
+            {
+                <div class="text-center mt-4">
+                    <button type="button" class="btn btn-outline-primary" disabled>
+                        <i class="bi bi-arrow-down-circle me-2"></i>
+                        Load More Videos
+                    </button>
+                    <div class="small text-muted mt-2">
+                        Pagination will be implemented for large libraries
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnVideosChanged { get; set; }
+
+    private List<VideoDisplayModel> Videos = new();
+    private List<VideoDisplayModel> FilteredVideos = new();
+    private bool IsLoading = false;
+    private bool IsGridView = true;
+    private string LibrarySearchQuery = string.Empty;
+    private string CurrentSortOption = "Date Added";
+    private string? CurrentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user ID - this would come from authentication
+        CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
+        await LoadLibraryAsync();
+    }
+
+    /// <summary>
+    /// Loads the user's video library from the service.
+    /// </summary>
+    private async Task LoadLibraryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUserId))
+            return;
+
+        IsLoading = true;
+        
+        try
+        {
+            Videos = await VideoService.GetUserLibraryAsync(CurrentUserId);
+            ApplyFiltersAndSort();
+            await OnVideosChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowErrorAsync($"Failed to load video library: {ex.Message}");
+            Videos.Clear();
+            FilteredVideos.Clear();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the library data.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await LoadLibraryAsync();
+    }
+
+    /// <summary>
+    /// Toggles between grid and list view modes.
+    /// </summary>
+    private void ToggleViewMode()
+    {
+        IsGridView = !IsGridView;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles library search input with debouncing.
+    /// </summary>
+    private async Task OnLibrarySearchInput(ChangeEventArgs e)
+    {
+        LibrarySearchQuery = e.Value?.ToString() ?? string.Empty;
+        ApplyFiltersAndSort();
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Clears the library search.
+    /// </summary>
+    private void ClearLibrarySearch()
+    {
+        LibrarySearchQuery = string.Empty;
+        ApplyFiltersAndSort();
+    }
+
+    /// <summary>
+    /// Sorts videos by the specified criteria.
+    /// </summary>
+    private void SortVideos(string sortOption)
+    {
+        CurrentSortOption = sortOption;
+        ApplyFiltersAndSort();
+    }
+
+    /// <summary>
+    /// Sort methods for dropdown menu items.
+    /// </summary>
+    private void SortByDateAdded() => SortVideos("Date Added");
+    private void SortByTitle() => SortVideos("Title");
+    private void SortByDuration() => SortVideos("Duration");
+    private void SortByViews() => SortVideos("Views");
+    private void SortByPublished() => SortVideos("Published");
+
+    /// <summary>
+    /// Applies current filters and sorting to the video list.
+    /// </summary>
+    private void ApplyFiltersAndSort()
+    {
+        var query = Videos.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
+        {
+            var searchLower = LibrarySearchQuery.ToLowerInvariant();
+            query = query.Where(v => 
+                v.Title.ToLowerInvariant().Contains(searchLower) ||
+                v.ChannelTitle.ToLowerInvariant().Contains(searchLower) ||
+                v.Description.ToLowerInvariant().Contains(searchLower));
+        }
+
+        // Apply sorting
+        query = CurrentSortOption switch
+        {
+            "Title" => query.OrderBy(v => v.Title),
+            "Duration" => query.OrderByDescending(v => v.Duration),
+            "Views" => query.OrderByDescending(v => v.ViewCount ?? 0),
+            "Published" => query.OrderByDescending(v => v.PublishedAt),
+            _ => query.OrderByDescending(v => v.AddedToLibrary ?? DateTime.MinValue) // Date Added
+        };
+
+        FilteredVideos = query.ToList();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles when a video is removed from the library.
+    /// </summary>
+    private async Task HandleVideoRemoved(VideoDisplayModel video)
+    {
+        Videos.RemoveAll(v => v.Id == video.Id);
+        ApplyFiltersAndSort();
+        await OnVideosChanged.InvokeAsync();
+        await MessageCenter.ShowSuccessAsync($"Removed '{video.ShortTitle}' from your library.");
+    }
+
+    /// <summary>
+    /// Scrolls to the search section (for empty state).
+    /// </summary>
+    private async Task ScrollToSearch()
+    {
+        // This could be implemented with JavaScript interop to scroll to search component
+        await Task.CompletedTask;
+    }
+}
