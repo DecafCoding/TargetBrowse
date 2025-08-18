@@ -1,4 +1,5 @@
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Data.Entities;
 
 namespace TargetBrowse.Features.Videos.Data;
 
@@ -38,6 +39,15 @@ public interface IVideoRepository
     /// <param name="videoId">System video ID (not YouTube ID)</param>
     /// <returns>True if removed successfully, false if not found</returns>
     Task<bool> RemoveVideoAsync(string userId, Guid videoId);
+
+    /// <summary>
+    /// Updates the watch status for a video in the user's library.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <param name="videoId">System video ID</param>
+    /// <param name="watchStatus">New watch status</param>
+    /// <returns>True if updated successfully, false if not found</returns>
+    Task<bool> UpdateVideoWatchStatusAsync(string userId, Guid videoId, WatchStatus watchStatus);
 
     /// <summary>
     /// Checks if a video is already in the user's library.

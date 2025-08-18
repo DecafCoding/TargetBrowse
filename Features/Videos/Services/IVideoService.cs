@@ -1,4 +1,5 @@
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Data.Entities;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -42,6 +43,15 @@ public interface IVideoService
     /// <param name="videoId">System video ID</param>
     /// <returns>True if removed successfully</returns>
     Task<bool> RemoveVideoFromLibraryAsync(string userId, Guid videoId);
+
+    /// <summary>
+    /// Updates the watch status for a video in the user's library.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <param name="videoId">System video ID</param>
+    /// <param name="watchStatus">New watch status</param>
+    /// <returns>True if updated successfully</returns>
+    Task<bool> UpdateVideoWatchStatusAsync(string userId, Guid videoId, WatchStatus watchStatus);
 
     /// <summary>
     /// Gets all videos in the user's library.

@@ -1,5 +1,6 @@
 @page "/video-library"
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IVideoService VideoService
@@ -21,6 +22,19 @@
         </a>
     </div>
 </div>
+
+<!-- Debug Information (only visible in development) -->
+@if (ShowDebugInfo)
+{
+    <div class="alert alert-info mb-4">
+        <strong>Debug Info:</strong>
+        <br />User ID: @CurrentUserId
+        <br />Is Loading: @IsLoading
+        <br />Videos Count: @Videos.Count
+        <br />Filtered Count: @FilteredVideos.Count
+        <br />Last Error: @LastError
+    </div>
+}
 
 <div class="row">
     <div class="col-lg-8">
@@ -66,6 +80,28 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <div class="mt-3 text-muted">Loading your video library...</div>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(LastError))
+                {
+                    <!-- Error State -->
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Unable to Load Library
+                        </h5>
+                        <p class="mb-2">@LastError</p>
+                        <hr>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-danger btn-sm" @onclick="RefreshAsync">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                Try Again
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ToggleDebugInfo">
+                                <i class="bi bi-bug me-1"></i>
+                                @(ShowDebugInfo ? "Hide" : "Show") Debug Info
+                            </button>
+                        </div>
                     </div>
                 }
                 else if (!Videos.Any())
@@ -299,6 +335,9 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private List<VideoDisplayModel> Videos = new();
     private List<VideoDisplayModel> FilteredVideos = new();
     private bool IsLoading = false;
@@ -306,6 +345,8 @@
     private string LibrarySearchQuery = string.Empty;
     private string CurrentSortOption = "Date Added";
     private string? CurrentUserId;
+    private string? LastError;
+    private bool ShowDebugInfo = false;
 
     // Statistics properties
     private string TotalDurationDisplay => CalculateTotalDuration();
@@ -320,8 +361,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get current user ID - this would come from authentication
-        CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
         await LoadLibraryAsync();
     }
 
@@ -330,25 +369,42 @@
     /// </summary>
     private async Task LoadLibraryAsync()
     {
-        if (string.IsNullOrWhiteSpace(CurrentUserId))
-            return;
-
-        IsLoading = true;
-        
         try
         {
+            IsLoading = true;
+            LastError = null;
+            StateHasChanged();
+
+            // Get current user using the same pattern as the working components
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                LastError = "User not authenticated or user ID not available.";
+                return;
+            }
+
             Videos = await VideoService.GetUserLibraryAsync(CurrentUserId);
             ApplyFiltersAndSort();
+            
+            if (!Videos.Any())
+            {
+                // This is not an error, just an empty library
+                await MessageCenter.ShowInfoAsync("Your video library is empty. Start by searching for videos to add!");
+            }
         }
         catch (Exception ex)
         {
-            await MessageCenter.ShowErrorAsync($"Failed to load video library: {ex.Message}");
+            LastError = $"Failed to load video library: {ex.Message}";
             Videos.Clear();
             FilteredVideos.Clear();
+            await MessageCenter.ShowErrorAsync(LastError);
         }
         finally
         {
             IsLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -358,6 +414,15 @@
     public async Task RefreshAsync()
     {
         await LoadLibraryAsync();
+    }
+
+    /// <summary>
+    /// Toggles debug information display.
+    /// </summary>
+    private void ToggleDebugInfo()
+    {
+        ShowDebugInfo = !ShowDebugInfo;
+        StateHasChanged();
     }
 
     /// <summary>

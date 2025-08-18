@@ -1,3 +1,6 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Data.Entities
 @inject IVideoService VideoService
 @inject IMessageCenterService MessageCenter
 
@@ -6,16 +9,26 @@
     <!-- Grid View Card -->
     <div class="card video-library-item h-100">
         <div class="position-relative">
-            <img src="@Video.ThumbnailUrl" 
+            <img src="@GetThumbnailUrl()" 
                  class="card-img-top video-thumbnail-grid" 
                  alt="@Video.Title"
-                 loading="lazy" />
+                 loading="lazy" 
+                 onerror="this.src='https://img.youtube.com/vi/@Video.YouTubeVideoId/hqdefault.jpg'" />
             
             <!-- Duration Badge -->
             @if (!string.IsNullOrEmpty(Video.DurationDisplay))
             {
                 <span class="badge bg-dark position-absolute bottom-0 end-0 m-2">
                     @Video.DurationDisplay
+                </span>
+            }
+            
+            <!-- Watch Status Badge -->
+            @if (Video.WatchStatus != WatchStatus.NotWatched)
+            {
+                <span class="badge @GetWatchStatusBadgeClass() position-absolute top-0 start-0 m-2">
+                    <i class="bi @GetWatchStatusIcon() me-1"></i>
+                    @GetWatchStatusText()
                 </span>
             }
             
@@ -33,8 +46,9 @@
             <h6 class="card-title mb-2">
                 <a href="@Video.YouTubeUrl" 
                    target="_blank" 
-                   class="text-decoration-none">
-                    @Video.Title
+                   class="text-decoration-none"
+                   title="@Video.Title">
+                    @Video.ShortTitle
                     <i class="bi bi-box-arrow-up-right ms-1 small"></i>
                 </a>
             </h6>
@@ -51,18 +65,66 @@
             
             <!-- Video Stats -->
             <div class="small text-muted mb-3 flex-grow-1">
-                <div>@Video.ViewCountDisplay views</div>
-                <div>Added @Video.AddedToLibraryDisplay</div>
+                <div class="d-flex justify-content-between">
+                    <span title="@(Video.ViewCount?.ToString("N0")) views">
+                        @Video.ViewCountDisplay views
+                    </span>
+                    @if (Video.LikeCount.HasValue && Video.LikeCount > 0)
+                    {
+                        <span title="@(Video.LikeCount?.ToString("N0")) likes">
+                            @Video.LikeCountDisplay likes
+                        </span>
+                    }
+                </div>
+                <div class="mt-1">
+                    <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">
+                        @Video.PublishedDisplay
+                    </span>
+                    <span class="mx-2">•</span>
+                    <span title="Added to library @Video.AddedToLibrary?.ToString("MMM d, yyyy h:mm tt")">
+                        Added @Video.AddedToLibraryDisplay
+                    </span>
+                </div>
             </div>
             
-            <!-- Action Button -->
+            <!-- Watch Status Actions -->
             <div class="mt-auto">
-                <a href="@Video.YouTubeUrl" 
-                   target="_blank" 
-                   class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-play-circle me-1"></i>
-                    Watch Video
-                </a>
+                <div class="btn-group w-100 mb-2" role="group">
+                    <button type="button" 
+                           class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
+                           @onclick="() => MarkAsWatched()"
+                           disabled="@IsUpdatingStatus"
+                           title="Mark as watched">
+                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                        }
+                    </button>
+                    <button type="button" 
+                           class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
+                           @onclick="() => MarkAsSkipped()"
+                           disabled="@IsUpdatingStatus"
+                           title="Mark as skipped">
+                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-skip-forward"></i>
+                        }
+                    </button>
+                    <a href="@Video.YouTubeUrl" 
+                       target="_blank" 
+                       class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-play-circle me-1"></i>
+                        Watch
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -75,16 +137,25 @@ else
             <!-- Video Thumbnail -->
             <div class="col-md-3">
                 <div class="position-relative">
-                    <img src="@Video.ThumbnailUrl" 
+                    <img src="@GetThumbnailUrl()" 
                          class="img-fluid rounded-start video-thumbnail-list" 
                          alt="@Video.Title"
-                         loading="lazy" />
+                         loading="lazy" 
+                         onerror="this.src='https://img.youtube.com/vi/@Video.YouTubeVideoId/hqdefault.jpg'" />
                     
                     <!-- Duration Badge -->
                     @if (!string.IsNullOrEmpty(Video.DurationDisplay))
                     {
                         <span class="badge bg-dark position-absolute bottom-0 end-0 m-2">
                             @Video.DurationDisplay
+                        </span>
+                    }
+
+                    <!-- Watch Status Badge -->
+                    @if (Video.WatchStatus != WatchStatus.NotWatched)
+                    {
+                        <span class="badge @GetWatchStatusBadgeClass() position-absolute top-0 start-0 m-2">
+                            <i class="bi @GetWatchStatusIcon()"></i>
                         </span>
                     }
                 </div>
@@ -122,7 +193,15 @@ else
                             @Video.ChannelTitle
                         </a>
                         <span class="mx-2">•</span>
-                        <span>@Video.PublishedDisplay</span>
+                        <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">@Video.PublishedDisplay</span>
+                        @if (Video.WatchStatus != WatchStatus.NotWatched)
+                        {
+                            <span class="mx-2">•</span>
+                            <span class="@GetWatchStatusTextClass()">
+                                <i class="bi @GetWatchStatusIcon() me-1"></i>
+                                @GetWatchStatusText()
+                            </span>
+                        }
                     </div>
                     
                     <!-- Video Description -->
@@ -133,17 +212,58 @@ else
                     <!-- Video Stats and Actions -->
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="small text-muted">
-                            <span>@Video.ViewCountDisplay views</span>
+                            <span title="@(Video.ViewCount?.ToString("N0")) views">
+                                @Video.ViewCountDisplay views
+                            </span>
+                            @if (Video.LikeCount.HasValue && Video.LikeCount > 0)
+                            {
+                                <span class="mx-2">•</span>
+                                <span title="@(Video.LikeCount?.ToString("N0")) likes">
+                                    @Video.LikeCountDisplay likes
+                                </span>
+                            }
                             <span class="mx-2">•</span>
-                            <span>Added @Video.AddedToLibraryDisplay</span>
+                            <span title="Added to library @Video.AddedToLibrary?.ToString("MMM d, yyyy h:mm tt")">
+                                Added @Video.AddedToLibraryDisplay
+                            </span>
                         </div>
                         
-                        <a href="@Video.YouTubeUrl" 
-                           target="_blank" 
-                           class="btn btn-primary btn-sm">
-                            <i class="bi bi-play-circle me-1"></i>
-                            Watch
-                        </a>
+                        <div class="btn-group" role="group">
+                            <button type="button" 
+                                   class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
+                                   @onclick="() => MarkAsWatched()"
+                                   disabled="@IsUpdatingStatus"
+                                   title="Mark as watched">
+                                @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle"></i>
+                                }
+                            </button>
+                            <button type="button" 
+                                   class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
+                                   @onclick="() => MarkAsSkipped()"
+                                   disabled="@IsUpdatingStatus"
+                                   title="Mark as skipped">
+                                @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-skip-forward"></i>
+                                }
+                            </button>
+                            <a href="@Video.YouTubeUrl" 
+                               target="_blank" 
+                               class="btn btn-primary btn-sm">
+                                <i class="bi bi-play-circle me-1"></i>
+                                Watch
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -184,19 +304,100 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     [Parameter, EditorRequired] public VideoDisplayModel Video { get; set; } = null!;
     [Parameter] public bool IsGridView { get; set; } = true;
     [Parameter] public EventCallback<VideoDisplayModel> OnVideoRemoved { get; set; }
 
     private bool ShowConfirmDialog = false;
     private bool IsRemoving = false;
+    private bool IsUpdatingStatus = false;
+    private WatchStatus? PendingStatus = null;
     private string? CurrentUserId;
 
     protected override async Task OnInitializedAsync()
     {
-        // Get current user ID - this would come from authentication
-        CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
-        await Task.CompletedTask;
+        await GetCurrentUserIdAsync();
+    }
+
+    /// <summary>
+    /// Gets the current authenticated user's ID using the same pattern as working components.
+    /// </summary>
+    private async Task GetCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch (Exception)
+        {
+            CurrentUserId = null;
+        }
+    }
+
+    /// <summary>
+    /// Gets the appropriate thumbnail URL for the video.
+    /// Uses the video's stored thumbnail URL from the repository, which now uses proper YouTube thumbnails.
+    /// </summary>
+    private string GetThumbnailUrl()
+    {
+        // The repository now provides proper YouTube thumbnail URLs
+        return Video.ThumbnailUrl ?? $"https://img.youtube.com/vi/{Video.YouTubeVideoId}/maxresdefault.jpg";
+    }
+
+    /// <summary>
+    /// Gets the CSS class for watch status badge.
+    /// </summary>
+    private string GetWatchStatusBadgeClass()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "bg-success",
+            WatchStatus.Skipped => "bg-secondary",
+            _ => "bg-primary"
+        };
+    }
+
+    /// <summary>
+    /// Gets the icon for watch status.
+    /// </summary>
+    private string GetWatchStatusIcon()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "bi-check-circle-fill",
+            WatchStatus.Skipped => "bi-skip-forward-fill",
+            _ => "bi-circle"
+        };
+    }
+
+    /// <summary>
+    /// Gets the text for watch status.
+    /// </summary>
+    private string GetWatchStatusText()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "Watched",
+            WatchStatus.Skipped => "Skipped",
+            _ => "Not Watched"
+        };
+    }
+
+    /// <summary>
+    /// Gets the CSS class for watch status text.
+    /// </summary>
+    private string GetWatchStatusTextClass()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "text-success",
+            WatchStatus.Skipped => "text-secondary",
+            _ => "text-muted"
+        };
     }
 
     /// <summary>
@@ -254,6 +455,67 @@ else
             StateHasChanged();
         }
     }
+
+    /// <summary>
+    /// Marks the video as watched.
+    /// </summary>
+    private async Task MarkAsWatched()
+    {
+        await UpdateWatchStatus(WatchStatus.Watched);
+    }
+
+    /// <summary>
+    /// Marks the video as skipped.
+    /// </summary>
+    private async Task MarkAsSkipped()
+    {
+        await UpdateWatchStatus(WatchStatus.Skipped);
+    }
+
+    /// <summary>
+    /// Updates the watch status for the video.
+    /// </summary>
+    private async Task UpdateWatchStatus(WatchStatus newStatus)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUserId) || IsUpdatingStatus)
+            return;
+
+        // If clicking the same status, toggle back to NotWatched
+        if (Video.WatchStatus == newStatus)
+        {
+            newStatus = WatchStatus.NotWatched;
+        }
+
+        IsUpdatingStatus = true;
+        PendingStatus = newStatus;
+        
+        try
+        {
+            var success = await VideoService.UpdateVideoWatchStatusAsync(CurrentUserId, Video.Id, newStatus);
+            
+            if (success)
+            {
+                Video.WatchStatus = newStatus;
+                var statusText = GetWatchStatusText().ToLower();
+                await MessageCenter.ShowSuccessAsync($"Marked video as {statusText}");
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to update watch status. Please try again.");
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowErrorAsync($"Failed to update watch status: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdatingStatus = false;
+            PendingStatus = null;
+        }
+    }
 }
 
 <style>
@@ -300,6 +562,30 @@ else
         font-size: 0.7rem;
     }
 
+    /* Button group improvements */
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: var(--bs-border-radius-sm);
+        border-bottom-left-radius: var(--bs-border-radius-sm);
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: var(--bs-border-radius-sm);
+        border-bottom-right-radius: var(--bs-border-radius-sm);
+    }
+
+    /* Watch status styling */
+    .text-success {
+        color: var(--bs-success) !important;
+    }
+
+    .text-secondary {
+        color: var(--bs-secondary) !important;
+    }
+
     /* Responsive adjustments */
     @@media (max-width: 768px) {
         .video-thumbnail-grid {
@@ -308,6 +594,19 @@ else
         
         .video-thumbnail-list {
             height: 100px;
+        }
+
+        .btn-group {
+            flex-direction: column;
+        }
+
+        .btn-group .btn {
+            border-radius: var(--bs-border-radius-sm) !important;
+            margin-bottom: 0.25rem;
+        }
+
+        .btn-group .btn:last-child {
+            margin-bottom: 0;
         }
     }
 
@@ -318,5 +617,25 @@ else
 
     [data-bs-theme="dark"] .video-library-item:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Loading state for buttons */
+    .btn:disabled {
+        cursor: not-allowed;
+    }
+
+    /* Thumbnail fallback styling */
+    .video-thumbnail-grid,
+    .video-thumbnail-list {
+        background-color: var(--bs-light);
+        background-image: url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100' height='100' fill='%23f8f9fa'/%3e%3ctext x='50' y='50' font-size='14' text-anchor='middle' dy='.3em' fill='%236c757d'%3eLoading...%3c/text%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 60px 60px;
+    }
+
+    [data-bs-theme="dark"] .video-thumbnail-grid,
+    [data-bs-theme="dark"] .video-thumbnail-list {
+        background-color: var(--bs-dark);
     }
 </style>
