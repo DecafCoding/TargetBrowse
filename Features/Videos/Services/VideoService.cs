@@ -2,6 +2,7 @@ using TargetBrowse.Features.Videos.Data;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Utilities;
 using TargetBrowse.Services.YouTube.Models;
+using TargetBrowse.Data.Entities;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -140,6 +141,7 @@ public class VideoService : IVideoService
 
     /// <summary>
     /// Adds a video to the user's library.
+    /// Ensures we get full video details including duration, views, and likes.
     /// </summary>
     public async Task<bool> AddVideoToLibraryAsync(string userId, AddVideoModel addVideoModel)
     {
@@ -162,7 +164,8 @@ public class VideoService : IVideoService
                 return false;
             }
 
-            // Get video details from YouTube API
+            // Get FULL video details from YouTube API (not just search results)
+            // This ensures we have duration, views, likes, and all metadata
             var apiResult = await _youTubeService.GetVideoByIdAsync(addVideoModel.VideoId);
             if (!apiResult.IsSuccess || apiResult.Data == null)
             {
@@ -171,16 +174,24 @@ public class VideoService : IVideoService
                 return false;
             }
 
-            // Convert to display model and add to library
+            // Convert to display model with full metadata
             var video = MapYouTubeVideoToDisplayModel(apiResult.Data);
+            
+            // Ensure we have the enhanced metadata fields
+            if (!video.HasDetailedInfo)
+            {
+                _logger.LogWarning("Video {VideoId} does not have detailed metadata (duration, views, likes)", addVideoModel.VideoId);
+                // Still allow adding, but log the warning
+            }
+
             video.IsInLibrary = true;
             video.AddedToLibrary = DateTime.UtcNow;
 
             var success = await _videoRepository.AddVideoAsync(userId, video);
             if (success)
             {
-                _logger.LogInformation("Added video {VideoId} to library for user {UserId}", 
-                    addVideoModel.VideoId, userId);
+                _logger.LogInformation("Added video {VideoId} '{Title}' to library for user {UserId} with metadata: Duration={Duration}, Views={Views}, Likes={Likes}", 
+                    addVideoModel.VideoId, video.Title, userId, video.DurationDisplay, video.ViewCountDisplay, video.LikeCountDisplay);
             }
 
             return success;
@@ -211,6 +222,35 @@ public class VideoService : IVideoService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing video {VideoId} from library for user {UserId}", 
+                videoId, userId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Updates the watch status for a video in the user's library.
+    /// </summary>
+    public async Task<bool> UpdateVideoWatchStatusAsync(string userId, Guid videoId, WatchStatus watchStatus)
+    {
+        try
+        {
+            var success = await _videoRepository.UpdateVideoWatchStatusAsync(userId, videoId, watchStatus);
+            if (success)
+            {
+                _logger.LogInformation("Updated watch status for video {VideoId} to {Status} for user {UserId}", 
+                    videoId, watchStatus, userId);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to update watch status for video {VideoId} for user {UserId} - video not found in library", 
+                    videoId, userId);
+            }
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating watch status for video {VideoId} for user {UserId}", 
                 videoId, userId);
             return false;
         }
@@ -272,7 +312,7 @@ public class VideoService : IVideoService
                 VideosAddedThisMonth = videos.Count(v => v.AddedToLibrary >= monthAgo),
                 VideosByChannel = videos.GroupBy(v => v.ChannelTitle)
                                       .ToDictionary(g => g.Key, g => g.Count()),
-                LastAddedDate = videos.Max(v => v.AddedToLibrary)
+                LastAddedDate = videos.Any() ? videos.Max(v => v.AddedToLibrary) : null
             };
 
             if (stats.VideosByChannel.Any())
@@ -310,6 +350,7 @@ public class VideoService : IVideoService
 
     /// <summary>
     /// Validates a video URL and extracts video information.
+    /// Gets full video details if valid.
     /// </summary>
     public async Task<VideoDisplayModel?> ValidateVideoUrlAsync(string videoUrl)
     {
@@ -321,6 +362,7 @@ public class VideoService : IVideoService
                 return null;
             }
 
+            // Get full video details for validation
             var apiResult = await _youTubeService.GetVideoByIdAsync(videoId);
             if (!apiResult.IsSuccess || apiResult.Data == null)
             {
@@ -358,6 +400,7 @@ public class VideoService : IVideoService
 
     /// <summary>
     /// Maps a YouTube API video response to a video display model.
+    /// Handles both search results (limited data) and detailed video responses (full data).
     /// </summary>
     private static VideoDisplayModel MapYouTubeVideoToDisplayModel(YouTubeVideoResponse youTubeVideo)
     {
@@ -368,11 +411,16 @@ public class VideoService : IVideoService
             Title = youTubeVideo.Title,
             Description = youTubeVideo.Description,
             ThumbnailUrl = youTubeVideo.ThumbnailUrl,
-            Duration = youTubeVideo.Duration,
-            ViewCount = youTubeVideo.ViewCount,
+            Duration = youTubeVideo.Duration, // Will be null for search results, populated for detailed calls
+            ViewCount = youTubeVideo.ViewCount, // Will be null for search results, populated for detailed calls
+            LikeCount = youTubeVideo.LikeCount, // Will be null for search results, populated for detailed calls
+            CommentCount = youTubeVideo.CommentCount, // Will be null for search results, populated for detailed calls
             PublishedAt = youTubeVideo.PublishedAt,
             ChannelId = youTubeVideo.ChannelId,
             ChannelTitle = youTubeVideo.ChannelTitle,
+            CategoryId = youTubeVideo.CategoryId,
+            Tags = youTubeVideo.Tags ?? new List<string>(),
+            DefaultLanguage = youTubeVideo.DefaultLanguage,
             IsInLibrary = false // Will be set by calling methods
         };
     }

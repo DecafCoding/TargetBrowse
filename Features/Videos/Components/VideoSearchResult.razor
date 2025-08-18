@@ -1,3 +1,8 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.Videos.Models
+@using TargetBrowse.Features.Videos.Services
+@using TargetBrowse.Services
 @inject IVideoService VideoService
 @inject IMessageCenterService MessageCenter
 
@@ -61,6 +66,29 @@
             </small>
         </div>
 
+        <!-- Enhanced Metadata Display (Duration, Likes if available) -->
+        @if (Video.HasDetailedInfo)
+        {
+            <div class="video-stats mb-2">
+                <small class="text-muted d-flex flex-wrap gap-2">
+                    @if (!string.IsNullOrEmpty(Video.LikeCountDisplay))
+                    {
+                        <span>
+                            <i class="bi bi-hand-thumbs-up me-1"></i>
+                            @Video.LikeCountDisplay
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Video.CommentCountDisplay))
+                    {
+                        <span>
+                            <i class="bi bi-chat me-1"></i>
+                            @Video.CommentCountDisplay
+                        </span>
+                    }
+                </small>
+            </div>
+        }
+
         <!-- Video Description -->
         @if (!string.IsNullOrEmpty(Video.ShortDescription) && Video.ShortDescription != "No description available")
         {
@@ -85,7 +113,7 @@
                     {
                         <i class="bi bi-plus-circle me-1"></i>
                     }
-                    Add to Library
+                    Save to Library
                 </button>
             }
             else
@@ -110,52 +138,58 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     [Parameter, EditorRequired] public VideoDisplayModel Video { get; set; } = null!;
     [Parameter] public EventCallback<VideoDisplayModel> OnVideoAdded { get; set; }
 
     private bool IsAddingToLibrary = false;
-    private string? CurrentUserId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Get current user ID - this would come from authentication
-        CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
-        await Task.CompletedTask;
-    }
 
     /// <summary>
-    /// Adds the video to the user's library.
+    /// Adds the video to the user's library with full metadata.
     /// </summary>
     private async Task AddToLibrary()
     {
-        if (string.IsNullOrWhiteSpace(CurrentUserId))
-        {
-            await MessageCenter.ShowErrorAsync("Please log in to add videos to your library.");
+        if (IsAddingToLibrary)
             return;
-        }
 
-        if (Video.IsInLibrary)
-        {
-            return; // Already in library
-        }
-
-        IsAddingToLibrary = true;
-        
         try
         {
+            IsAddingToLibrary = true;
+            StateHasChanged();
+
+            // Get current user ID
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                await MessageCenter.ShowErrorAsync("Please log in to add videos to your library.");
+                return;
+            }
+
+            if (Video.IsInLibrary)
+            {
+                return; // Already in library
+            }
+
+            // Create the add model
             var addModel = new AddVideoModel
             {
                 VideoUrl = Video.YouTubeUrl,
                 Notes = $"Added from search on {DateTime.Now:yyyy-MM-dd}"
             };
 
-            var success = await VideoService.AddVideoToLibraryAsync(CurrentUserId, addModel);
+            // Add to library - this will now get full video details including duration, views, likes
+            var success = await VideoService.AddVideoToLibraryAsync(userId, addModel);
             
             if (success)
             {
                 Video.IsInLibrary = true;
                 Video.AddedToLibrary = DateTime.UtcNow;
                 
+                await MessageCenter.ShowSuccessAsync($"Added '{Video.ShortTitle}' to your library with full details!");
                 await OnVideoAdded.InvokeAsync(Video);
             }
             else
@@ -170,6 +204,7 @@
         finally
         {
             IsAddingToLibrary = false;
+            StateHasChanged();
         }
     }
 }
@@ -246,7 +281,7 @@
         color: var(--bs-primary) !important;
     }
 
-    .video-metadata {
+    .video-metadata, .video-stats {
         font-size: 0.75rem;
     }
 
