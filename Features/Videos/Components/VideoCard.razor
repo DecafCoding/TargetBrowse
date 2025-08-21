@@ -5,7 +5,9 @@
 @using TargetBrowse.Features.Videos.Services
 @using TargetBrowse.Services
 @inject IVideoService VideoService
+@inject IVideoRatingService VideoRatingService
 @inject IMessageCenterService MessageCenter
+@inject ILogger<VideoCard> Logger
 
 <div class="card video-card h-100">
     <!-- Video Thumbnail Container -->
@@ -37,6 +39,15 @@
             <span class="badge @GetWatchStatusBadgeClass() position-absolute status-badge">
                 <i class="bi @GetWatchStatusIcon() me-1"></i>
                 @GetWatchStatusText()
+            </span>
+        }
+
+        <!-- Rating Badge -->
+        @if (DisplayMode == VideoDisplayMode.Library && Video.IsRatedByUser)
+        {
+            <span class="badge bg-warning position-absolute rating-badge">
+                <i class="bi bi-star-fill me-1"></i>
+                @Video.UserStars
             </span>
         }
 
@@ -93,6 +104,32 @@
                 }
             </small>
         </div>
+
+        <!-- Rating Display (Library Mode) -->
+        @if (DisplayMode == VideoDisplayMode.Library)
+        {
+            <div class="video-rating mb-2">
+                @if (Video.IsRatedByUser)
+                {
+                    <VideoRatingDisplay Rating="@Video.UserRating"
+                                        CssClass="compact"
+                                        ShowActions="true"
+                                        ShowTimestamp="false"
+                                        ShowNotes="false"
+                                        TruncateNotes="true"
+                                        MaxNotesLength="50"
+                                        OnEdit="@HandleEditRating" />
+                }
+                else
+                {
+                    <VideoRatingDisplay Rating="null"
+                                        CssClass="compact"
+                                        ShowEmptyState="true"
+                                        ShowNotes="false"
+                                        ShowActions="false" />
+                }
+            </div>
+        }
 
         <!-- Enhanced Metadata (when available) -->
         @if (Video.HasDetailedInfo && (Video.LikeCount.HasValue || Video.CommentCount.HasValue))
@@ -168,41 +205,54 @@
             else if (DisplayMode == VideoDisplayMode.Library)
             {
                 <!-- Library Mode Actions -->
-                <div class="btn-group w-100 mb-2" role="group">
+                <div class="d-grid gap-2">
+                    <!-- Watch Status Row -->
+                    <div class="btn-group" role="group">
+                        <button type="button"
+                                class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
+                                @onclick="() => MarkAsWatched()"
+                                disabled="@IsUpdatingStatus"
+                                title="Mark as watched">
+                            @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-circle"></i>
+                            }
+                        </button>
+                        <button type="button"
+                                class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
+                                @onclick="() => MarkAsSkipped()"
+                                disabled="@IsUpdatingStatus"
+                                title="Mark as skipped">
+                            @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-skip-forward"></i>
+                            }
+                        </button>
+                        <a href="@Video.YouTubeUrl"
+                           target="_blank"
+                           class="btn btn-primary btn-sm flex-fill">
+                            <i class="bi bi-play-circle me-1"></i>
+                            Watch
+                        </a>
+                    </div>
+
+                    <!-- Rating Action Row -->
                     <button type="button"
-                            class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
-                            @onclick="() => MarkAsWatched()"
-                            disabled="@IsUpdatingStatus"
-                            title="Mark as watched">
-                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-check-circle"></i>
-                        }
+                            class="btn @(Video.IsRatedByUser ? "btn-warning" : "btn-outline-warning") btn-sm w-100"
+                            @onclick="() => ShowRatingModal()"
+                            disabled="@(!Video.CanBeRated)"
+                            title="@(Video.CanBeRated ? (Video.IsRatedByUser ? "Edit your rating" : "Rate this video") : Video.CannotRateReason)">
+                        <i class="bi @(Video.IsRatedByUser ? "bi-star-fill" : "bi-star") me-1"></i>
+                        @(Video.IsRatedByUser ? $"Edit Rating ({Video.UserStars} stars)" : "Rate Video")
                     </button>
-                    <button type="button"
-                            class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
-                            @onclick="() => MarkAsSkipped()"
-                            disabled="@IsUpdatingStatus"
-                            title="Mark as skipped">
-                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-skip-forward"></i>
-                        }
-                    </button>
-                    <a href="@Video.YouTubeUrl"
-                       target="_blank"
-                       class="btn btn-primary btn-sm flex-fill">
-                        <i class="bi bi-play-circle me-1"></i>
-                        Watch
-                    </a>
                 </div>
             }
         </div>
@@ -241,6 +291,13 @@
     </div>
 }
 
+<!-- Rating Modal -->
+<VideoRatingModal IsVisible="@ShowRatingModalDialog"
+                  Model="@CurrentRatingModel"
+                  OnClose="@HideRatingModal"
+                  OnSubmit="@HandleRatingSubmit"
+                  OnDelete="@HandleRatingDelete" />
+
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -250,14 +307,20 @@
     [Parameter] public EventCallback<VideoDisplayModel> OnVideoAdded { get; set; }
     [Parameter] public EventCallback<VideoDisplayModel> OnVideoRemoved { get; set; }
     [Parameter] public EventCallback<(VideoDisplayModel Video, WatchStatus Status)> OnWatchStatusChanged { get; set; }
+    [Parameter] public EventCallback<(VideoDisplayModel Video, VideoRatingModel? Rating)> OnVideoRated { get; set; }
 
     // State management
     private bool IsAddingToLibrary = false;
     private bool IsRemoving = false;
     private bool IsUpdatingStatus = false;
     private bool ShowConfirmDialog = false;
+    private bool ShowRatingModalDialog = false;
     private WatchStatus? PendingStatus = null;
     private string? CurrentUserId;
+    private RateVideoModel? CurrentRatingModel = null;
+
+    // Add logger field for error handling
+    private ILogger<VideoCard>? _logger => Logger;
 
     protected override async Task OnInitializedAsync()
     {
@@ -504,6 +567,126 @@
     }
 
     #endregion
+
+    #region Rating Actions
+
+    /// <summary>
+    /// Shows the rating modal for creating or editing a rating.
+    /// </summary>
+    private void ShowRatingModal()
+    {
+        if (!Video.CanBeRated)
+        {
+            MessageCenter.ShowErrorAsync(Video.CannotRateReason);
+            return;
+        }
+
+        // Create rating model from video
+        CurrentRatingModel = Video.CreateRatingModel();
+        ShowRatingModalDialog = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides the rating modal.
+    /// </summary>
+    private void HideRatingModal()
+    {
+        ShowRatingModalDialog = false;
+        CurrentRatingModel = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles rating submission from the modal.
+    /// </summary>
+    private async Task HandleRatingSubmit(RateVideoModel ratingModel)
+    {
+        if (string.IsNullOrEmpty(CurrentUserId) || ratingModel == null)
+        {
+            await MessageCenter.ShowErrorAsync("Unable to save rating. Please try again.");
+            return;
+        }
+
+        try
+        {
+            VideoRatingModel savedRating;
+
+            if (ratingModel.IsEditing && ratingModel.RatingId.HasValue)
+            {
+                // Update existing rating
+                savedRating = await VideoRatingService.UpdateRatingAsync(
+                    CurrentUserId,
+                    ratingModel.RatingId.Value,
+                    ratingModel);
+            }
+            else
+            {
+                // Create new rating
+                savedRating = await VideoRatingService.CreateRatingAsync(CurrentUserId, ratingModel);
+            }
+
+            // Update the video model with the new rating
+            Video.UserRating = savedRating;
+
+            // Hide modal
+            HideRatingModal();
+
+            // Notify parent component
+            await OnVideoRated.InvokeAsync((Video, savedRating));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to save rating for video {VideoId}", ratingModel.VideoId);
+            // The service already shows error messages via MessageCenter
+            // Don't show duplicate error message here
+        }
+    }
+
+    /// <summary>
+    /// Handles rating deletion from the modal.
+    /// </summary>
+    private async Task HandleRatingDelete(RateVideoModel ratingModel)
+    {
+        if (string.IsNullOrEmpty(CurrentUserId) || ratingModel?.RatingId == null)
+        {
+            await MessageCenter.ShowErrorAsync("Unable to delete rating. Please try again.");
+            return;
+        }
+
+        try
+        {
+            var success = await VideoRatingService.DeleteRatingAsync(CurrentUserId, ratingModel.RatingId.Value);
+
+            if (success)
+            {
+                // Remove the rating from the video model
+                Video.UserRating = null;
+
+                // Hide modal
+                HideRatingModal();
+
+                // Notify parent component
+                await OnVideoRated.InvokeAsync((Video, null));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to delete rating {RatingId}", ratingModel.RatingId.Value);
+            // The service already shows error messages via MessageCenter
+            // Don't show duplicate error message here
+        }
+    }
+
+    /// <summary>
+    /// Handles editing an existing rating.
+    /// </summary>
+    private void HandleEditRating(VideoRatingModel rating)
+    {
+        ShowRatingModal();
+    }
+
+    #endregion
 }
 
 <style>
@@ -557,6 +740,14 @@
         border-radius: 3px;
     }
 
+    .rating-badge {
+        top: 8px;
+        right: 40px;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+
     .remove-btn {
         top: 8px;
         right: 8px;
@@ -598,6 +789,11 @@
 
     .video-metadata, .video-stats {
         font-size: 0.75rem;
+    }
+
+    .video-rating {
+        font-size: 0.75rem;
+        min-height: 1.5rem;
     }
 
     .video-description {

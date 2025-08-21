@@ -1,4 +1,5 @@
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Videos.Services;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -6,6 +7,7 @@ namespace TargetBrowse.Features.Videos.Models;
 /// Display model for video information in the UI.
 /// Provides formatted data and user-friendly display methods.
 /// Handles missing data gracefully for search results vs detailed views.
+/// Extended with rating information for the rating system.
 /// </summary>
 public class VideoDisplayModel
 {
@@ -106,6 +108,45 @@ public class VideoDisplayModel
     /// </summary>
     public WatchStatus WatchStatus { get; set; } = WatchStatus.NotWatched;
 
+    // ===== RATING SYSTEM PROPERTIES =====
+
+    /// <summary>
+    /// User's rating for this video. Null if not rated.
+    /// </summary>
+    public VideoRatingModel? UserRating { get; set; }
+
+    /// <summary>
+    /// Whether the current user has rated this video.
+    /// </summary>
+    public bool IsRatedByUser => UserRating != null;
+
+    /// <summary>
+    /// User's star rating (1-5) if rated, 0 if not rated.
+    /// </summary>
+    public int UserStars => UserRating?.Stars ?? 0;
+
+    /// <summary>
+    /// Summary of all ratings for this video (across all users).
+    /// </summary>
+    public VideoRatingSummary? RatingSummary { get; set; }
+
+    /// <summary>
+    /// Whether this video has any ratings from any users.
+    /// </summary>
+    public bool HasRatings => RatingSummary?.TotalRatings > 0;
+
+    /// <summary>
+    /// Average rating across all users.
+    /// </summary>
+    public double AverageRating => RatingSummary?.AverageStars ?? 0;
+
+    /// <summary>
+    /// Total number of ratings from all users.
+    /// </summary>
+    public int TotalRatings => RatingSummary?.TotalRatings ?? 0;
+
+    // ===== EXISTING PROPERTIES CONTINUE =====
+
     /// <summary>
     /// Indicates whether this model contains detailed information (from videos API)
     /// or basic information only (from search API).
@@ -166,6 +207,63 @@ public class VideoDisplayModel
     /// </summary>
     public string PublishedDisplay => FormatPublishedDate();
 
+    // ===== NEW RATING DISPLAY PROPERTIES =====
+
+    /// <summary>
+    /// Display text for user's rating.
+    /// </summary>
+    public string UserRatingDisplay => UserRating?.StarDisplayText ?? "Not rated";
+
+    /// <summary>
+    /// CSS class for user's rating display.
+    /// </summary>
+    public string UserRatingCssClass => UserRating?.StarCssClass ?? "text-muted";
+
+    /// <summary>
+    /// Short version of user's rating notes for card display.
+    /// </summary>
+    public string UserRatingNotesShort => UserRating?.ShortNotes ?? string.Empty;
+
+    /// <summary>
+    /// Display text for average rating.
+    /// </summary>
+    public string AverageRatingDisplay => HasRatings ? $"{AverageRating:F1} stars" : "No ratings";
+
+    /// <summary>
+    /// Display text for rating count.
+    /// </summary>
+    public string RatingCountDisplay => TotalRatings switch
+    {
+        0 => "No ratings",
+        1 => "1 rating",
+        _ => $"{TotalRatings} ratings"
+    };
+
+    /// <summary>
+    /// Combined rating summary for compact display.
+    /// </summary>
+    public string RatingSummaryDisplay => HasRatings
+        ? $"{AverageRating:F1} stars ({TotalRatings} {(TotalRatings == 1 ? "rating" : "ratings")})"
+        : "No ratings yet";
+
+    /// <summary>
+    /// CSS class for average rating display.
+    /// </summary>
+    public string AverageRatingCssClass => RatingSummary?.AverageStarsCssClass ?? "text-muted";
+
+    /// <summary>
+    /// Whether the video can be rated by the user.
+    /// Currently requires the video to be in the user's library.
+    /// </summary>
+    public bool CanBeRated => IsInLibrary;
+
+    /// <summary>
+    /// Tooltip text explaining why the video can't be rated (if applicable).
+    /// </summary>
+    public string CannotRateReason => !IsInLibrary
+        ? "Add video to your library to rate it"
+        : string.Empty;
+
     /// <summary>
     /// Formats large numbers into human-readable format (K, M, B).
     /// Returns empty string for null values.
@@ -202,7 +300,7 @@ public class VideoDisplayModel
         {
             // Parse ISO 8601 duration (PT4M13S)
             var timespan = System.Xml.XmlConvert.ToTimeSpan(duration);
-            
+
             if (timespan.TotalHours >= 1)
             {
                 return $"{(int)timespan.TotalHours}:{timespan.Minutes:D2}:{timespan.Seconds:D2}";
@@ -270,5 +368,35 @@ public class VideoDisplayModel
             return text;
 
         return text.Substring(0, maxLength).TrimEnd() + "...";
+    }
+
+    /// <summary>
+    /// Creates a RateVideoModel from this video for rating purposes.
+    /// </summary>
+    /// <returns>RateVideoModel for this video</returns>
+    public RateVideoModel CreateRatingModel()
+    {
+        return new RateVideoModel
+        {
+            VideoId = Id,
+            YouTubeVideoId = YouTubeVideoId,
+            VideoTitle = Title,
+            VideoThumbnailUrl = ThumbnailUrl,
+            ChannelTitle = ChannelTitle,
+            Stars = UserStars,
+            Notes = UserRating?.Notes ?? string.Empty,
+            RatingId = UserRating?.Id
+        };
+    }
+
+    /// <summary>
+    /// Updates this model with rating information.
+    /// </summary>
+    /// <param name="userRating">User's rating for this video</param>
+    /// <param name="ratingSummary">Summary of all ratings for this video</param>
+    public void UpdateWithRatingInfo(VideoRatingModel? userRating, VideoRatingSummary? ratingSummary)
+    {
+        UserRating = userRating;
+        RatingSummary = ratingSummary;
     }
 }

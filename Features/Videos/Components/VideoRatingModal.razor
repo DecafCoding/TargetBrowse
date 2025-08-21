@@ -1,0 +1,480 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using TargetBrowse.Features.Videos.Models
+
+@* Modal for rating videos with star input and notes *@
+
+@if (IsVisible)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);"
+         @onclick="HandleBackdropClick" @onclick:stopPropagation="false">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-star me-2"></i>
+                        @(Model?.IsEditing == true ? "Edit Rating" : "Rate Video")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (Model != null)
+                    {
+                        <EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit">
+                            <DataAnnotationsValidator />
+
+                            <!-- Video Information -->
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    @if (!string.IsNullOrEmpty(Model.VideoThumbnailUrl))
+                                    {
+                                        <img src="@Model.VideoThumbnailUrl"
+                                             class="img-fluid rounded video-thumbnail"
+                                             alt="@Model.VideoTitle"
+                                             onerror="this.style.display='none'" />
+                                    }
+                                    else
+                                    {
+                                        <div class="video-thumbnail-placeholder rounded d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-play-circle text-muted" style="font-size: 2rem;"></i>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-8">
+                                    <h6 class="video-title mb-2">@Model.VideoTitle</h6>
+                                    @if (!string.IsNullOrEmpty(Model.ChannelTitle))
+                                    {
+                                        <p class="text-muted mb-0">
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            @Model.ChannelTitle
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Star Rating Input -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    Rating <span class="text-danger">*</span>
+                                </label>
+                                <div class="rating-input-container">
+                                    <StarRatingInput @bind-CurrentValue="Model.Stars"
+                                                     Size="StarRatingInput.StarSize.Large"
+                                                     ShowLabel="true"
+                                                     CssClass="mb-2" />
+                                    <ValidationMessage For="@(() => Model.Stars)" class="text-danger small" />
+                                </div>
+                            </div>
+
+                            <!-- Notes Input -->
+                            <div class="mb-4">
+                                <label for="rating-notes" class="form-label">
+                                    Notes <span class="text-danger">*</span>
+                                </label>
+                                <div class="notes-input-container">
+                                    <InputTextArea @bind-Value="Model.Notes"
+                                                   class="form-control notes-textarea"
+                                                   id="rating-notes"
+                                                   placeholder="Please explain your rating. What did you like or dislike about this video? (minimum 10 characters)"
+                                                   rows="4"
+                                                   maxlength="1000"
+                                                   @oninput="OnNotesInput" />
+
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <ValidationMessage For="@(() => Model.Notes)" class="text-danger small" />
+                                        <small class="@Model.NotesCharacterCountCssClass">
+                                            @Model.NotesCharacterCount / 1000 characters
+                                            @if (Model.NotesCharacterCount < 10)
+                                            {
+                                                <span class="text-danger">(minimum 10)</span>
+                                            }
+                                        </small>
+                                    </div>
+
+                                    @if (Model.NotesCharacterCount >= 10)
+                                    {
+                                        <div class="notes-preview mt-2 p-2 bg-light rounded">
+                                            <small class="text-muted">
+                                                <strong>Preview:</strong> @Model.Notes
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Form Validation Summary -->
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Action Buttons -->
+                            <div class="modal-footer">
+                                <button type="button"
+                                        class="btn btn-secondary"
+                                        @onclick="CloseModal"
+                                        disabled="@IsSubmitting">
+                                    Cancel
+                                </button>
+
+                                @if (Model.IsEditing && OnDelete.HasDelegate)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            @onclick="ShowDeleteConfirmation"
+                                            disabled="@IsSubmitting">
+                                        <i class="bi bi-trash me-1"></i>
+                                        Delete Rating
+                                    </button>
+                                }
+
+                                <button type="submit"
+                                        class="btn btn-primary"
+                                        disabled="@(IsSubmitting || !Model.IsValid)">
+                                    @if (IsSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-star me-1"></i>
+                                    }
+                                    @(Model.IsEditing ? "Update Rating" : "Save Rating")
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    @if (ShowDeleteConfirm)
+    {
+        <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.6); z-index: 1051;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Delete Rating
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="HideDeleteConfirmation"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete your rating for this video?</p>
+                        <p class="text-muted small mb-0">This action cannot be undone, but you can always rate the video again later.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                @onclick="HideDeleteConfirmation"
+                                disabled="@IsDeleting">
+                            Cancel
+                        </button>
+                        <button type="button"
+                                class="btn btn-danger"
+                                @onclick="HandleDelete"
+                                disabled="@IsDeleting">
+                            @if (IsDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Delete Rating
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    /// <summary>
+    /// Whether the modal is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// The rating model for the form.
+    /// </summary>
+    [Parameter] public RateVideoModel? Model { get; set; }
+
+    /// <summary>
+    /// Callback when the modal should be closed.
+    /// </summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// Callback when a rating is submitted.
+    /// </summary>
+    [Parameter] public EventCallback<RateVideoModel> OnSubmit { get; set; }
+
+    /// <summary>
+    /// Callback when a rating should be deleted.
+    /// </summary>
+    [Parameter] public EventCallback<RateVideoModel> OnDelete { get; set; }
+
+    /// <summary>
+    /// Whether to allow clicking backdrop to close modal.
+    /// </summary>
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+
+    private bool IsSubmitting = false;
+    private bool IsDeleting = false;
+    private bool ShowDeleteConfirm = false;
+
+    /// <summary>
+    /// Handles valid form submission.
+    /// </summary>
+    private async Task HandleValidSubmit()
+    {
+        if (Model == null || IsSubmitting) return;
+
+        IsSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            await OnSubmit.InvokeAsync(Model);
+        }
+        catch (Exception)
+        {
+            // Error handling should be done in parent component
+            // and communicated via message center
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles notes input for real-time character count.
+    /// </summary>
+    private void OnNotesInput(ChangeEventArgs e)
+    {
+        if (Model != null && e.Value != null)
+        {
+            Model.Notes = e.Value.ToString() ?? string.Empty;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Closes the modal.
+    /// </summary>
+    private async Task CloseModal()
+    {
+        if (IsSubmitting || IsDeleting) return;
+        await OnClose.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Handles backdrop click events.
+    /// </summary>
+    private async Task HandleBackdropClick()
+    {
+        if (CloseOnBackdropClick && !IsSubmitting && !IsDeleting)
+        {
+            await CloseModal();
+        }
+    }
+
+    /// <summary>
+    /// Shows delete confirmation dialog.
+    /// </summary>
+    private void ShowDeleteConfirmation()
+    {
+        ShowDeleteConfirm = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides delete confirmation dialog.
+    /// </summary>
+    private void HideDeleteConfirmation()
+    {
+        ShowDeleteConfirm = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles rating deletion.
+    /// </summary>
+    private async Task HandleDelete()
+    {
+        if (Model == null || IsDeleting) return;
+
+        IsDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            await OnDelete.InvokeAsync(Model);
+            ShowDeleteConfirm = false;
+        }
+        catch (Exception)
+        {
+            // Error handling should be done in parent component
+        }
+        finally
+        {
+            IsDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles ESC key press to close modal.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsVisible)
+        {
+            // Focus the first form element for accessibility
+            await Task.Delay(100); // Small delay to ensure modal is rendered
+        }
+    }
+}
+
+<style>
+    .video-thumbnail {
+        width: 100%;
+        max-height: 120px;
+        object-fit: cover;
+    }
+
+    .video-thumbnail-placeholder {
+        width: 100%;
+        height: 120px;
+        background-color: var(--bs-light);
+        border: 2px dashed var(--bs-border-color);
+    }
+
+    .video-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.3;
+        margin-bottom: 0.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .rating-input-container {
+        padding: 1rem;
+        background-color: var(--bs-light);
+        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color);
+    }
+
+    .notes-input-container {
+        position: relative;
+    }
+
+    .notes-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+        .notes-textarea:focus {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+    .notes-preview {
+        max-height: 80px;
+        overflow-y: auto;
+        word-break: break-word;
+    }
+
+    .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--bs-border-color);
+        background-color: var(--bs-light);
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--bs-border-color);
+        background-color: var(--bs-light);
+    }
+
+    /* Dark theme support */
+    [data-bs-theme="dark"] .video-thumbnail-placeholder {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-border-color);
+    }
+
+    [data-bs-theme="dark"] .rating-input-container {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-border-color);
+    }
+
+    [data-bs-theme="dark"] .notes-preview {
+        background-color: var(--bs-dark) !important;
+        color: var(--bs-light);
+    }
+
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-border-color);
+    }
+
+    /* Animation */
+    .modal.fade.show {
+        animation: modalFadeIn 0.15s ease-out;
+    }
+
+    @@keyframes modalFadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .modal-lg
+
+    {
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+
+    .video-title {
+        font-size: 1rem;
+    }
+
+    .rating-input-container {
+        padding: 0.75rem;
+    }
+
+    .notes-textarea {
+        min-height: 80px;
+    }
+
+    }
+
+    /* Focus management for accessibility */
+    .modal.show .modal-content {
+        outline: none;
+    }
+
+    .modal.show .btn-close:focus {
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+</style>
