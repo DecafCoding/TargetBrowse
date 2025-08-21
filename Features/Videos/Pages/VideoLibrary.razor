@@ -1,4 +1,4 @@
-@page "/video-library"
+﻿@page "/video-library"
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using TargetBrowse.Features.Videos.Models
@@ -14,6 +14,13 @@
         <h1 class="h2 mb-1">My Video Library</h1>
         <p class="text-muted mb-0">
             Manage and organize your saved YouTube videos for focused content consumption. You have @Videos.Count in your library.
+            @if (RatedVideosCount > 0)
+            {
+                <span class="ms-2">
+                    <i class="bi bi-star-fill text-warning"></i>
+                    @RatedVideosCount rated
+                </span>
+            }
         </p>
     </div>
     <div>
@@ -42,6 +49,7 @@
         <br />Is Loading: @IsLoading
         <br />Videos Count: @Videos.Count
         <br />Filtered Count: @FilteredVideos.Count
+        <br />Rated Videos: @RatedVideosCount
         <br />Last Error: @LastError
     </div>
 }
@@ -110,7 +118,7 @@
                 }
                 else
                 {
-                    <!-- Library Controls - Search, Sort, and Count on same line -->
+                    <!-- Library Controls - Search, Sort, Filter, and Count on same line -->
                     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 mb-4">
                         <!-- Search Input (takes up remaining space) -->
                         <div class="flex-grow-1" style="min-width: 200px;">
@@ -134,6 +142,26 @@
                             </div>
                         </div>
 
+                        <!-- Rating Filter Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-star me-1"></i>
+                                Filter: @CurrentRatingFilter
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("All Videos")'>All Videos</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" Rated")'>Rated Videos</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" Not Rated")'>Not Rated</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 5 Stars")'>5 Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 4+ Stars")'>4+ Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 3+ Stars")'>3+ Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 1-2 Stars")'>1-2 Stars</button></li>
+                            </ul>
+                        </div>
+
                         <!-- Sort Dropdown -->
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary dropdown-toggle"
@@ -148,6 +176,9 @@
                                 <li><button class="dropdown-item" @onclick="SortByDuration">Duration</button></li>
                                 <li><button class="dropdown-item" @onclick="SortByViews">Views</button></li>
                                 <li><button class="dropdown-item" @onclick="SortByPublished">Published Date</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item" @onclick="SortByRating">Rating (High to Low)</button></li>
+                                <li><button class="dropdown-item" @onclick="SortByRatingLowToHigh">Rating (Low to High)</button></li>
                             </ul>
                         </div>
 
@@ -164,6 +195,35 @@
                         </div>
                     </div>
 
+                    <!-- Rating Summary Bar (if there are rated videos) -->
+                    @if (RatedVideosCount > 0)
+                    {
+                        <div class="rating-summary-bar mb-4 p-3 bg-light rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-star-fill text-warning me-2"></i>
+                                        Your Rating Summary
+                                    </h6>
+                                    <small class="text-muted">
+                                        @RatedVideosCount of @Videos.Count videos rated • Average: @AverageUserRating.ToString("F1") stars
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-md-end">
+                                        @for (int stars = 1; stars <= 5; stars++)
+                                        {
+                                            var count = GetRatingCount(stars);
+                                            <span class="badge @GetStarBadgeClass(stars) me-1" title="@count videos with @stars stars">
+                                                @stars★ @count
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
                     <!-- Video Grid using VideoCard Component -->
                     <div class="row">
                         @foreach (var video in FilteredVideos)
@@ -172,7 +232,8 @@
                                 <VideoCard Video="@video"
                                            DisplayMode="VideoDisplayMode.Library"
                                            OnVideoRemoved="@HandleVideoRemoved"
-                                           OnWatchStatusChanged="@HandleWatchStatusChanged" />
+                                           OnWatchStatusChanged="@HandleWatchStatusChanged"
+                                           OnVideoRated="@HandleVideoRated" />
                             </div>
                         }
                     </div>
@@ -206,9 +267,14 @@
     private bool IsGridView = true;
     private string LibrarySearchQuery = string.Empty;
     private string CurrentSortOption = "Date Added";
+    private string CurrentRatingFilter = "All Videos";
     private string? CurrentUserId;
     private string? LastError;
     private bool ShowDebugInfo = false;
+
+    // Rating statistics properties
+    private int RatedVideosCount => Videos.Count(v => v.IsRatedByUser);
+    private double AverageUserRating => RatedVideosCount > 0 ? Videos.Where(v => v.IsRatedByUser).Average(v => v.UserStars) : 0;
 
     // Statistics properties
     private string TotalDurationDisplay => CalculateTotalDuration();
@@ -248,6 +314,10 @@
             }
 
             Videos = await VideoService.GetUserLibraryAsync(CurrentUserId);
+
+            // Load mock rating data for demonstration
+            LoadMockRatingData();
+
             ApplyFiltersAndSort();
 
             if (!Videos.Any())
@@ -267,6 +337,46 @@
         {
             IsLoading = false;
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads mock rating data for demonstration purposes.
+    /// TODO: Replace with actual rating service integration.
+    /// </summary>
+    private void LoadMockRatingData()
+    {
+        var random = new Random();
+        var sampleNotes = new[]
+        {
+            "Great explanation of the concepts. Very clear and easy to follow.",
+            "Good content but could be more concise. Still worth watching.",
+            "Excellent tutorial! Exactly what I was looking for.",
+            "Too basic for my level, but well presented.",
+            "Amazing insights and practical examples. Highly recommended!",
+            "Decent content but the audio quality could be better.",
+            "Comprehensive coverage of the topic. Very thorough.",
+            "Not what I expected but still learned something new.",
+            "Outstanding presentation and valuable information.",
+            "Good starting point for beginners in this topic."
+        };
+
+        // Add mock ratings to 40% of videos
+        foreach (var video in Videos.Take((int)(Videos.Count * 0.4)))
+        {
+            var stars = random.Next(1, 6);
+            video.UserRating = new VideoRatingModel
+                {
+                    Id = Guid.NewGuid(),
+                    VideoId = video.Id,
+                    YouTubeVideoId = video.YouTubeVideoId,
+                    VideoTitle = video.Title,
+                    UserId = CurrentUserId ?? string.Empty,
+                    Stars = stars,
+                    Notes = sampleNotes[random.Next(sampleNotes.Length)],
+                    CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30)),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
+                };
         }
     }
 
@@ -307,6 +417,15 @@
     }
 
     /// <summary>
+    /// Sets the rating filter.
+    /// </summary>
+    private void SetRatingFilter(string filter)
+    {
+        CurrentRatingFilter = filter;
+        ApplyFiltersAndSort();
+    }
+
+    /// <summary>
     /// Sorts videos by the specified criteria.
     /// </summary>
     private void SortVideos(string sortOption)
@@ -323,6 +442,8 @@
     private void SortByDuration() => SortVideos("Duration");
     private void SortByViews() => SortVideos("Views");
     private void SortByPublished() => SortVideos("Published");
+    private void SortByRating() => SortVideos("Rating (High to Low)");
+    private void SortByRatingLowToHigh() => SortVideos("Rating (Low to High)");
 
     /// <summary>
     /// Applies current filters and sorting to the video list.
@@ -338,8 +459,21 @@
             query = query.Where(v =>
                 v.Title.ToLowerInvariant().Contains(searchLower) ||
                 v.ChannelTitle.ToLowerInvariant().Contains(searchLower) ||
-                v.Description.ToLowerInvariant().Contains(searchLower));
+                v.Description.ToLowerInvariant().Contains(searchLower) ||
+                (v.UserRating?.Notes.ToLowerInvariant().Contains(searchLower) ?? false));
         }
+
+        // Apply rating filter
+        query = CurrentRatingFilter switch
+        {
+            "Rated" => query.Where(v => v.IsRatedByUser),
+            "Not Rated" => query.Where(v => !v.IsRatedByUser),
+            "5 Stars" => query.Where(v => v.UserStars == 5),
+            "4+ Stars" => query.Where(v => v.UserStars >= 4),
+            "3+ Stars" => query.Where(v => v.UserStars >= 3),
+            "1-2 Stars" => query.Where(v => v.UserStars >= 1 && v.UserStars <= 2),
+            _ => query // "All Videos"
+        };
 
         // Apply sorting
         query = CurrentSortOption switch
@@ -348,6 +482,8 @@
             "Duration" => query.OrderByDescending(v => GetDurationInMinutes(v.Duration)),
             "Views" => query.OrderByDescending(v => v.ViewCount ?? 0),
             "Published" => query.OrderByDescending(v => v.PublishedAt),
+            "Rating (High to Low)" => query.OrderByDescending(v => v.UserStars).ThenByDescending(v => v.AddedToLibrary),
+            "Rating (Low to High)" => query.OrderBy(v => v.UserStars == 0 ? int.MaxValue : v.UserStars).ThenByDescending(v => v.AddedToLibrary),
             _ => query.OrderByDescending(v => v.AddedToLibrary ?? DateTime.MinValue) // Date Added
         };
 
@@ -380,6 +516,47 @@
         // Apply filters and sort to update the display
         ApplyFiltersAndSort();
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handles when a video is rated or rating is updated.
+    /// </summary>
+    private async Task HandleVideoRated((VideoDisplayModel Video, VideoRatingModel? Rating) data)
+    {
+        // Update the video in our local list
+        var video = Videos.FirstOrDefault(v => v.Id == data.Video.Id);
+        if (video != null)
+        {
+            video.UserRating = data.Rating;
+        }
+
+        // Apply filters and sort to update the display
+        ApplyFiltersAndSort();
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets the count of videos with a specific star rating.
+    /// </summary>
+    private int GetRatingCount(int stars)
+    {
+        return Videos.Count(v => v.UserStars == stars);
+    }
+
+    /// <summary>
+    /// Gets the CSS class for star rating badges.
+    /// </summary>
+    private string GetStarBadgeClass(int stars)
+    {
+        return stars switch
+        {
+            5 => "bg-success",
+            4 => "bg-info",
+            3 => "bg-warning",
+            2 => "bg-danger",
+            1 => "bg-dark",
+            _ => "bg-secondary"
+        };
     }
 
     /// <summary>
@@ -459,14 +636,46 @@
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     }
 
+    /* Rating summary bar */
+    .rating-summary-bar {
+        border: 1px solid var(--bs-border-color);
+    }
+
+        .rating-summary-bar .badge {
+            font-size: 0.7rem;
+        }
+
     /* Dark theme adjustments */
     [data-bs-theme="dark"] .video-card:hover {
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    [data-bs-theme="dark"] .rating-summary-bar {
+        background-color: var(--bs-dark) !important;
+        border-color: var(--bs-border-color);
     }
 
     /* Loading state improvements */
     .spinner-border-sm {
         width: 1rem;
         height: 1rem;
+    }
+
+    /* Filter and sort improvements */
+    .dropdown-toggle {
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 768px) {
+        .rating-summary-bar .row
+
+    {
+        text-align: center;
+    }
+
+    .rating-summary-bar .col-md-6:last-child {
+        margin-top: 0.5rem;
+    }
+
     }
 </style>

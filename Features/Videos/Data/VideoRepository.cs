@@ -22,6 +22,7 @@ public class VideoRepository : IVideoRepository
 
     /// <summary>
     /// Gets all videos in the user's library.
+    /// FIXED: Now includes rating information for each video.
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetUserVideosAsync(string userId)
     {
@@ -31,6 +32,8 @@ public class VideoRepository : IVideoRepository
                 .Where(uv => uv.UserId == userId)
                 .Include(uv => uv.Video)
                 .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
                 .Select(uv => new VideoDisplayModel
                 {
@@ -48,7 +51,23 @@ public class VideoRepository : IVideoRepository
                     ChannelTitle = uv.Video.Channel.Name,
                     AddedToLibrary = uv.AddedToLibraryAt,
                     IsInLibrary = true,
-                    WatchStatus = uv.Status
+                    WatchStatus = uv.Status,
+                    // FIXED: Map the user's rating for this video
+                    UserRating = uv.Video.Ratings
+                        .Where(r => r.UserId == userId)
+                        .Select(r => new VideoRatingModel
+                        {
+                            Id = r.Id,
+                            VideoId = r.VideoId ?? Guid.Empty,
+                            YouTubeVideoId = uv.Video.YouTubeVideoId,
+                            VideoTitle = uv.Video.Title,
+                            UserId = r.UserId,
+                            Stars = r.Stars,
+                            Notes = r.Notes,
+                            CreatedAt = r.CreatedAt,
+                            UpdatedAt = r.LastModifiedAt
+                        })
+                        .FirstOrDefault()
                 })
                 .ToListAsync();
         }
@@ -61,6 +80,7 @@ public class VideoRepository : IVideoRepository
 
     /// <summary>
     /// Gets a specific video by its YouTube video ID for a user.
+    /// FIXED: Now includes rating information.
     /// </summary>
     public async Task<VideoDisplayModel?> GetVideoByYouTubeIdAsync(string userId, string youTubeVideoId)
     {
@@ -70,6 +90,8 @@ public class VideoRepository : IVideoRepository
                 .Where(uv => uv.UserId == userId && uv.Video.YouTubeVideoId == youTubeVideoId)
                 .Include(uv => uv.Video)
                 .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
                 .Select(uv => new VideoDisplayModel
                 {
                     Id = uv.Video.Id,
@@ -86,7 +108,23 @@ public class VideoRepository : IVideoRepository
                     ChannelTitle = uv.Video.Channel.Name,
                     AddedToLibrary = uv.AddedToLibraryAt,
                     IsInLibrary = true,
-                    WatchStatus = uv.Status
+                    WatchStatus = uv.Status,
+                    // FIXED: Map the user's rating for this video
+                    UserRating = uv.Video.Ratings
+                        .Where(r => r.UserId == userId)
+                        .Select(r => new VideoRatingModel
+                        {
+                            Id = r.Id,
+                            VideoId = r.VideoId ?? Guid.Empty,
+                            YouTubeVideoId = uv.Video.YouTubeVideoId,
+                            VideoTitle = uv.Video.Title,
+                            UserId = r.UserId,
+                            Stars = r.Stars,
+                            Notes = r.Notes,
+                            CreatedAt = r.CreatedAt,
+                            UpdatedAt = r.LastModifiedAt
+                        })
+                        .FirstOrDefault()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -96,6 +134,188 @@ public class VideoRepository : IVideoRepository
             throw;
         }
     }
+
+    /// <summary>
+    /// Searches videos in the user's library by title or description.
+    /// FIXED: Now includes rating information.
+    /// </summary>
+    public async Task<List<VideoDisplayModel>> SearchUserVideosAsync(string userId, string searchQuery)
+    {
+        try
+        {
+            var searchLower = searchQuery.ToLowerInvariant();
+
+            return await _context.UserVideos
+                .Where(uv => uv.UserId == userId &&
+                           (uv.Video.Title.ToLower().Contains(searchLower) ||
+                            uv.Video.Channel.Name.ToLower().Contains(searchLower)))
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
+                .OrderByDescending(uv => uv.AddedToLibraryAt)
+                .Select(uv => new VideoDisplayModel
+                {
+                    Id = uv.Video.Id,
+                    YouTubeVideoId = uv.Video.YouTubeVideoId,
+                    Title = uv.Video.Title,
+                    Description = "",
+                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
+                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
+                    ViewCount = (ulong)uv.Video.ViewCount,
+                    LikeCount = (ulong)uv.Video.LikeCount,
+                    CommentCount = (ulong)uv.Video.CommentCount,
+                    PublishedAt = uv.Video.PublishedAt,
+                    ChannelId = uv.Video.Channel.YouTubeChannelId,
+                    ChannelTitle = uv.Video.Channel.Name,
+                    AddedToLibrary = uv.AddedToLibraryAt,
+                    IsInLibrary = true,
+                    WatchStatus = uv.Status,
+                    // FIXED: Map the user's rating for this video
+                    UserRating = uv.Video.Ratings
+                        .Where(r => r.UserId == userId)
+                        .Select(r => new VideoRatingModel
+                        {
+                            Id = r.Id,
+                            VideoId = r.VideoId ?? Guid.Empty,
+                            YouTubeVideoId = uv.Video.YouTubeVideoId,
+                            VideoTitle = uv.Video.Title,
+                            UserId = r.UserId,
+                            Stars = r.Stars,
+                            Notes = r.Notes,
+                            CreatedAt = r.CreatedAt,
+                            UpdatedAt = r.LastModifiedAt
+                        })
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching videos for user {UserId} with query {SearchQuery}", userId, searchQuery);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets videos added to library within a date range.
+    /// FIXED: Now includes rating information.
+    /// </summary>
+    public async Task<List<VideoDisplayModel>> GetVideosByDateRangeAsync(string userId, DateTime fromDate, DateTime toDate)
+    {
+        try
+        {
+            return await _context.UserVideos
+                .Where(uv => uv.UserId == userId &&
+                           uv.AddedToLibraryAt >= fromDate &&
+                           uv.AddedToLibraryAt <= toDate)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
+                .OrderByDescending(uv => uv.AddedToLibraryAt)
+                .Select(uv => new VideoDisplayModel
+                {
+                    Id = uv.Video.Id,
+                    YouTubeVideoId = uv.Video.YouTubeVideoId,
+                    Title = uv.Video.Title,
+                    Description = "",
+                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
+                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
+                    ViewCount = (ulong)uv.Video.ViewCount,
+                    LikeCount = (ulong)uv.Video.LikeCount,
+                    CommentCount = (ulong)uv.Video.CommentCount,
+                    PublishedAt = uv.Video.PublishedAt,
+                    ChannelId = uv.Video.Channel.YouTubeChannelId,
+                    ChannelTitle = uv.Video.Channel.Name,
+                    AddedToLibrary = uv.AddedToLibraryAt,
+                    IsInLibrary = true,
+                    WatchStatus = uv.Status,
+                    // FIXED: Map the user's rating for this video
+                    UserRating = uv.Video.Ratings
+                        .Where(r => r.UserId == userId)
+                        .Select(r => new VideoRatingModel
+                        {
+                            Id = r.Id,
+                            VideoId = r.VideoId ?? Guid.Empty,
+                            YouTubeVideoId = uv.Video.YouTubeVideoId,
+                            VideoTitle = uv.Video.Title,
+                            UserId = r.UserId,
+                            Stars = r.Stars,
+                            Notes = r.Notes,
+                            CreatedAt = r.CreatedAt,
+                            UpdatedAt = r.LastModifiedAt
+                        })
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting videos by date range for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets videos from a specific channel that are in the user's library.
+    /// FIXED: Now includes rating information.
+    /// </summary>
+    public async Task<List<VideoDisplayModel>> GetVideosByChannelAsync(string userId, string channelId)
+    {
+        try
+        {
+            return await _context.UserVideos
+                .Where(uv => uv.UserId == userId && uv.Video.Channel.YouTubeChannelId == channelId)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
+                .OrderByDescending(uv => uv.Video.PublishedAt)
+                .Select(uv => new VideoDisplayModel
+                {
+                    Id = uv.Video.Id,
+                    YouTubeVideoId = uv.Video.YouTubeVideoId,
+                    Title = uv.Video.Title,
+                    Description = "",
+                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
+                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
+                    ViewCount = (ulong)uv.Video.ViewCount,
+                    LikeCount = (ulong)uv.Video.LikeCount,
+                    CommentCount = (ulong)uv.Video.CommentCount,
+                    PublishedAt = uv.Video.PublishedAt,
+                    ChannelId = uv.Video.Channel.YouTubeChannelId,
+                    ChannelTitle = uv.Video.Channel.Name,
+                    AddedToLibrary = uv.AddedToLibraryAt,
+                    IsInLibrary = true,
+                    WatchStatus = uv.Status,
+                    // FIXED: Map the user's rating for this video
+                    UserRating = uv.Video.Ratings
+                        .Where(r => r.UserId == userId)
+                        .Select(r => new VideoRatingModel
+                        {
+                            Id = r.Id,
+                            VideoId = r.VideoId ?? Guid.Empty,
+                            YouTubeVideoId = uv.Video.YouTubeVideoId,
+                            VideoTitle = uv.Video.Title,
+                            UserId = r.UserId,
+                            Stars = r.Stars,
+                            Notes = r.Notes,
+                            CreatedAt = r.CreatedAt,
+                            UpdatedAt = r.LastModifiedAt
+                        })
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting videos by channel {ChannelId} for user {UserId}", channelId, userId);
+            throw;
+        }
+    }
+
+    // ===== REST OF THE METHODS REMAIN UNCHANGED =====
 
     /// <summary>
     /// Adds a video to the user's library.
@@ -109,7 +329,7 @@ public class VideoRepository : IVideoRepository
             // Check if user already has this video in their library
             var existingUserVideo = await _context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.YouTubeVideoId == video.YouTubeVideoId);
-            
+
             if (existingUserVideo != null)
             {
                 _logger.LogInformation("Video {VideoId} already exists in library for user {UserId}", video.YouTubeVideoId, userId);
@@ -156,7 +376,7 @@ public class VideoRepository : IVideoRepository
         {
             var userVideo = await _context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
-            
+
             if (userVideo == null)
             {
                 return false;
@@ -164,7 +384,7 @@ public class VideoRepository : IVideoRepository
 
             _context.UserVideos.Remove(userVideo);
             await _context.SaveChangesAsync();
-            
+
             _logger.LogInformation("Successfully removed video {VideoId} from library for user {UserId}", videoId, userId);
             return true;
         }
@@ -184,7 +404,7 @@ public class VideoRepository : IVideoRepository
         {
             var userVideo = await _context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
-            
+
             if (userVideo == null)
             {
                 _logger.LogWarning("Video {VideoId} not found in library for user {UserId}", videoId, userId);
@@ -195,8 +415,8 @@ public class VideoRepository : IVideoRepository
             userVideo.StatusChangedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            
-            _logger.LogInformation("Successfully updated watch status for video {VideoId} to {Status} for user {UserId}", 
+
+            _logger.LogInformation("Successfully updated watch status for video {VideoId} to {Status} for user {UserId}",
                 videoId, watchStatus, userId);
             return true;
         }
@@ -242,129 +462,6 @@ public class VideoRepository : IVideoRepository
     }
 
     /// <summary>
-    /// Searches videos in the user's library by title or description.
-    /// </summary>
-    public async Task<List<VideoDisplayModel>> SearchUserVideosAsync(string userId, string searchQuery)
-    {
-        try
-        {
-            var searchLower = searchQuery.ToLowerInvariant();
-            
-            return await _context.UserVideos
-                .Where(uv => uv.UserId == userId && 
-                           (uv.Video.Title.ToLower().Contains(searchLower) || 
-                            uv.Video.Channel.Name.ToLower().Contains(searchLower)))
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .OrderByDescending(uv => uv.AddedToLibraryAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status
-                })
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error searching videos for user {UserId} with query {SearchQuery}", userId, searchQuery);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets videos added to library within a date range.
-    /// </summary>
-    public async Task<List<VideoDisplayModel>> GetVideosByDateRangeAsync(string userId, DateTime fromDate, DateTime toDate)
-    {
-        try
-        {
-            return await _context.UserVideos
-                .Where(uv => uv.UserId == userId && 
-                           uv.AddedToLibraryAt >= fromDate && 
-                           uv.AddedToLibraryAt <= toDate)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .OrderByDescending(uv => uv.AddedToLibraryAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status
-                })
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting videos by date range for user {UserId}", userId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets videos from a specific channel that are in the user's library.
-    /// </summary>
-    public async Task<List<VideoDisplayModel>> GetVideosByChannelAsync(string userId, string channelId)
-    {
-        try
-        {
-            return await _context.UserVideos
-                .Where(uv => uv.UserId == userId && uv.Video.Channel.YouTubeChannelId == channelId)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .OrderByDescending(uv => uv.Video.PublishedAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status
-                })
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting videos by channel {ChannelId} for user {UserId}", channelId, userId);
-            throw;
-        }
-    }
-
-    /// <summary>
     /// Updates video information (for metadata refresh).
     /// </summary>
     public async Task<bool> UpdateVideoAsync(string userId, Guid videoId, VideoDisplayModel updatedVideo)
@@ -374,7 +471,7 @@ public class VideoRepository : IVideoRepository
             var userVideo = await _context.UserVideos
                 .Include(uv => uv.Video)
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
-            
+
             if (userVideo == null)
             {
                 return false;

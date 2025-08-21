@@ -79,6 +79,7 @@ public class Program
         // Videos Feature Services
         builder.Services.AddScoped<Features.Videos.Services.IVideoService, Features.Videos.Services.VideoService>();
         builder.Services.AddScoped<Features.Videos.Data.IVideoRepository, Features.Videos.Data.VideoRepository>();
+        builder.Services.AddScoped<Features.Videos.Services.IVideoRatingService, Features.Videos.Services.VideoRatingService>();
 
         // YouTube API Configuration
         builder.Services.Configure<YouTubeApiSettings>(
