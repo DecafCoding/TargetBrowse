@@ -1,0 +1,693 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Data.Entities
+@using TargetBrowse.Features.Videos.Models
+@using TargetBrowse.Features.Videos.Services
+@using TargetBrowse.Services
+@inject IVideoService VideoService
+@inject IMessageCenterService MessageCenter
+
+<div class="card video-card h-100">
+    <!-- Video Thumbnail Container -->
+    <div class="position-relative video-thumbnail-container">
+        <img src="@GetThumbnailUrl()"
+             class="card-img-top video-thumbnail"
+             alt="@Video.Title"
+             loading="lazy"
+             onerror="this.src='https://img.youtube.com/vi/@Video.YouTubeVideoId/hqdefault.jpg'" />
+
+        <!-- Duration Badge -->
+        @if (!string.IsNullOrEmpty(Video.DurationDisplay))
+        {
+            <span class="badge bg-dark position-absolute duration-badge">
+                @Video.DurationDisplay
+            </span>
+        }
+
+        <!-- Status Badges -->
+        @if (DisplayMode == VideoDisplayMode.Search && Video.IsInLibrary)
+        {
+            <span class="badge bg-success position-absolute status-badge">
+                <i class="bi bi-check-circle me-1"></i>
+                In Library
+            </span>
+        }
+        else if (DisplayMode == VideoDisplayMode.Library && Video.WatchStatus != WatchStatus.NotWatched)
+        {
+            <span class="badge @GetWatchStatusBadgeClass() position-absolute status-badge">
+                <i class="bi @GetWatchStatusIcon() me-1"></i>
+                @GetWatchStatusText()
+            </span>
+        }
+
+        <!-- Remove Button (Library Mode Only) -->
+        @if (DisplayMode == VideoDisplayMode.Library)
+        {
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger position-absolute remove-btn"
+                    @onclick="() => ConfirmRemove()"
+                    title="Remove from library">
+                <i class="bi bi-x"></i>
+            </button>
+        }
+    </div>
+
+    <!-- Video Details -->
+    <div class="card-body d-flex flex-column p-3">
+        <!-- Video Title -->
+        <h6 class="card-title video-title mb-2">
+            <a href="@Video.YouTubeUrl"
+               target="_blank"
+               class="text-decoration-none title-link"
+               title="@Video.Title">
+                @Video.Title
+            </a>
+        </h6>
+
+        <!-- Channel Info -->
+        <div class="video-channel mb-2">
+            <a href="@Video.ChannelUrl"
+               target="_blank"
+               class="text-muted text-decoration-none channel-link">
+                <i class="bi bi-person-circle me-1"></i>
+                @Video.ChannelTitle
+            </a>
+        </div>
+
+        <!-- Video Metadata -->
+        <div class="video-metadata mb-2">
+            <small class="text-muted">
+                @if (!string.IsNullOrEmpty(Video.ViewCountDisplay))
+                {
+                    <span title="@(Video.ViewCount?.ToString("N0")) views">@Video.ViewCountDisplay views</span>
+                    <span class="mx-1">•</span>
+                }
+                <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">@Video.PublishedDisplay</span>
+
+                @if (DisplayMode == VideoDisplayMode.Library && Video.AddedToLibrary.HasValue)
+                {
+                    <span class="mx-1">•</span>
+                    <span title="Added to library @Video.AddedToLibrary?.ToString("MMM d, yyyy h:mm tt")">
+                        Added @Video.AddedToLibraryDisplay
+                    </span>
+                }
+            </small>
+        </div>
+
+        <!-- Enhanced Metadata (when available) -->
+        @if (Video.HasDetailedInfo && (Video.LikeCount.HasValue || Video.CommentCount.HasValue))
+        {
+            <div class="video-stats mb-2">
+                <small class="text-muted d-flex flex-wrap gap-2">
+                    @if (!string.IsNullOrEmpty(Video.LikeCountDisplay))
+                    {
+                        <span title="@(Video.LikeCount?.ToString("N0")) likes">
+                            <i class="bi bi-hand-thumbs-up me-1"></i>
+                            @Video.LikeCountDisplay
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Video.CommentCountDisplay))
+                    {
+                        <span title="@(Video.CommentCount?.ToString("N0")) comments">
+                            <i class="bi bi-chat me-1"></i>
+                            @Video.CommentCountDisplay
+                        </span>
+                    }
+                </small>
+            </div>
+        }
+
+        <!-- Video Description -->
+        @if (!string.IsNullOrEmpty(Video.ShortDescription) && Video.ShortDescription != "No description available")
+        {
+            <p class="video-description text-muted small mb-3 flex-grow-1">
+                @Video.ShortDescription
+            </p>
+        }
+
+        <!-- Action Buttons -->
+        <div class="mt-auto">
+            @if (DisplayMode == VideoDisplayMode.Search)
+            {
+                <!-- Search Mode Actions -->
+                @if (!Video.IsInLibrary)
+                {
+                    <button type="button"
+                            class="btn btn-primary btn-sm w-100 mb-2"
+                            @onclick="AddToLibrary"
+                            disabled="@IsAddingToLibrary">
+                        @if (IsAddingToLibrary)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-plus-circle me-1"></i>
+                        }
+                        Save to Library
+                    </button>
+                }
+                else
+                {
+                    <button type="button"
+                            class="btn btn-success btn-sm w-100 mb-2"
+                            disabled>
+                        <i class="bi bi-check-circle me-1"></i>
+                        In Library
+                    </button>
+                }
+
+                <a href="@Video.YouTubeUrl"
+                   target="_blank"
+                   class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-play-circle me-1"></i>
+                    Watch on YouTube
+                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                </a>
+            }
+            else if (DisplayMode == VideoDisplayMode.Library)
+            {
+                <!-- Library Mode Actions -->
+                <div class="btn-group w-100 mb-2" role="group">
+                    <button type="button"
+                            class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
+                            @onclick="() => MarkAsWatched()"
+                            disabled="@IsUpdatingStatus"
+                            title="Mark as watched">
+                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                        }
+                    </button>
+                    <button type="button"
+                            class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
+                            @onclick="() => MarkAsSkipped()"
+                            disabled="@IsUpdatingStatus"
+                            title="Mark as skipped">
+                        @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-skip-forward"></i>
+                        }
+                    </button>
+                    <a href="@Video.YouTubeUrl"
+                       target="_blank"
+                       class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-play-circle me-1"></i>
+                        Watch
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal (Library Mode Only) -->
+@if (DisplayMode == VideoDisplayMode.Library && ShowConfirmDialog)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Remove Video</h5>
+                    <button type="button" class="btn-close" @onclick="CancelRemove"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove <strong>"@Video.ShortTitle"</strong> from your library?</p>
+                    <p class="text-muted small mb-0">This action cannot be undone, but you can always add the video back later.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelRemove">Cancel</button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            @onclick="RemoveVideo"
+                            disabled="@IsRemoving">
+                        @if (IsRemoving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Remove Video
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter, EditorRequired] public VideoDisplayModel Video { get; set; } = null!;
+    [Parameter, EditorRequired] public VideoDisplayMode DisplayMode { get; set; }
+    [Parameter] public EventCallback<VideoDisplayModel> OnVideoAdded { get; set; }
+    [Parameter] public EventCallback<VideoDisplayModel> OnVideoRemoved { get; set; }
+    [Parameter] public EventCallback<(VideoDisplayModel Video, WatchStatus Status)> OnWatchStatusChanged { get; set; }
+
+    // State management
+    private bool IsAddingToLibrary = false;
+    private bool IsRemoving = false;
+    private bool IsUpdatingStatus = false;
+    private bool ShowConfirmDialog = false;
+    private WatchStatus? PendingStatus = null;
+    private string? CurrentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserIdAsync();
+    }
+
+    /// <summary>
+    /// Gets the current authenticated user's ID using the same pattern as working components.
+    /// </summary>
+    private async Task GetCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch (Exception)
+        {
+            CurrentUserId = null;
+        }
+    }
+
+    /// <summary>
+    /// Gets the appropriate thumbnail URL for the video.
+    /// </summary>
+    private string GetThumbnailUrl()
+    {
+        return Video.ThumbnailUrl ?? $"https://img.youtube.com/vi/{Video.YouTubeVideoId}/maxresdefault.jpg";
+    }
+
+    /// <summary>
+    /// Gets the CSS class for watch status badge.
+    /// </summary>
+    private string GetWatchStatusBadgeClass()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "bg-success",
+            WatchStatus.Skipped => "bg-secondary",
+            _ => "bg-primary"
+        };
+    }
+
+    /// <summary>
+    /// Gets the icon for watch status.
+    /// </summary>
+    private string GetWatchStatusIcon()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "bi-check-circle-fill",
+            WatchStatus.Skipped => "bi-skip-forward-fill",
+            _ => "bi-circle"
+        };
+    }
+
+    /// <summary>
+    /// Gets the text for watch status.
+    /// </summary>
+    private string GetWatchStatusText()
+    {
+        return Video.WatchStatus switch
+        {
+            WatchStatus.Watched => "Watched",
+            WatchStatus.Skipped => "Skipped",
+            _ => "Not Watched"
+        };
+    }
+
+    #region Search Mode Actions
+
+    /// <summary>
+    /// Adds the video to the user's library with full metadata.
+    /// </summary>
+    private async Task AddToLibrary()
+    {
+        if (IsAddingToLibrary || string.IsNullOrEmpty(CurrentUserId))
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+                await MessageCenter.ShowErrorAsync("Please log in to add videos to your library.");
+            return;
+        }
+
+        if (Video.IsInLibrary)
+            return;
+
+        IsAddingToLibrary = true;
+        StateHasChanged();
+
+        try
+        {
+            var addModel = new AddVideoModel
+                {
+                    VideoUrl = Video.YouTubeUrl,
+                    Notes = $"Added from search on {DateTime.Now:yyyy-MM-dd}"
+                };
+
+            var success = await VideoService.AddVideoToLibraryAsync(CurrentUserId, addModel);
+
+            if (success)
+            {
+                Video.IsInLibrary = true;
+                Video.AddedToLibrary = DateTime.UtcNow;
+
+                await MessageCenter.ShowSuccessAsync($"Added '{Video.ShortTitle}' to your library!");
+                await OnVideoAdded.InvokeAsync(Video);
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to add video to library. It may already exist or there was a network error.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowErrorAsync($"Error adding video to library: {ex.Message}");
+        }
+        finally
+        {
+            IsAddingToLibrary = false;
+            StateHasChanged();
+        }
+    }
+
+    #endregion
+
+    #region Library Mode Actions
+
+    /// <summary>
+    /// Shows the confirmation dialog for removing the video.
+    /// </summary>
+    private void ConfirmRemove()
+    {
+        ShowConfirmDialog = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Cancels the remove operation and hides the dialog.
+    /// </summary>
+    private void CancelRemove()
+    {
+        ShowConfirmDialog = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Removes the video from the library after confirmation.
+    /// </summary>
+    private async Task RemoveVideo()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUserId))
+        {
+            await MessageCenter.ShowErrorAsync("Please log in to manage your library.");
+            return;
+        }
+
+        IsRemoving = true;
+
+        try
+        {
+            var success = await VideoService.RemoveVideoFromLibraryAsync(CurrentUserId, Video.Id);
+
+            if (success)
+            {
+                ShowConfirmDialog = false;
+                await OnVideoRemoved.InvokeAsync(Video);
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to remove video from library. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowErrorAsync($"Error removing video: {ex.Message}");
+        }
+        finally
+        {
+            IsRemoving = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Marks the video as watched.
+    /// </summary>
+    private async Task MarkAsWatched()
+    {
+        await UpdateWatchStatus(WatchStatus.Watched);
+    }
+
+    /// <summary>
+    /// Marks the video as skipped.
+    /// </summary>
+    private async Task MarkAsSkipped()
+    {
+        await UpdateWatchStatus(WatchStatus.Skipped);
+    }
+
+    /// <summary>
+    /// Updates the watch status for the video.
+    /// </summary>
+    private async Task UpdateWatchStatus(WatchStatus newStatus)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUserId) || IsUpdatingStatus)
+            return;
+
+        // If clicking the same status, toggle back to NotWatched
+        if (Video.WatchStatus == newStatus)
+        {
+            newStatus = WatchStatus.NotWatched;
+        }
+
+        IsUpdatingStatus = true;
+        PendingStatus = newStatus;
+
+        try
+        {
+            var success = await VideoService.UpdateVideoWatchStatusAsync(CurrentUserId, Video.Id, newStatus);
+
+            if (success)
+            {
+                Video.WatchStatus = newStatus;
+                var statusText = GetWatchStatusText().ToLower();
+                await MessageCenter.ShowSuccessAsync($"Marked video as {statusText}");
+                await OnWatchStatusChanged.InvokeAsync((Video, newStatus));
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to update watch status. Please try again.");
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowErrorAsync($"Failed to update watch status: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdatingStatus = false;
+            PendingStatus = null;
+        }
+    }
+
+    #endregion
+}
+
+<style>
+    .video-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid var(--bs-border-color);
+        height: 100%;
+    }
+
+        .video-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+    .video-thumbnail-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        transition: transform 0.2s ease;
+        background-color: var(--bs-light);
+        background-image: url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100' height='100' fill='%23f8f9fa'/%3e%3ctext x='50' y='50' font-size='14' text-anchor='middle' dy='.3em' fill='%236c757d'%3eLoading...%3c/text%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 60px 60px;
+    }
+
+    .video-card:hover .video-thumbnail {
+        transform: scale(1.02);
+    }
+
+    .duration-badge {
+        bottom: 8px;
+        right: 8px;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+
+    .status-badge {
+        top: 8px;
+        left: 8px;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+
+    .remove-btn {
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .video-card:hover .remove-btn {
+        opacity: 1;
+    }
+
+    .video-title {
+        font-size: 0.9rem;
+        line-height: 1.3;
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.4rem;
+    }
+
+    .title-link {
+        color: inherit;
+    }
+
+        .title-link:hover {
+            color: var(--bs-primary) !important;
+        }
+
+    .video-channel {
+        font-size: 0.8rem;
+    }
+
+    .channel-link:hover {
+        color: var(--bs-primary) !important;
+    }
+
+    .video-metadata, .video-stats {
+        font-size: 0.75rem;
+    }
+
+    .video-description {
+        font-size: 0.75rem;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 2.1rem;
+    }
+
+    /* Button group improvements */
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+        .btn-group .btn:first-child {
+            border-top-left-radius: var(--bs-border-radius-sm);
+            border-bottom-left-radius: var(--bs-border-radius-sm);
+        }
+
+        .btn-group .btn:last-child {
+            border-top-right-radius: var(--bs-border-radius-sm);
+            border-bottom-right-radius: var(--bs-border-radius-sm);
+        }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .video-thumbnail
+
+    {
+        height: 180px;
+    }
+
+    .video-title {
+        font-size: 0.85rem;
+    }
+
+    .video-channel {
+        font-size: 0.75rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+        .btn-group .btn {
+            border-radius: var(--bs-border-radius-sm) !important;
+            margin-bottom: 0.25rem;
+        }
+
+            .btn-group .btn:last-child {
+                margin-bottom: 0;
+            }
+
+    }
+
+    @@media (max-width: 576px) {
+        .video-thumbnail
+
+    {
+        height: 160px;
+    }
+
+    }
+
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .video-card {
+        border-color: var(--bs-border-color);
+        background-color: var(--bs-dark);
+    }
+
+        [data-bs-theme="dark"] .video-card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+    [data-bs-theme="dark"] .title-link {
+        color: var(--bs-light);
+    }
+
+        [data-bs-theme="dark"] .title-link:hover {
+            color: var(--bs-primary) !important;
+        }
+
+    [data-bs-theme="dark"] .video-thumbnail {
+        background-color: var(--bs-dark);
+    }
+
+    /* Loading and disabled states */
+    .btn:disabled {
+        cursor: not-allowed;
+    }
+</style>

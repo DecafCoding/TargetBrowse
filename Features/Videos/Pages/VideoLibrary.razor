@@ -1,6 +1,7 @@
 @page "/video-library"
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using TargetBrowse.Features.Videos.Models
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IVideoService VideoService
@@ -10,16 +11,25 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h2 mb-1">Video Library</h1>
+        <h1 class="h2 mb-1">My Video Library</h1>
         <p class="text-muted mb-0">
-            Manage and organize your saved YouTube videos for focused content consumption.
+            Manage and organize your saved YouTube videos for focused content consumption. You have @Videos.Count in your library.
         </p>
     </div>
     <div>
-        <a href="/video-search" class="btn btn-primary">
-            <i class="bi bi-search me-2"></i>
-            Search Videos
-        </a>
+        <div class="btn-group" role="group">
+            <a href="/video-search"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-search me-1"></i>
+                Search Videos
+            </a>
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="RefreshAsync">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Refresh
+            </button>
+        </div>
     </div>
 </div>
 
@@ -37,40 +47,9 @@
 }
 
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-lg-12">
         <!-- My Video Library Section -->
         <div class="card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-collection-play me-2"></i>
-                        My Video Library
-                        @if (Videos.Any())
-                        {
-                            <span class="badge bg-primary ms-2">@Videos.Count</span>
-                        }
-                    </h5>
-                    
-                    @if (Videos.Any())
-                    {
-                        <div class="btn-group" role="group">
-                            <button type="button" 
-                                   class="btn btn-outline-secondary btn-sm" 
-                                   @onclick="ToggleViewMode">
-                                <i class="bi @(IsGridView ? "bi-list" : "bi-grid-3x3-gap") me-1"></i>
-                                @(IsGridView ? "List" : "Grid")
-                            </button>
-                            <button type="button" 
-                                   class="btn btn-outline-secondary btn-sm" 
-                                   @onclick="RefreshAsync">
-                                <i class="bi bi-arrow-clockwise me-1"></i>
-                                Refresh
-                            </button>
-                        </div>
-                    }
-                </div>
-            </div>
-            
             <div class="card-body">
                 @if (IsLoading)
                 {
@@ -131,45 +110,35 @@
                 }
                 else
                 {
-                    <!-- Library Search -->
-                    <div class="mb-4">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" 
-                                   class="form-control" 
-                                   placeholder="Search your library..."
-                                   @bind="LibrarySearchQuery"
-                                   @oninput="OnLibrarySearchInput" />
-                            @if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
-                            {
-                                <button class="btn btn-outline-secondary" 
-                                       type="button" 
-                                       @onclick="ClearLibrarySearch">
-                                    <i class="bi bi-x"></i>
-                                </button>
-                            }
+                    <!-- Library Controls - Search, Sort, and Count on same line -->
+                    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 mb-4">
+                        <!-- Search Input (takes up remaining space) -->
+                        <div class="flex-grow-1" style="min-width: 200px;">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Search your library..."
+                                       @bind="LibrarySearchQuery"
+                                       @oninput="OnLibrarySearchInput" />
+                                @if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
+                                {
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            @onclick="ClearLibrarySearch">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                }
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Video Count and Filters -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="text-muted small">
-                            @if (FilteredVideos.Count != Videos.Count)
-                            {
-                                <span>Showing @FilteredVideos.Count of @Videos.Count videos</span>
-                            }
-                            else
-                            {
-                                <span>@Videos.Count videos in your library</span>
-                            }
-                        </div>
-                        
+                        <!-- Sort Dropdown -->
                         <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                   type="button" 
-                                   data-bs-toggle="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
                                 <i class="bi bi-funnel me-1"></i>
                                 Sort: @CurrentSortOption
                             </button>
@@ -181,28 +150,30 @@
                                 <li><button class="dropdown-item" @onclick="SortByPublished">Published Date</button></li>
                             </ul>
                         </div>
-                    </div>
 
-                    <!-- Video Grid/List -->
-                    <div class="@(IsGridView ? "row" : "")">
-                        @foreach (var video in FilteredVideos)
-                        {
-                            @if (IsGridView)
+                        <!-- Video Count -->
+                        <div class="text-muted small text-nowrap">
+                            @if (FilteredVideos.Count != Videos.Count)
                             {
-                                <div class="col-md-6 col-lg-4 mb-4">
-                                    <VideoLibraryItem Video="@video" 
-                                                    IsGridView="true"
-                                                    OnVideoRemoved="@HandleVideoRemoved" />
-                                </div>
+                                <span>Showing @FilteredVideos.Count of @Videos.Count videos</span>
                             }
                             else
                             {
-                                <div class="mb-3">
-                                    <VideoLibraryItem Video="@video" 
-                                                    IsGridView="false"
-                                                    OnVideoRemoved="@HandleVideoRemoved" />
-                                </div>
+                                <span>@Videos.Count videos in your library</span>
                             }
+                        </div>
+                    </div>
+
+                    <!-- Video Grid using VideoCard Component -->
+                    <div class="row">
+                        @foreach (var video in FilteredVideos)
+                        {
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <VideoCard Video="@video"
+                                           DisplayMode="VideoDisplayMode.Library"
+                                           OnVideoRemoved="@HandleVideoRemoved"
+                                           OnWatchStatusChanged="@HandleWatchStatusChanged" />
+                            </div>
                         }
                     </div>
 
@@ -222,115 +193,6 @@
                 }
             </div>
         </div>
-    </div>
-
-    <div class="col-lg-4">
-        <!-- Library Statistics -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>
-                    Library Statistics
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="mb-2">
-                            <i class="bi bi-collection text-primary" style="font-size: 1.5rem;"></i>
-                        </div>
-                        <div class="h4 mb-1">@Videos.Count</div>
-                        <small class="text-muted">Total Videos</small>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-2">
-                            <i class="bi bi-clock text-success" style="font-size: 1.5rem;"></i>
-                        </div>
-                        <div class="h4 mb-1">@TotalDurationDisplay</div>
-                        <small class="text-muted">Total Duration</small>
-                    </div>
-                </div>
-                <hr class="my-3">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="mb-1 fw-bold">@VideosThisWeek</div>
-                        <small class="text-muted">This Week</small>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-1 fw-bold">@VideosThisMonth</div>
-                        <small class="text-muted">This Month</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-lightning me-2"></i>
-                    Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="/video-search" class="btn btn-primary">
-                        <i class="bi bi-search me-2"></i>
-                        Search for Videos
-                    </a>
-                    <a href="/suggestions" class="btn btn-outline-success">
-                        <i class="bi bi-magic me-2"></i>
-                        Get Suggestions
-                    </a>
-                    <a href="/channels" class="btn btn-outline-secondary">
-                        <i class="bi bi-person-plus me-2"></i>
-                        Manage Channels
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Library Insights -->
-        @if (Videos.Any())
-        {
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-bar-chart me-2"></i>
-                        Library Insights
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Not Watched</small>
-                            <small class="fw-bold">@NotWatchedCount</small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-warning" style="width: @NotWatchedPercentage%"></div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Watched</small>
-                            <small class="fw-bold">@WatchedCount</small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-success" style="width: @WatchedPercentage%"></div>
-                        </div>
-                    </div>
-                    <div class="mb-0">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Skipped</small>
-                            <small class="fw-bold">@SkippedCount</small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-secondary" style="width: @SkippedPercentage%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
     </div>
 </div>
 
@@ -387,7 +249,7 @@
 
             Videos = await VideoService.GetUserLibraryAsync(CurrentUserId);
             ApplyFiltersAndSort();
-            
+
             if (!Videos.Any())
             {
                 // This is not an error, just an empty library
@@ -422,15 +284,6 @@
     private void ToggleDebugInfo()
     {
         ShowDebugInfo = !ShowDebugInfo;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Toggles between grid and list view modes.
-    /// </summary>
-    private void ToggleViewMode()
-    {
-        IsGridView = !IsGridView;
         StateHasChanged();
     }
 
@@ -482,7 +335,7 @@
         if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
         {
             var searchLower = LibrarySearchQuery.ToLowerInvariant();
-            query = query.Where(v => 
+            query = query.Where(v =>
                 v.Title.ToLowerInvariant().Contains(searchLower) ||
                 v.ChannelTitle.ToLowerInvariant().Contains(searchLower) ||
                 v.Description.ToLowerInvariant().Contains(searchLower));
@@ -513,20 +366,37 @@
     }
 
     /// <summary>
+    /// Handles when a video's watch status is changed.
+    /// </summary>
+    private async Task HandleWatchStatusChanged((VideoDisplayModel Video, WatchStatus Status) data)
+    {
+        // Update the video in our local list
+        var video = Videos.FirstOrDefault(v => v.Id == data.Video.Id);
+        if (video != null)
+        {
+            video.WatchStatus = data.Status;
+        }
+
+        // Apply filters and sort to update the display
+        ApplyFiltersAndSort();
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Calculates total duration display string.
     /// </summary>
     private string CalculateTotalDuration()
     {
         var totalMinutes = 0;
-        
+
         foreach (var video in Videos)
         {
             totalMinutes += GetDurationInMinutes(video.Duration);
         }
-        
+
         var hours = totalMinutes / 60;
         var minutes = totalMinutes % 60;
-        
+
         if (hours > 0)
             return $"{hours}h {minutes}m";
         else
@@ -570,3 +440,33 @@
         return Videos.Count(v => v.AddedToLibrary >= oneMonthAgo);
     }
 }
+
+<style>
+    /* Grid view adjustments */
+    .row .video-card {
+        height: 100%;
+    }
+
+    /* Consistent card heights in grid */
+    .row > [class*="col-"] {
+        display: flex;
+        align-items: stretch;
+    }
+
+    /* Hover effects */
+    .video-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .video-card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Loading state improvements */
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+</style>

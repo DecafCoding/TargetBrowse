@@ -1,5 +1,7 @@
 @page "/video-search"
 @using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Videos.Models
+@using TargetBrowse.Features.Videos.Components
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IVideoService VideoService
@@ -38,7 +40,7 @@
                     <DataAnnotationsValidator />
                     
                     <div class="mb-4">
-                        <label for="searchQuery" class="form-label">Search Videos (Enter keywords or for quick addtion paste direct video links)</label>
+                        <label for="searchQuery" class="form-label">Search Videos (Enter keywords or for quick addition paste direct video links)</label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-search"></i>
@@ -132,13 +134,14 @@
                         </button>
                     </div>
 
-                    <!-- Results Grid -->
+                    <!-- Results Grid - Now using the shared VideoCard component -->
                     <div class="row g-3 video-results-grid">
                         @foreach (var video in SearchResults)
                         {
                             <div class="col-12 col-md-6 col-lg-4">
-                                <VideoSearchResult Video="@video" 
-                                                 OnVideoAdded="@HandleVideoAddedToLibrary" />
+                                <VideoCard Video="@video" 
+                                          DisplayMode="VideoDisplayMode.Search"
+                                          OnVideoAdded="@HandleVideoAddedToLibrary" />
                             </div>
                         }
                     </div>
@@ -263,6 +266,7 @@
         }
 
         await MessageCenter.ShowSuccessAsync($"Added '{video.ShortTitle}' to your library!");
+        StateHasChanged(); // Force UI update to reflect the change
     }
 
     /// <summary>
