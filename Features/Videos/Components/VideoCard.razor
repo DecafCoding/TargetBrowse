@@ -520,13 +520,15 @@
 
     .video-thumbnail-container {
         position: relative;
+        aspect-ratio: 16 / 9; /* Match YouTube thumbnail aspect ratio for consistent display */
         overflow: hidden;
+        background-color: #000; /* Black background for any edge cases */
     }
 
     .video-thumbnail {
         width: 100%;
-        height: 200px;
-        object-fit: cover;
+        height: 100%;
+        object-fit: cover; /* Still use cover for edge cases, but aspect-ratio prevents cropping */
         transition: transform 0.2s ease;
         background-color: var(--bs-light);
         background-image: url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100' height='100' fill='%23f8f9fa'/%3e%3ctext x='50' y='50' font-size='14' text-anchor='middle' dy='.3em' fill='%236c757d'%3eLoading...%3c/text%3e%3c/svg%3e");
@@ -624,15 +626,11 @@
             border-bottom-right-radius: var(--bs-border-radius-sm);
         }
 
-    /* Responsive adjustments */
+    /* Responsive adjustments - maintaining aspect ratio removes need for height changes */
     @@media (max-width: 768px) {
-        .video-thumbnail
+        .video-title
 
     {
-        height: 180px;
-    }
-
-    .video-title {
         font-size: 0.85rem;
     }
 
@@ -652,15 +650,6 @@
             .btn-group .btn:last-child {
                 margin-bottom: 0;
             }
-
-    }
-
-    @@media (max-width: 576px) {
-        .video-thumbnail
-
-    {
-        height: 160px;
-    }
 
     }
 
@@ -689,5 +678,15 @@
     /* Loading and disabled states */
     .btn:disabled {
         cursor: not-allowed;
+    }
+
+    /* Fallback for browsers that don't support aspect-ratio */
+    @@supports not (aspect-ratio: 16 / 9) {
+        .video-thumbnail-container
+
+    {
+        height: 200px; /* Fallback to original height */
+    }
+
     }
 </style>
