@@ -57,6 +57,11 @@ public class ChannelDisplayModel
     public bool IsTracked { get; set; }
 
     /// <summary>
+    /// The current user's rating for this channel (if any).
+    /// </summary>
+    public ChannelRatingModel? UserRating { get; set; }
+
+    /// <summary>
     /// Formatted subscriber count for display (e.g., "1.2M", "45.3K").
     /// </summary>
     public string SubscriberCountDisplay => FormatCount(SubscriberCount);
@@ -80,6 +85,43 @@ public class ChannelDisplayModel
     /// Gets the YouTube channel URL.
     /// </summary>
     public string YouTubeUrl => $"https://www.youtube.com/channel/{YouTubeChannelId}";
+
+    /// <summary>
+    /// Indicates if the user has rated this channel.
+    /// </summary>
+    public bool IsRated => UserRating != null;
+
+    /// <summary>
+    /// Indicates if the channel is rated 1-star (should be excluded from suggestions).
+    /// </summary>
+    public bool IsLowRated => UserRating?.IsLowRating ?? false;
+
+    /// <summary>
+    /// Gets the star rating if available, 0 if not rated.
+    /// </summary>
+    public int StarRating => UserRating?.Stars ?? 0;
+
+    /// <summary>
+    /// Gets display text for the channel's rating status.
+    /// </summary>
+    public string RatingStatusDisplay => UserRating switch
+    {
+        null => "Not rated",
+        var rating when rating.IsLowRating => "Low rated (excluded from suggestions)",
+        var rating => $"Rated {rating.Stars} stars"
+    };
+
+    /// <summary>
+    /// Gets CSS class for rating status display.
+    /// </summary>
+    public string RatingStatusCssClass => UserRating switch
+    {
+        null => "text-muted",
+        var rating when rating.IsLowRating => "text-danger",
+        var rating when rating.Stars >= 4 => "text-success",
+        var rating when rating.Stars == 3 => "text-info",
+        var rating => "text-warning"
+    };
 
     /// <summary>
     /// Formats large numbers into human-readable format (K, M, B).

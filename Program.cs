@@ -75,6 +75,7 @@ public class Program
         // Channels Feature Services
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
         builder.Services.AddScoped<Features.Channels.Data.IChannelRepository, Features.Channels.Data.ChannelRepository>();
+        builder.Services.AddScoped<Features.Channels.Services.IChannelRatingService, Features.Channels.Services.ChannelRatingService>();
 
         // Videos Feature Services
         builder.Services.AddScoped<Features.Videos.Services.IVideoService, Features.Videos.Services.VideoService>();

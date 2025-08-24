@@ -2,7 +2,9 @@
 @using System.Security.Claims
 @using TargetBrowse.Features.Channels.Models
 @using TargetBrowse.Features.Channels.Services
+@using TargetBrowse.Features.Channels.Components
 @inject IChannelService ChannelService
+@inject IChannelRatingService ChannelRatingService
 @attribute [Authorize]
 
 @rendermode InteractiveServer
@@ -47,6 +49,7 @@
                             <th scope="col" class="border-0">Subs</th>
                             <th scope="col" class="border-0">Videos</th>
                             <th scope="col" class="border-0">Age</th>
+                            <th scope="col" class="border-0 text-center">Rating</th>
                             <th scope="col" class="border-0 text-center">Details</th>
                             <th scope="col" class="border-0 text-center" style="width: 80px;">Delete</th>
                         </tr>
@@ -92,6 +95,15 @@
                                 <!-- Tracked Since -->
                                 <td class="text-muted">
                                     @channel.TrackedSinceDisplay
+                                </td>
+
+                                <!-- Rating -->
+                                <td class="text-center">
+                                    <ChannelRatingDisplay Rating="@channel.UserRating"
+                                                        ShowDetailsButton="false"
+                                                        ShowEditButton="true"
+                                                        OnRateClick="@(() => ShowRatingModal(channel))"
+                                                        OnEditClick="@(() => ShowEditRatingModal(channel))" />
                                 </td>
 
                                 <!-- Links -->
@@ -224,6 +236,12 @@
     <div class="modal-backdrop show" @onclick="HideRemoveConfirmation"></div>
 }
 
+<!-- Channel Rating Modal -->
+<ChannelRatingModal @ref="RatingModal"
+                   OnRatingCreated="HandleRatingCreated"
+                   OnRatingUpdated="HandleRatingUpdated"
+                   OnRatingDeleted="HandleRatingDeleted" />
+
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -236,6 +254,7 @@
     private bool IsRemoving { get; set; } = false;
     private bool _showRemoveModal { get; set; } = false;
     private ChannelDisplayModel? _channelToRemove { get; set; }
+    private ChannelRatingModal? RatingModal { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -249,6 +268,49 @@
     public async Task RefreshAsync()
     {
         await LoadTrackedChannelsAsync();
+    }
+
+    /// <summary>
+    /// Shows the rating modal for creating a new rating.
+    /// </summary>
+    private void ShowRatingModal(ChannelDisplayModel channel)
+    {
+        RatingModal?.ShowForNewRating(channel);
+    }
+
+    /// <summary>
+    /// Shows the rating modal for editing an existing rating.
+    /// </summary>
+    private void ShowEditRatingModal(ChannelDisplayModel channel)
+    {
+        if (channel.UserRating != null)
+        {
+            RatingModal?.ShowForEditRating(channel, channel.UserRating);
+        }
+    }
+
+    /// <summary>
+    /// Handles when a new rating is created.
+    /// </summary>
+    private async Task HandleRatingCreated(ChannelRatingModel newRating)
+    {
+        await LoadTrackedChannelsAsync(); // Refresh to show the new rating
+    }
+
+    /// <summary>
+    /// Handles when a rating is updated.
+    /// </summary>
+    private async Task HandleRatingUpdated(ChannelRatingModel updatedRating)
+    {
+        await LoadTrackedChannelsAsync(); // Refresh to show the updated rating
+    }
+
+    /// <summary>
+    /// Handles when a rating is deleted.
+    /// </summary>
+    private async Task HandleRatingDeleted(Guid deletedRatingId)
+    {
+        await LoadTrackedChannelsAsync(); // Refresh to remove the rating display
     }
 
     /// <summary>
@@ -316,7 +378,7 @@
     }
 
     /// <summary>
-    /// Loads tracked channels for the current user from the service.
+    /// Loads tracked channels with their ratings for the current user.
     /// </summary>
     private async Task LoadTrackedChannelsAsync()
     {
@@ -330,7 +392,14 @@
 
             if (!string.IsNullOrEmpty(userId))
             {
+                // Get tracked channels
                 TrackedChannels = await ChannelService.GetTrackedChannelsAsync(userId);
+
+                // Load ratings for each channel
+                foreach (var channel in TrackedChannels)
+                {
+                    channel.UserRating = await ChannelRatingService.GetUserRatingAsync(userId, channel.Id);
+                }
 
                 // Notify parent component of channel changes (for count updates)
                 if (OnChannelsChanged.HasDelegate)
@@ -405,29 +474,61 @@
         opacity: 0.6;
     }
 
+    /* Rating column alignment */
+    .table td:nth-child(5) {
+        min-width: 120px;
+    }
+
     /* Responsive table improvements */
     @@media (max-width: 768px) {
-        .table-responsive
+        .table-responsive {
+            font-size: 0.9rem;
+        }
 
-    {
-        font-size: 0.9rem;
-    }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.775rem;
+        }
 
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.775rem;
-    }
-
-    /* Stack channel info on mobile */
-    .table .d-flex {
-        flex-direction: column;
-        align-items: flex-start !important;
-    }
+        /* Stack channel info on mobile */
+        .table .d-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
 
         .table .d-flex img,
         .table .d-flex > div:first-child {
             margin-bottom: 0.5rem;
         }
 
+        /* Hide some columns on mobile */
+        .table th:nth-child(3),
+        .table td:nth-child(3),
+        .table th:nth-child(4),
+        .table td:nth-child(4) {
+            display: none;
+        }
+    }
+
+    /* Rating display improvements */
+    .table td:nth-child(5) .d-flex {
+        justify-content: center;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    /* Button group spacing */
+    .btn-group-sm > .btn {
+        margin: 0 2px;
+    }
+
+    /* Dark mode adjustments */
+    [data-bs-theme="dark"] .table-hover tbody tr:hover {
+        background-color: var(--bs-gray-800);
+    }
+
+    [data-bs-theme="dark"] .table > thead > tr > th {
+        background-color: var(--bs-gray-800);
+        color: var(--bs-gray-200);
     }
 </style>
