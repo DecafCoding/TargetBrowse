@@ -1,0 +1,303 @@
+@using TargetBrowse.Features.Channels.Models
+
+@if (Rating != null)
+{
+    <!-- Existing Rating Display -->
+    <div class="d-flex align-items-center">
+        <!-- Star Display -->
+        <div class="me-2">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <i class="bi bi-star@(i <= Rating.Stars ? "-fill" : "") @GetStarClass(i)"></i>
+            }
+        </div>
+
+        <!-- Rating Info -->
+        <span class="badge @GetRatingBadgeClass() me-2">@Rating.Stars</span>
+
+        @if (ShowDetailsButton)
+        {
+            <!-- View Details Button -->
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="ToggleDetails"
+                    title="@(ShowDetails ? "Hide rating details" : "Show rating details")">
+                <i class="bi bi-@(ShowDetails ? "eye-slash" : "eye")"></i>
+            </button>
+        }
+
+        @if (ShowEditButton)
+        {
+            <!-- Edit Rating Button -->
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm ms-1"
+                    @onclick="HandleEditClick"
+                    title="Edit your rating">
+                <i class="bi bi-pencil"></i>
+            </button>
+        }
+    </div>
+
+    @if (ShowDetails && ShowDetailsButton)
+    {
+        <!-- Rating Details -->
+        <div class="mt-2 p-2 bg-light rounded">
+            <div class="small">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <strong>@Rating.StarDisplayText</strong>
+                    <small class="text-muted">@Rating.CreatedAtDisplay</small>
+                </div>
+                
+                @if (!string.IsNullOrWhiteSpace(Rating.Notes))
+                {
+                    <div class="text-muted">
+                        @if (ShowFullNotes)
+                        {
+                            <span>@Rating.Notes</span>
+                        }
+                        else
+                        {
+                            <span>@Rating.ShortNotes</span>
+                            @if (Rating.Notes.Length > 100)
+                            {
+                                <button type="button" 
+                                        class="btn btn-link btn-sm p-0 ms-1"
+                                        @onclick="() => ShowFullNotes = true">
+                                    <small>Show more</small>
+                                </button>
+                            }
+                        }
+                        
+                        @if (ShowFullNotes && Rating.Notes.Length > 100)
+                        {
+                            <button type="button" 
+                                    class="btn btn-link btn-sm p-0 ms-1"
+                                    @onclick="() => ShowFullNotes = false">
+                                <small>Show less</small>
+                            </button>
+                        }
+                    </div>
+                }
+
+                @if (Rating.WasModified)
+                {
+                    <div class="mt-1">
+                        <small class="text-muted fst-italic">@Rating.UpdatedAtDisplay</small>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <!-- No Rating - Show Rate Button -->
+    <button type="button"
+            class="btn btn-outline-primary btn-sm"
+            @onclick="HandleRateClick"
+            disabled="@IsDisabled"
+            title="Rate this channel">
+        <i class="bi bi-star me-1"></i>
+        Rate
+    </button>
+}
+
+@code {
+    [Parameter]
+    public ChannelRatingModel? Rating { get; set; }
+
+    [Parameter]
+    public bool ShowDetailsButton { get; set; } = true;
+
+    [Parameter]
+    public bool ShowEditButton { get; set; } = true;
+
+    [Parameter]
+    public bool IsDisabled { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnRateClick { get; set; }
+
+    [Parameter]
+    public EventCallback OnEditClick { get; set; }
+
+    private bool ShowDetails { get; set; } = false;
+    private bool ShowFullNotes { get; set; } = false;
+
+    /// <summary>
+    /// Toggles the display of rating details.
+    /// </summary>
+    private void ToggleDetails()
+    {
+        ShowDetails = !ShowDetails;
+        if (!ShowDetails)
+        {
+            ShowFullNotes = false;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles the rate button click.
+    /// </summary>
+    private async Task HandleRateClick()
+    {
+        if (OnRateClick.HasDelegate)
+        {
+            await OnRateClick.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles the edit button click.
+    /// </summary>
+    private async Task HandleEditClick()
+    {
+        if (OnEditClick.HasDelegate)
+        {
+            await OnEditClick.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Gets the CSS class for individual stars.
+    /// </summary>
+    private string GetStarClass(int starNumber)
+    {
+        if (Rating == null) return "text-muted";
+
+        return Rating.Stars switch
+        {
+            1 when starNumber <= 1 => "text-danger",
+            2 when starNumber <= 2 => "text-warning",
+            3 when starNumber <= 3 => "text-info",
+            4 when starNumber <= 4 => "text-success",
+            5 when starNumber <= 5 => "text-success",
+            _ when starNumber <= Rating.Stars => "text-warning",
+            _ => "text-muted"
+        };
+    }
+
+    /// <summary>
+    /// Gets the CSS class for the rating badge.
+    /// </summary>
+    private string GetRatingBadgeClass()
+    {
+        if (Rating == null) return "bg-secondary";
+
+        return Rating.Stars switch
+        {
+            1 => "bg-danger",
+            2 => "bg-warning text-dark",
+            3 => "bg-info",
+            4 => "bg-success",
+            5 => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+<style>
+    /* Star styling */
+    .bi-star,
+    .bi-star-fill {
+        font-size: 0.9rem;
+        margin-right: 1px;
+    }
+
+    /* Rating badge styling */
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Button styling */
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+
+    .btn-outline-secondary:hover,
+    .btn-outline-primary:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s ease;
+    }
+
+    /* Details panel styling */
+    .bg-light {
+        background-color: var(--bs-gray-100) !important;
+    }
+
+    .rounded {
+        border-radius: 0.375rem !important;
+    }
+
+    /* Text styling */
+    .small {
+        font-size: 0.875rem;
+    }
+
+    .text-muted {
+        color: var(--bs-secondary) !important;
+    }
+
+    /* Link button styling */
+    .btn-link {
+        color: var(--bs-primary);
+        text-decoration: none;
+    }
+
+    .btn-link:hover {
+        color: var(--bs-primary);
+        text-decoration: underline;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 576px) {
+        .d-flex.align-items-center {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.7rem;
+        }
+
+        .bi-star,
+        .bi-star-fill {
+            font-size: 0.8rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+        }
+    }
+
+    /* Dark mode support */
+    [data-bs-theme="dark"] .bg-light {
+        background-color: var(--bs-gray-800) !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: var(--bs-gray-400) !important;
+    }
+
+    /* Focus states for accessibility */
+    .btn:focus {
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+
+    /* Hover effects */
+    .btn-outline-secondary:hover {
+        background-color: var(--bs-secondary);
+        border-color: var(--bs-secondary);
+        color: white;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
+</style>

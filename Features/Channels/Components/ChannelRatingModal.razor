@@ -1,0 +1,425 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.Channels.Models
+@using TargetBrowse.Features.Channels.Services
+@using TargetBrowse.Features.Videos.Components
+@inject IChannelRatingService ChannelRatingService
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+@if (IsVisible)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" aria-labelledby="ratingModalTitle" aria-hidden="false">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ratingModalTitle">
+                        <i class="bi bi-star me-2"></i>
+                        @if (IsEditMode) 
+                        { 
+                            <span>Edit Channel Rating</span> 
+                        } 
+                        else 
+                        { 
+                            <span>Rate Channel</span> 
+                        }
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="CloseModal"
+                            disabled="@IsSubmitting"
+                            aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    @if (CurrentChannel != null)
+                    {
+                        <!-- Channel Information -->
+                        <div class="d-flex align-items-center mb-4">
+                            @if (!string.IsNullOrEmpty(CurrentChannel.ThumbnailUrl))
+                            {
+                                <img src="@CurrentChannel.ThumbnailUrl"
+                                     alt="@CurrentChannel.Name thumbnail"
+                                     class="rounded me-3"
+                                     style="width: 60px; height: 60px; object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center"
+                                     style="width: 60px; height: 60px;">
+                                    <i class="bi bi-person-circle text-white fs-3"></i>
+                                </div>
+                            }
+                            <div>
+                                <h6 class="mb-1">@CurrentChannel.Name</h6>
+                                <small class="text-muted">@CurrentChannel.SubscriberCountDisplay subscribers</small>
+                            </div>
+                        </div>
+
+                        <!-- Rating Form -->
+                        <EditForm Model="@RatingModel" OnValidSubmit="@HandleValidSubmit">
+                            <DataAnnotationsValidator />
+
+                            <!-- Star Rating Input -->
+                            <div class="mb-4">
+                                <label class="form-label fw-medium">Your Rating</label>
+                                <div class="d-flex align-items-center">
+                                    <StarRatingInput CurrentValue="@RatingModel.Stars" 
+                                                   CurrentValueChanged="@OnStarRatingChanged"
+                                                   IsDisabled="@IsSubmitting" />
+                                    <div class="ms-3">
+                                        <span class="badge @GetStarBadgeClass() fs-6">
+                                            @RatingModel.StarDisplayText
+                                        </span>
+                                    </div>
+                                </div>
+                                <ValidationMessage For="@(() => RatingModel.Stars)" class="text-danger" />
+                            </div>
+
+                            <!-- Rating Notes -->
+                            <div class="mb-4">
+                                <label for="ratingNotes" class="form-label fw-medium">
+                                    Explain Your Rating
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <textarea @bind="RatingModel.Notes"
+                                        @oninput="OnNotesChanged"
+                                        class="form-control"
+                                        id="ratingNotes"
+                                        rows="4"
+                                        placeholder="Please explain why you gave this rating. What do you like or dislike about this channel's content?"
+                                        disabled="@IsSubmitting"
+                                        maxlength="1000"></textarea>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <ValidationMessage For="@(() => RatingModel.Notes)" class="text-danger" />
+                                    <small class="text-muted">@NotesCharacterCount / 1000 characters</small>
+                                </div>
+                            </div>
+
+                            <!-- Rating Guidelines -->
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Rating Guidelines
+                                </h6>
+                                <ul class="mb-0 small">
+                                    <li><strong>5 stars:</strong> Excellent content, always worth watching</li>
+                                    <li><strong>4 stars:</strong> Very good content, usually worth watching</li>
+                                    <li><strong>3 stars:</strong> Average content, sometimes worth watching</li>
+                                    <li><strong>2 stars:</strong> Below average content, rarely worth watching</li>
+                                    <li><strong>1 star:</strong> Poor content, will exclude from suggestions</li>
+                                </ul>
+                            </div>
+
+                            @if (RatingModel.Stars == 1)
+                            {
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Note:</strong> Rating this channel 1 star will exclude it from future content suggestions.
+                                </div>
+                            }
+
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button"
+                                        class="btn btn-secondary"
+                                        @onclick="CloseModal"
+                                        disabled="@IsSubmitting">
+                                    Cancel
+                                </button>
+
+                                @if (IsEditMode && ExistingRating != null)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            @onclick="HandleDelete"
+                                            disabled="@IsSubmitting">
+                                        @if (IsDeleting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        }
+                                        Delete Rating
+                                    </button>
+                                }
+
+                                <button type="submit"
+                                        class="btn btn-primary"
+                                        disabled="@(IsSubmitting || !IsFormValid)">
+                                    @if (IsSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    }
+                                    @if (IsEditMode) 
+                                    { 
+                                        <span>Update Rating</span> 
+                                    } 
+                                    else 
+                                    { 
+                                        <span>Save Rating</span> 
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop show" @onclick="CloseModal"></div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter]
+    public EventCallback<ChannelRatingModel> OnRatingCreated { get; set; }
+
+    [Parameter]
+    public EventCallback<ChannelRatingModel> OnRatingUpdated { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnRatingDeleted { get; set; }
+
+    public bool IsVisible { get; private set; } = false;
+    private bool IsSubmitting { get; set; } = false;
+    private bool IsDeleting { get; set; } = false;
+    private bool IsEditMode => ExistingRating != null;
+
+    private ChannelDisplayModel? CurrentChannel { get; set; }
+    private ChannelRatingModel? ExistingRating { get; set; }
+    private RateChannelModel RatingModel { get; set; } = new();
+
+    private int NotesCharacterCount => RatingModel.Notes?.Length ?? 0;
+    private bool IsFormValid => RatingModel.IsValid && NotesCharacterCount >= 10;
+
+    /// <summary>
+    /// Shows the modal for creating a new rating.
+    /// </summary>
+    public void ShowForNewRating(ChannelDisplayModel channel)
+    {
+        CurrentChannel = channel;
+        ExistingRating = null;
+        RatingModel = RateChannelModel.CreateNew(channel.Id, channel.YouTubeChannelId, channel.Name);
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Shows the modal for editing an existing rating.
+    /// </summary>
+    public void ShowForEditRating(ChannelDisplayModel channel, ChannelRatingModel existingRating)
+    {
+        CurrentChannel = channel;
+        ExistingRating = existingRating;
+        RatingModel = RateChannelModel.CreateUpdate(existingRating);
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Closes the modal and resets state.
+    /// </summary>
+    public void CloseModal()
+    {
+        if (IsSubmitting || IsDeleting) return;
+
+        IsVisible = false;
+        CurrentChannel = null;
+        ExistingRating = null;
+        RatingModel = new();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles star rating changes.
+    /// </summary>
+    private void OnStarRatingChanged(int newRating)
+    {
+        RatingModel.Stars = newRating;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles form submission for creating or updating ratings.
+    /// </summary>
+    private async Task HandleValidSubmit()
+    {
+        if (IsSubmitting || !IsFormValid || CurrentChannel == null) return;
+
+        try
+        {
+            IsSubmitting = true;
+            StateHasChanged();
+
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            ChannelRatingModel result;
+
+            if (IsEditMode && ExistingRating != null)
+            {
+                result = await ChannelRatingService.UpdateRatingAsync(userId, ExistingRating.Id, RatingModel);
+                if (OnRatingUpdated.HasDelegate)
+                {
+                    await OnRatingUpdated.InvokeAsync(result);
+                }
+            }
+            else
+            {
+                result = await ChannelRatingService.CreateRatingAsync(userId, RatingModel);
+                if (OnRatingCreated.HasDelegate)
+                {
+                    await OnRatingCreated.InvokeAsync(result);
+                }
+            }
+
+            CloseModal();
+        }
+        catch (Exception)
+        {
+            // Error handling is done in the service layer via MessageCenterService
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles rating deletion.
+    /// </summary>
+    private async Task HandleDelete()
+    {
+        if (IsDeleting || ExistingRating == null) return;
+
+        try
+        {
+            IsDeleting = true;
+            StateHasChanged();
+
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var success = await ChannelRatingService.DeleteRatingAsync(userId, ExistingRating.Id);
+
+            if (success)
+            {
+                if (OnRatingDeleted.HasDelegate)
+                {
+                    await OnRatingDeleted.InvokeAsync(ExistingRating.Id);
+                }
+                CloseModal();
+            }
+        }
+        catch (Exception)
+        {
+            // Error handling is done in the service layer via MessageCenterService
+        }
+        finally
+        {
+            IsDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles notes input changes for character count.
+    /// </summary>
+    private void OnNotesChanged(ChangeEventArgs e)
+    {
+        RatingModel.Notes = e.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets the appropriate CSS class for the star rating badge.
+    /// </summary>
+    private string GetStarBadgeClass()
+    {
+        return RatingModel.Stars switch
+        {
+            1 => "bg-danger",
+            2 => "bg-warning",
+            3 => "bg-info",
+            4 => "bg-success",
+            5 => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+}
+
+<style>
+    /* Modal styling to ensure proper display */
+    .modal.show {
+        display: block !important;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0.5;
+    }
+
+    /* Channel thumbnail styling */
+    .modal img {
+        border: 1px solid var(--bs-border-color);
+    }
+
+    /* Form styling improvements */
+    .form-label.fw-medium {
+        color: var(--bs-body-color);
+        margin-bottom: 0.5rem;
+    }
+
+    /* Star rating alignment */
+    .d-flex.align-items-center .badge {
+        white-space: nowrap;
+    }
+
+    /* Character count styling */
+    .text-muted.small {
+        font-size: 0.85rem;
+    }
+
+    /* Alert styling */
+    .alert ul {
+        padding-left: 1.2rem;
+    }
+
+    .alert ul li {
+        margin-bottom: 0.25rem;
+    }
+
+    /* Button spacing */
+    .gap-2 {
+        gap: 0.5rem !important;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 576px) {
+        .modal-dialog {
+            margin: 1rem;
+        }
+
+        .d-flex.justify-content-end {
+            flex-direction: column;
+        }
+
+        .gap-2 {
+            gap: 0.75rem !important;
+        }
+    }
+</style>
