@@ -1,0 +1,318 @@
+namespace TargetBrowse.Features.Suggestions.Models;
+
+/// <summary>
+/// Display model for showing suggestions in the UI.
+/// </summary>
+public class SuggestionDisplayModel
+{
+    /// <summary>
+    /// Suggestion entity identifier.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Video information for display.
+    /// </summary>
+    public VideoInfo Video { get; set; } = null!;
+
+    /// <summary>
+    /// Human-readable reason for the suggestion.
+    /// </summary>
+    public string Reason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When the suggestion was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Current status of the suggestion.
+    /// </summary>
+    public SuggestionStatus Status { get; set; }
+
+    /// <summary>
+    /// Suggestion score for display (optional).
+    /// </summary>
+    public double? Score { get; set; }
+
+    /// <summary>
+    /// Days until this suggestion expires.
+    /// </summary>
+    public int DaysUntilExpiry
+    {
+        get
+        {
+            var expiryDate = CreatedAt.AddDays(30);
+            var daysRemaining = (expiryDate - DateTime.UtcNow).Days;
+            return Math.Max(0, daysRemaining);
+        }
+    }
+
+    /// <summary>
+    /// Whether this suggestion is close to expiring (< 3 days).
+    /// </summary>
+    public bool IsNearExpiry => DaysUntilExpiry <= 3;
+
+    /// <summary>
+    /// Gets CSS class for status badge.
+    /// </summary>
+    public string GetStatusBadgeCss() => Status switch
+    {
+        SuggestionStatus.Pending => "badge bg-warning",
+        SuggestionStatus.Approved => "badge bg-success",
+        SuggestionStatus.Denied => "badge bg-danger",
+        SuggestionStatus.Expired => "badge bg-secondary",
+        _ => "badge bg-light"
+    };
+
+    /// <summary>
+    /// Gets display text for status.
+    /// </summary>
+    public string GetStatusText() => Status switch
+    {
+        SuggestionStatus.Pending => "Pending Review",
+        SuggestionStatus.Approved => "Approved",
+        SuggestionStatus.Denied => "Denied",
+        SuggestionStatus.Expired => "Expired",
+        _ => "Unknown"
+    };
+
+    /// <summary>
+    /// Gets formatted score for display.
+    /// </summary>
+    public string FormattedScore => Score?.ToString("F1") ?? "N/A";
+
+    /// <summary>
+    /// Gets time since creation for display.
+    /// </summary>
+    public string TimeSinceCreated
+    {
+        get
+        {
+            var timeSince = DateTime.UtcNow - CreatedAt;
+            return timeSince.TotalDays switch
+            {
+                < 1 => "Today",
+                < 7 => $"{(int)timeSince.TotalDays} days ago",
+                < 30 => $"{(int)(timeSince.TotalDays / 7)} weeks ago",
+                _ => $"{(int)(timeSince.TotalDays / 30)} months ago"
+            };
+        }
+    }
+}
+
+/// <summary>
+/// Analytics data for user's suggestion activity.
+/// </summary>
+public class SuggestionAnalytics
+{
+    /// <summary>
+    /// Total suggestions generated for the user.
+    /// </summary>
+    public int TotalSuggestionsGenerated { get; set; }
+
+    /// <summary>
+    /// Number of suggestions approved by the user.
+    /// </summary>
+    public int SuggestionsApproved { get; set; }
+
+    /// <summary>
+    /// Number of suggestions denied by the user.
+    /// </summary>
+    public int SuggestionsDenied { get; set; }
+
+    /// <summary>
+    /// Number of suggestions that expired.
+    /// </summary>
+    public int SuggestionsExpired { get; set; }
+
+    /// <summary>
+    /// Currently pending suggestions.
+    /// </summary>
+    public int PendingSuggestions { get; set; }
+
+    /// <summary>
+    /// Average score of generated suggestions.
+    /// </summary>
+    public double AverageSuggestionScore { get; set; }
+
+    /// <summary>
+    /// Most common suggestion source.
+    /// </summary>
+    public SuggestionSource MostCommonSource { get; set; }
+
+    /// <summary>
+    /// Distribution of suggestions by source.
+    /// </summary>
+    public Dictionary<SuggestionSource, int> SourceDistribution { get; set; } = new();
+
+    /// <summary>
+    /// Top channels that generated suggestions.
+    /// </summary>
+    public List<ChannelSuggestionStats> TopSuggestionChannels { get; set; } = new();
+
+    /// <summary>
+    /// Top topics that matched suggestions.
+    /// </summary>
+    public List<TopicSuggestionStats> TopSuggestionTopics { get; set; } = new();
+
+    /// <summary>
+    /// Date of the most recent suggestion generation.
+    /// </summary>
+    public DateTime? LastSuggestionGenerated { get; set; }
+
+    /// <summary>
+    /// Approval rate (approved / total reviewed).
+    /// </summary>
+    public double ApprovalRate
+    {
+        get
+        {
+            var totalReviewed = SuggestionsApproved + SuggestionsDenied;
+            return totalReviewed > 0 ? (double)SuggestionsApproved / totalReviewed : 0;
+        }
+    }
+
+    /// <summary>
+    /// Gets formatted approval rate for display.
+    /// </summary>
+    public string FormattedApprovalRate => $"{ApprovalRate:P1}";
+}
+
+/// <summary>
+/// Statistics for a channel's suggestion performance.
+/// </summary>
+public class ChannelSuggestionStats
+{
+    /// <summary>
+    /// Channel name.
+    /// </summary>
+    public string ChannelName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Number of suggestions generated from this channel.
+    /// </summary>
+    public int SuggestionCount { get; set; }
+
+    /// <summary>
+    /// Number of suggestions approved from this channel.
+    /// </summary>
+    public int ApprovedCount { get; set; }
+
+    /// <summary>
+    /// Approval rate for suggestions from this channel.
+    /// </summary>
+    public double ApprovalRate => SuggestionCount > 0 ? (double)ApprovedCount / SuggestionCount : 0;
+
+    /// <summary>
+    /// Gets formatted approval rate for display.
+    /// </summary>
+    public string FormattedApprovalRate => $"{ApprovalRate:P0}";
+}
+
+/// <summary>
+/// Statistics for a topic's suggestion performance.
+/// </summary>
+public class TopicSuggestionStats
+{
+    /// <summary>
+    /// Topic name.
+    /// </summary>
+    public string TopicName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Number of suggestions that matched this topic.
+    /// </summary>
+    public int MatchCount { get; set; }
+
+    /// <summary>
+    /// Number of topic-matched suggestions that were approved.
+    /// </summary>
+    public int ApprovedCount { get; set; }
+
+    /// <summary>
+    /// Average score of suggestions that matched this topic.
+    /// </summary>
+    public double AverageScore { get; set; }
+
+    /// <summary>
+    /// Approval rate for suggestions matching this topic.
+    /// </summary>
+    public double ApprovalRate => MatchCount > 0 ? (double)ApprovedCount / MatchCount : 0;
+
+    /// <summary>
+    /// Gets formatted approval rate for display.
+    /// </summary>
+    public string FormattedApprovalRate => $"{ApprovalRate:P0}";
+
+    /// <summary>
+    /// Gets formatted average score for display.
+    /// </summary>
+    public string FormattedAverageScore => $"{AverageScore:F1}";
+}
+
+/// <summary>
+/// Scoring result for enhanced video analysis.
+/// Future implementation for transcript-based scoring.
+/// </summary>
+public class VideoScore
+{
+    /// <summary>
+    /// The video that was scored.
+    /// </summary>
+    public VideoInfo Video { get; set; } = null!;
+
+    /// <summary>
+    /// Scoring stage that was applied.
+    /// </summary>
+    public ScoringStage Stage { get; set; }
+
+    /// <summary>
+    /// Channel rating component score.
+    /// </summary>
+    public double ChannelRatingScore { get; set; }
+
+    /// <summary>
+    /// Topic relevance component score.
+    /// </summary>
+    public double TopicRelevanceScore { get; set; }
+
+    /// <summary>
+    /// Recency component score.
+    /// </summary>
+    public double RecencyScore { get; set; }
+
+    /// <summary>
+    /// Topics that matched this video.
+    /// </summary>
+    public List<string> MatchedTopics { get; set; } = new();
+
+    /// <summary>
+    /// Total calculated score.
+    /// </summary>
+    public double TotalScore { get; set; }
+
+    /// <summary>
+    /// Confidence level in the scoring (0-1).
+    /// </summary>
+    public double Confidence { get; set; } = 1.0;
+
+    /// <summary>
+    /// Additional context or reasoning for the score.
+    /// </summary>
+    public string? Context { get; set; }
+
+    /// <summary>
+    /// Gets formatted total score for display.
+    /// </summary>
+    public string FormattedScore => $"{TotalScore:F1}";
+
+    /// <summary>
+    /// Gets score breakdown for debugging.
+    /// </summary>
+    public string GetScoreBreakdown()
+    {
+        return $"Channel: {ChannelRatingScore:F1} | Topics: {TopicRelevanceScore:F1} | " +
+               $"Recency: {RecencyScore:F1} | Total: {TotalScore:F1}";
+    }
+}

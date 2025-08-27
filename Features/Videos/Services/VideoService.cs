@@ -3,6 +3,10 @@ using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Utilities;
 using TargetBrowse.Services.YouTube.Models;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Google.Apis.YouTube.v3.Data;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -54,13 +58,13 @@ public class VideoService : IVideoService
             string? channelId = null;
             if (searchModel.SearchInTrackedChannelsOnly)
             {
-            // TODO: Get user's tracked channels and search within them
-            // For now, search all channels
+                // TODO: Get user's tracked channels and search within them
+                // For now, search all channels
             }
 
             var searchResult = await _youTubeService.SearchVideosAsync(
-            searchModel.SearchQuery, 
-            searchModel.MaxResults, 
+            searchModel.SearchQuery,
+            searchModel.MaxResults,
             channelId,
             searchModel.SortOrder,
             searchModel.DurationFilter,
@@ -77,7 +81,7 @@ public class VideoService : IVideoService
             foreach (var youTubeVideo in searchResult.Data)
             {
                 var video = MapYouTubeVideoToDisplayModel(youTubeVideo);
-                
+
                 // Check if video is already in user's library
                 video.IsInLibrary = await _videoRepository.IsVideoInLibraryAsync(userId, video.YouTubeVideoId);
                 if (video.IsInLibrary)
@@ -92,7 +96,7 @@ public class VideoService : IVideoService
                 videos.Add(video);
             }
 
-            _logger.LogInformation("Video search for '{Query}' with advanced filters returned {Count} results", 
+            _logger.LogInformation("Video search for '{Query}' with advanced filters returned {Count} results",
                 searchModel.SearchQuery, videos.Count);
 
             return videos;
@@ -122,7 +126,7 @@ public class VideoService : IVideoService
             var apiResult = await _youTubeService.GetVideoByIdAsync(youTubeVideoId);
             if (!apiResult.IsSuccess || apiResult.Data == null)
             {
-                _logger.LogWarning("Failed to get video details for {VideoId}: {Error}", 
+                _logger.LogWarning("Failed to get video details for {VideoId}: {Error}",
                     youTubeVideoId, apiResult.ErrorMessage);
                 return null;
             }
@@ -159,7 +163,7 @@ public class VideoService : IVideoService
             var existingVideo = await _videoRepository.GetVideoByYouTubeIdAsync(userId, addVideoModel.VideoId);
             if (existingVideo != null)
             {
-                _logger.LogInformation("Video {VideoId} already exists in library for user {UserId}", 
+                _logger.LogInformation("Video {VideoId} already exists in library for user {UserId}",
                     addVideoModel.VideoId, userId);
                 return false;
             }
@@ -169,14 +173,14 @@ public class VideoService : IVideoService
             var apiResult = await _youTubeService.GetVideoByIdAsync(addVideoModel.VideoId);
             if (!apiResult.IsSuccess || apiResult.Data == null)
             {
-                _logger.LogWarning("Failed to get video details for {VideoId}: {Error}", 
+                _logger.LogWarning("Failed to get video details for {VideoId}: {Error}",
                     addVideoModel.VideoId, apiResult.ErrorMessage);
                 return false;
             }
 
             // Convert to display model with full metadata
             var video = MapYouTubeVideoToDisplayModel(apiResult.Data);
-            
+
             // Ensure we have the enhanced metadata fields
             if (!video.HasDetailedInfo)
             {
@@ -190,7 +194,7 @@ public class VideoService : IVideoService
             var success = await _videoRepository.AddVideoAsync(userId, video);
             if (success)
             {
-                _logger.LogInformation("Added video {VideoId} '{Title}' to library for user {UserId} with metadata: Duration={Duration}, Views={Views}, Likes={Likes}", 
+                _logger.LogInformation("Added video {VideoId} '{Title}' to library for user {UserId} with metadata: Duration={Duration}, Views={Views}, Likes={Likes}",
                     addVideoModel.VideoId, video.Title, userId, video.DurationDisplay, video.ViewCountDisplay, video.LikeCountDisplay);
             }
 
@@ -213,7 +217,7 @@ public class VideoService : IVideoService
             var success = await _videoRepository.RemoveVideoAsync(userId, videoId);
             if (success)
             {
-                _logger.LogInformation("Removed video {VideoId} from library for user {UserId}", 
+                _logger.LogInformation("Removed video {VideoId} from library for user {UserId}",
                     videoId, userId);
             }
 
@@ -221,7 +225,7 @@ public class VideoService : IVideoService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing video {VideoId} from library for user {UserId}", 
+            _logger.LogError(ex, "Error removing video {VideoId} from library for user {UserId}",
                 videoId, userId);
             return false;
         }
@@ -237,12 +241,12 @@ public class VideoService : IVideoService
             var success = await _videoRepository.UpdateVideoWatchStatusAsync(userId, videoId, watchStatus);
             if (success)
             {
-                _logger.LogInformation("Updated watch status for video {VideoId} to {Status} for user {UserId}", 
+                _logger.LogInformation("Updated watch status for video {VideoId} to {Status} for user {UserId}",
                     videoId, watchStatus, userId);
             }
             else
             {
-                _logger.LogWarning("Failed to update watch status for video {VideoId} for user {UserId} - video not found in library", 
+                _logger.LogWarning("Failed to update watch status for video {VideoId} for user {UserId} - video not found in library",
                     videoId, userId);
             }
 
@@ -250,7 +254,7 @@ public class VideoService : IVideoService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating watch status for video {VideoId} for user {UserId}", 
+            _logger.LogError(ex, "Error updating watch status for video {VideoId} for user {UserId}",
                 videoId, userId);
             return false;
         }
@@ -342,7 +346,7 @@ public class VideoService : IVideoService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if video {VideoId} is in library for user {UserId}", 
+            _logger.LogError(ex, "Error checking if video {VideoId} is in library for user {UserId}",
                 youTubeVideoId, userId);
             return false;
         }
@@ -398,6 +402,115 @@ public class VideoService : IVideoService
         }
     }
 
+    // NEW IMPLEMENTATIONS FOR YT-010-03
+
+    /// <summary>
+    /// Saves all discovered videos to the database for historical browsing.
+    /// Handles duplicate prevention and ensures video metadata is stored.
+    /// </summary>
+    public async Task<List<VideoEntity>> SaveDiscoveredVideosAsync(List<VideoInfo> videos, string userId)
+    {
+        try
+        {
+            if (!videos.Any())
+            {
+                _logger.LogInformation("No videos to save for user {UserId}", userId);
+                return new List<VideoEntity>();
+            }
+
+            _logger.LogInformation("Saving {Count} discovered videos for user {UserId}", videos.Count, userId);
+
+            var savedEntities = new List<VideoEntity>();
+
+            // Process videos in batches to avoid overwhelming the database
+            const int batchSize = 20;
+            for (int i = 0; i < videos.Count; i += batchSize)
+            {
+                var batch = videos.Skip(i).Take(batchSize).ToList();
+                var batchEntities = new List<VideoEntity>();
+
+                foreach (var video in batch)
+                {
+                    try
+                    {
+                        var entity = await EnsureVideoExistsAsync(video);
+                        batchEntities.Add(entity);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to save video {VideoId} in batch for user {UserId}",
+                            video.YouTubeVideoId, userId);
+                        // Continue processing other videos
+                    }
+                }
+
+                savedEntities.AddRange(batchEntities);
+            }
+
+            _logger.LogInformation("Successfully saved {SavedCount} out of {TotalCount} videos for user {UserId}",
+                savedEntities.Count, videos.Count, userId);
+
+            return savedEntities;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving discovered videos for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Ensures a video exists in the database with complete metadata.
+    /// Creates the video entity if it doesn't exist, updates if it does.
+    /// </summary>
+    public async Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video)
+    {
+        try
+        {
+            // Use repository to ensure video exists with proper channel handling
+            return await _videoRepository.EnsureVideoExistsAsync(video);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ensuring video {VideoId} exists", video.YouTubeVideoId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets videos from a specific channel published since a given date.
+    /// Delegates to YouTube service for consistency.
+    /// </summary>
+    //public async Task<List<VideoInfo>> GetChannelVideosAsync(string channelId, DateTime since)
+    //{
+    //    try
+    //    {
+    //        _logger.LogDebug("Getting videos from channel {ChannelId} since {Since}", channelId, since);
+
+    //        // Delegate to the YouTube service which already handles this functionality
+    //        var result = await _youTubeService.GetChannelVideosAsync(channelId, since);
+
+    //        if (!result.IsSuccess || result.Data == null)
+    //        {
+    //            _logger.LogWarning("Failed to get channel videos for {ChannelId}: {Error}",
+    //                channelId, result.ErrorMessage);
+    //            return new List<VideoInfo>();
+    //        }
+
+    //        // Convert YouTube API response to VideoInfo objects
+    //        var videos = result.Data.Select(ConvertYouTubeResponseToVideoInfo).ToList();
+
+    //        _logger.LogInformation($"Retrieved {videos.Count()} videos from channel {channelId} since {since}");
+
+    //        return videos;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error getting channel videos for {ChannelId}", channelId);
+    //        return new List<VideoInfo>();
+    //    }
+    //}
+
     /// <summary>
     /// Maps a YouTube API video response to a video display model.
     /// Handles both search results (limited data) and detailed video responses (full data).
@@ -422,6 +535,27 @@ public class VideoService : IVideoService
             Tags = youTubeVideo.Tags ?? new List<string>(),
             DefaultLanguage = youTubeVideo.DefaultLanguage,
             IsInLibrary = false // Will be set by calling methods
+        };
+    }
+
+    /// <summary>
+    /// Converts a YouTube API response to a VideoInfo object for suggestion processing.
+    /// </summary>
+    private static VideoInfo ConvertYouTubeResponseToVideoInfo(YouTubeVideoResponse youTubeVideo)
+    {
+        return new VideoInfo
+        {
+            YouTubeVideoId = youTubeVideo.VideoId,
+            Title = youTubeVideo.Title,
+            ChannelId = youTubeVideo.ChannelId,
+            ChannelName = youTubeVideo.ChannelTitle,
+            PublishedAt = youTubeVideo.PublishedAt,
+            Duration = !string.IsNullOrEmpty(youTubeVideo.Duration) ? int.Parse(youTubeVideo.Duration) : 0,
+            ViewCount = (int)(youTubeVideo.ViewCount ?? 0),
+            LikeCount = (int)(youTubeVideo.LikeCount ?? 0),
+            CommentCount = (int)(youTubeVideo.CommentCount ?? 0),
+            Description = youTubeVideo.Description ?? string.Empty,
+            ThumbnailUrl = youTubeVideo.ThumbnailUrl ?? string.Empty
         };
     }
 }

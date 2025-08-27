@@ -21,12 +21,6 @@
                     <span class="rating-stars-text fw-medium @Rating.StarCssClass">
                         @Rating.Stars stars
                     </span>
-                    @if (ShowRatingText)
-                    {
-                        <span class="rating-text text-muted ms-1">
-                            (@GetRatingText())
-                        </span>
-                    }
                 </div>
 
                 @if (ShowNotes && !string.IsNullOrWhiteSpace(Rating.Notes))
@@ -117,11 +111,6 @@ else if (ShowEmptyState)
     /// Whether to show the rating label and info.
     /// </summary>
     [Parameter] public bool ShowLabel { get; set; } = true;
-
-    /// <summary>
-    /// Whether to show rating text (Poor, Good, etc.).
-    /// </summary>
-    [Parameter] public bool ShowRatingText { get; set; } = true;
 
     /// <summary>
     /// Whether to show the rating notes.

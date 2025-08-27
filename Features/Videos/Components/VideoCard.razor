@@ -16,7 +16,7 @@
              class="card-img-top video-thumbnail"
              alt="@Video.Title"
              loading="lazy"
-             onerror="this.src='https://img.youtube.com/vi/@Video.YouTubeVideoId/hqdefault.jpg'" />
+             onerror="handleThumbnailError(this, '@Video.YouTubeVideoId')" />
 
         <!-- Duration Badge -->
         @if (!string.IsNullOrEmpty(Video.DurationDisplay))
@@ -344,11 +344,17 @@
     }
 
     /// <summary>
-    /// Gets the appropriate thumbnail URL for the video.
+    /// Gets the appropriate thumbnail URL for the video - start with most reliable option.
     /// </summary>
     private string GetThumbnailUrl()
     {
-        return Video.ThumbnailUrl ?? $"https://img.youtube.com/vi/{Video.YouTubeVideoId}/maxresdefault.jpg";
+        if (!string.IsNullOrEmpty(Video.ThumbnailUrl))
+        {
+            return Video.ThumbnailUrl;
+        }
+
+        // Start with hqdefault which is more reliable than maxresdefault
+        return $"https://img.youtube.com/vi/{Video.YouTubeVideoId}/hqdefault.jpg";
     }
 
     /// <summary>
@@ -689,6 +695,40 @@
     #endregion
 }
 
+<script>
+    function handleThumbnailError(img, videoId) {
+        // Prevent infinite error loops
+        if (img.dataset.errorCount) {
+            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
+        } else {
+            img.dataset.errorCount = "1";
+        }
+
+        // Stop after 3 attempts to prevent infinite loops
+        if (parseInt(img.dataset.errorCount) > 3) {
+            return;
+        }
+
+        if (img.dataset.attempt === 'maxres') {
+            // Try hqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+            img.dataset.attempt = 'hq';
+        } else if (img.dataset.attempt === 'hq') {
+            // Try mqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
+            img.dataset.attempt = 'mq';
+        } else if (img.dataset.attempt === 'mq') {
+            // Try default
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
+            img.dataset.attempt = 'default';
+        } else if (!img.dataset.attempt) {
+            // First error - try maxresdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
+            img.dataset.attempt = 'maxres';
+        }
+    }
+</script>
+
 <style>
     .video-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -701,23 +741,32 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
+    /* FIXED: Improved thumbnail container to prevent black bars */
     .video-thumbnail-container {
         position: relative;
-        aspect-ratio: 16 / 9; /* Match YouTube thumbnail aspect ratio for consistent display */
+        width: 100%;
+        height: 0;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
         overflow: hidden;
-        background-color: #000; /* Black background for any edge cases */
+        background-color: #000; /* Black background for any gaps */
+        background-image: linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa),
+                          linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
     }
 
+    /* FIXED: Improved thumbnail positioning and sizing */
     .video-thumbnail {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover; /* Still use cover for edge cases, but aspect-ratio prevents cropping */
+        object-fit: cover;
+        object-position: center;
         transition: transform 0.2s ease;
-        background-color: var(--bs-light);
-        background-image: url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100' height='100' fill='%23f8f9fa'/%3e%3ctext x='50' y='50' font-size='14' text-anchor='middle' dy='.3em' fill='%236c757d'%3eLoading...%3c/text%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 60px 60px;
+        display: block;
+        background-color: #000;
     }
 
     .video-card:hover .video-thumbnail {
@@ -730,6 +779,8 @@
         font-size: 0.7rem;
         padding: 2px 6px;
         border-radius: 3px;
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        color: white;
     }
 
     .status-badge {
@@ -807,7 +858,6 @@
         max-height: 2.1rem;
     }
 
-    /* Button group improvements */
     .btn-group .btn {
         border-radius: 0;
     }
@@ -822,34 +872,31 @@
             border-bottom-right-radius: var(--bs-border-radius-sm);
         }
 
-    /* Responsive adjustments - maintaining aspect ratio removes need for height changes */
+    /* Mobile responsive adjustments */
     @@media (max-width: 768px) {
-        .video-title
-
-    {
-        font-size: 0.85rem;
-    }
-
-    .video-channel {
-        font-size: 0.75rem;
-    }
-
-    .btn-group {
-        flex-direction: column;
-    }
-
-        .btn-group .btn {
-            border-radius: var(--bs-border-radius-sm) !important;
-            margin-bottom: 0.25rem;
+        .video-title {
+            font-size: 0.85rem;
         }
 
-            .btn-group .btn:last-child {
-                margin-bottom: 0;
+        .video-channel {
+            font-size: 0.75rem;
+        }
+
+        .btn-group {
+            flex-direction: column;
+        }
+
+            .btn-group .btn {
+                border-radius: var(--bs-border-radius-sm) !important;
+                margin-bottom: 0.25rem;
             }
 
+                .btn-group .btn:last-child {
+                    margin-bottom: 0;
+                }
     }
 
-    /* Dark theme adjustments */
+    /* Dark theme support */
     [data-bs-theme="dark"] .video-card {
         border-color: var(--bs-border-color);
         background-color: var(--bs-dark);
@@ -867,22 +914,42 @@
             color: var(--bs-primary) !important;
         }
 
-    [data-bs-theme="dark"] .video-thumbnail {
-        background-color: var(--bs-dark);
+    /* Updated background pattern for dark theme */
+    [data-bs-theme="dark"] .video-thumbnail-container {
+        background-color: #000;
+        background-image: linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333),
+                          linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333);
     }
 
-    /* Loading and disabled states */
     .btn:disabled {
         cursor: not-allowed;
     }
 
     /* Fallback for browsers that don't support aspect-ratio */
-    @@supports not (aspect-ratio: 16 / 9) {
-        .video-thumbnail-container
-
-    {
-        height: 200px; /* Fallback to original height */
+    @@supports not (padding-bottom: 56.25%) {
+        .video-thumbnail-container {
+            height: 200px;
+            padding-bottom: 0;
+        }
     }
 
+    /* Improved loading state */
+    .video-thumbnail[src=""] {
+        background-color: var(--bs-secondary-bg);
+        opacity: 0.5;
     }
-</style>
+
+    /* Better error state styling */
+    .video-thumbnail[alt]:after {
+        content: attr(alt);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--bs-secondary);
+        font-size: 0.8rem;
+        text-align: center;
+        padding: 1rem;
+        max-width: 80%;
+    }
+    </style>

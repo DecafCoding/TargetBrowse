@@ -23,33 +23,9 @@
                         <EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit">
                             <DataAnnotationsValidator />
 
-                            <!-- Video Information -->
-                            <div class="row mb-4">
-                                <div class="col-md-4">
-                                    @if (!string.IsNullOrEmpty(Model.VideoThumbnailUrl))
-                                    {
-                                        <img src="@Model.VideoThumbnailUrl"
-                                             class="img-fluid rounded video-thumbnail"
-                                             alt="@Model.VideoTitle"
-                                             onerror="this.style.display='none'" />
-                                    }
-                                    else
-                                    {
-                                        <div class="video-thumbnail-placeholder rounded d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-play-circle text-muted" style="font-size: 2rem;"></i>
-                                        </div>
-                                    }
-                                </div>
-                                <div class="col-md-8">
-                                    <h6 class="video-title mb-2">@Model.VideoTitle</h6>
-                                    @if (!string.IsNullOrEmpty(Model.ChannelTitle))
-                                    {
-                                        <p class="text-muted mb-0">
-                                            <i class="bi bi-person-circle me-1"></i>
-                                            @Model.ChannelTitle
-                                        </p>
-                                    }
-                                </div>
+                            <!-- Video Information (Title Only) -->
+                            <div class="mb-4">
+                                <h6 class="video-title">@Model.VideoTitle</h6>
                             </div>
 
                             <!-- Star Rating Input -->
@@ -338,28 +314,14 @@
 }
 
 <style>
-    .video-thumbnail {
-        width: 100%;
-        max-height: 120px;
-        object-fit: cover;
-    }
-
-    .video-thumbnail-placeholder {
-        width: 100%;
-        height: 120px;
-        background-color: var(--bs-light);
-        border: 2px dashed var(--bs-border-color);
-    }
+    /* CLEANED: Removed all thumbnail-related CSS */
 
     .video-title {
         font-size: 1.1rem;
         font-weight: 600;
         line-height: 1.3;
         margin-bottom: 0.5rem;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        color: var(--bs-body-color);
     }
 
     .rating-input-container {
@@ -405,11 +367,6 @@
     }
 
     /* Dark theme support */
-    [data-bs-theme="dark"] .video-thumbnail-placeholder {
-        background-color: var(--bs-dark);
-        border-color: var(--bs-border-color);
-    }
-
     [data-bs-theme="dark"] .rating-input-container {
         background-color: var(--bs-dark);
         border-color: var(--bs-border-color);

@@ -1,13 +1,16 @@
-using Microsoft.EntityFrameworkCore;
-using TargetBrowse.Data;
-using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Data;
+using Microsoft.EntityFrameworkCore;
+using Google.Apis.YouTube.v3.Data;
 
 namespace TargetBrowse.Features.Videos.Data;
 
 /// <summary>
 /// Repository implementation for video data access operations.
-/// Handles CRUD operations for user's video library using Entity Framework.
+/// Handles CRUD operations for user's video library with Entity Framework Core.
+/// Fixed to include rating information when loading user videos.
 /// </summary>
 public class VideoRepository : IVideoRepository
 {
@@ -21,55 +24,23 @@ public class VideoRepository : IVideoRepository
     }
 
     /// <summary>
-    /// Gets all videos in the user's library.
-    /// FIXED: Now includes rating information for each video.
+    /// Gets all videos in the user's library with rating information.
+    /// FIXED: Now includes rating data for each video.
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetUserVideosAsync(string userId)
     {
         try
         {
-            return await _context.UserVideos
+            var userVideos = await _context.UserVideos
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating
                 .Where(uv => uv.UserId == userId)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "", // Description not stored in VideoEntity per schema
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId), // Use proper YouTube thumbnail
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status,
-                    // FIXED: Map the user's rating for this video
-                    UserRating = uv.Video.Ratings
-                        .Where(r => r.UserId == userId)
-                        .Select(r => new VideoRatingModel
-                        {
-                            Id = r.Id,
-                            VideoId = r.VideoId ?? Guid.Empty,
-                            YouTubeVideoId = uv.Video.YouTubeVideoId,
-                            VideoTitle = uv.Video.Title,
-                            UserId = r.UserId,
-                            Stars = r.Stars,
-                            Notes = r.Notes,
-                            CreatedAt = r.CreatedAt,
-                            UpdatedAt = r.LastModifiedAt
-                        })
-                        .FirstOrDefault()
-                })
                 .ToListAsync();
+
+            return userVideos.Select(uv => MapToDisplayModel(uv, userId)).ToList();
         }
         catch (Exception ex)
         {
@@ -80,175 +51,79 @@ public class VideoRepository : IVideoRepository
 
     /// <summary>
     /// Gets a specific video by its YouTube video ID for a user.
-    /// FIXED: Now includes rating information.
+    /// FIXED: Now includes rating data.
     /// </summary>
     public async Task<VideoDisplayModel?> GetVideoByYouTubeIdAsync(string userId, string youTubeVideoId)
     {
         try
         {
-            return await _context.UserVideos
-                .Where(uv => uv.UserId == userId && uv.Video.YouTubeVideoId == youTubeVideoId)
+            var userVideo = await _context.UserVideos
                 .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
+                    .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
-                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "", // Description not stored in VideoEntity per schema
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId), // Use proper YouTube thumbnail
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status,
-                    // FIXED: Map the user's rating for this video
-                    UserRating = uv.Video.Ratings
-                        .Where(r => r.UserId == userId)
-                        .Select(r => new VideoRatingModel
-                        {
-                            Id = r.Id,
-                            VideoId = r.VideoId ?? Guid.Empty,
-                            YouTubeVideoId = uv.Video.YouTubeVideoId,
-                            VideoTitle = uv.Video.Title,
-                            UserId = r.UserId,
-                            Stars = r.Stars,
-                            Notes = r.Notes,
-                            CreatedAt = r.CreatedAt,
-                            UpdatedAt = r.LastModifiedAt
-                        })
-                        .FirstOrDefault()
-                })
-                .FirstOrDefaultAsync();
+                    .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating
+                .FirstOrDefaultAsync(uv => uv.UserId == userId &&
+                                          uv.Video.YouTubeVideoId == youTubeVideoId);
+
+            return userVideo != null ? MapToDisplayModel(userVideo, userId) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting video {VideoId} for user {UserId}", youTubeVideoId, userId);
+            _logger.LogError(ex, "Error getting video by YouTube ID {VideoId} for user {UserId}",
+                youTubeVideoId, userId);
             throw;
         }
     }
 
     /// <summary>
     /// Searches videos in the user's library by title or description.
-    /// FIXED: Now includes rating information.
+    /// FIXED: Now includes rating data.
     /// </summary>
     public async Task<List<VideoDisplayModel>> SearchUserVideosAsync(string userId, string searchQuery)
     {
         try
         {
-            var searchLower = searchQuery.ToLowerInvariant();
-
-            return await _context.UserVideos
+            var userVideos = await _context.UserVideos
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating
                 .Where(uv => uv.UserId == userId &&
-                           (uv.Video.Title.ToLower().Contains(searchLower) ||
-                            uv.Video.Channel.Name.ToLower().Contains(searchLower)))
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
+                            (uv.Video.Title.Contains(searchQuery) ||
+                             uv.Video.Channel.Name.Contains(searchQuery)))
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status,
-                    // FIXED: Map the user's rating for this video
-                    UserRating = uv.Video.Ratings
-                        .Where(r => r.UserId == userId)
-                        .Select(r => new VideoRatingModel
-                        {
-                            Id = r.Id,
-                            VideoId = r.VideoId ?? Guid.Empty,
-                            YouTubeVideoId = uv.Video.YouTubeVideoId,
-                            VideoTitle = uv.Video.Title,
-                            UserId = r.UserId,
-                            Stars = r.Stars,
-                            Notes = r.Notes,
-                            CreatedAt = r.CreatedAt,
-                            UpdatedAt = r.LastModifiedAt
-                        })
-                        .FirstOrDefault()
-                })
                 .ToListAsync();
+
+            return userVideos.Select(uv => MapToDisplayModel(uv, userId)).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching videos for user {UserId} with query {SearchQuery}", userId, searchQuery);
+            _logger.LogError(ex, "Error searching user videos for user {UserId} with query {Query}",
+                userId, searchQuery);
             throw;
         }
     }
 
     /// <summary>
     /// Gets videos added to library within a date range.
-    /// FIXED: Now includes rating information.
+    /// FIXED: Now includes rating data.
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetVideosByDateRangeAsync(string userId, DateTime fromDate, DateTime toDate)
     {
         try
         {
-            return await _context.UserVideos
+            var userVideos = await _context.UserVideos
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Channel)
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating
                 .Where(uv => uv.UserId == userId &&
-                           uv.AddedToLibraryAt >= fromDate &&
-                           uv.AddedToLibraryAt <= toDate)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
-                .Include(uv => uv.Video)
-                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
+                            uv.AddedToLibraryAt >= fromDate &&
+                            uv.AddedToLibraryAt <= toDate)
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status,
-                    // FIXED: Map the user's rating for this video
-                    UserRating = uv.Video.Ratings
-                        .Where(r => r.UserId == userId)
-                        .Select(r => new VideoRatingModel
-                        {
-                            Id = r.Id,
-                            VideoId = r.VideoId ?? Guid.Empty,
-                            YouTubeVideoId = uv.Video.YouTubeVideoId,
-                            VideoTitle = uv.Video.Title,
-                            UserId = r.UserId,
-                            Stars = r.Stars,
-                            Notes = r.Notes,
-                            CreatedAt = r.CreatedAt,
-                            UpdatedAt = r.LastModifiedAt
-                        })
-                        .FirstOrDefault()
-                })
                 .ToListAsync();
+
+            return userVideos.Select(uv => MapToDisplayModel(uv, userId)).ToList();
         }
         catch (Exception ex)
         {
@@ -259,110 +134,91 @@ public class VideoRepository : IVideoRepository
 
     /// <summary>
     /// Gets videos from a specific channel that are in the user's library.
-    /// FIXED: Now includes rating information.
+    /// FIXED: Now includes rating data.
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetVideosByChannelAsync(string userId, string channelId)
     {
         try
         {
-            return await _context.UserVideos
-                .Where(uv => uv.UserId == userId && uv.Video.Channel.YouTubeChannelId == channelId)
+            var userVideos = await _context.UserVideos
                 .Include(uv => uv.Video)
-                .ThenInclude(v => v.Channel)
+                    .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
-                .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating for this video
-                .OrderByDescending(uv => uv.Video.PublishedAt)
-                .Select(uv => new VideoDisplayModel
-                {
-                    Id = uv.Video.Id,
-                    YouTubeVideoId = uv.Video.YouTubeVideoId,
-                    Title = uv.Video.Title,
-                    Description = "",
-                    ThumbnailUrl = GetVideoThumbnailUrl(uv.Video.YouTubeVideoId),
-                    Duration = ConvertSecondsToIso8601(uv.Video.Duration),
-                    ViewCount = (ulong)uv.Video.ViewCount,
-                    LikeCount = (ulong)uv.Video.LikeCount,
-                    CommentCount = (ulong)uv.Video.CommentCount,
-                    PublishedAt = uv.Video.PublishedAt,
-                    ChannelId = uv.Video.Channel.YouTubeChannelId,
-                    ChannelTitle = uv.Video.Channel.Name,
-                    AddedToLibrary = uv.AddedToLibraryAt,
-                    IsInLibrary = true,
-                    WatchStatus = uv.Status,
-                    // FIXED: Map the user's rating for this video
-                    UserRating = uv.Video.Ratings
-                        .Where(r => r.UserId == userId)
-                        .Select(r => new VideoRatingModel
-                        {
-                            Id = r.Id,
-                            VideoId = r.VideoId ?? Guid.Empty,
-                            YouTubeVideoId = uv.Video.YouTubeVideoId,
-                            VideoTitle = uv.Video.Title,
-                            UserId = r.UserId,
-                            Stars = r.Stars,
-                            Notes = r.Notes,
-                            CreatedAt = r.CreatedAt,
-                            UpdatedAt = r.LastModifiedAt
-                        })
-                        .FirstOrDefault()
-                })
+                    .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId)) // Include user's rating
+                .Where(uv => uv.UserId == userId &&
+                            uv.Video.Channel.YouTubeChannelId == channelId)
+                .OrderByDescending(uv => uv.AddedToLibraryAt)
                 .ToListAsync();
+
+            return userVideos.Select(uv => MapToDisplayModel(uv, userId)).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting videos by channel {ChannelId} for user {UserId}", channelId, userId);
+            _logger.LogError(ex, "Error getting videos by channel {ChannelId} for user {UserId}",
+                channelId, userId);
             throw;
         }
     }
 
-    // ===== REST OF THE METHODS REMAIN UNCHANGED =====
-
     /// <summary>
     /// Adds a video to the user's library.
-    /// Creates the video and channel entities if they don't exist.
     /// </summary>
     public async Task<bool> AddVideoAsync(string userId, VideoDisplayModel video)
     {
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            // Check if user already has this video in their library
+            // Check if already exists
             var existingUserVideo = await _context.UserVideos
-                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.YouTubeVideoId == video.YouTubeVideoId);
+                .FirstOrDefaultAsync(uv => uv.UserId == userId &&
+                                          uv.Video.YouTubeVideoId == video.YouTubeVideoId);
 
             if (existingUserVideo != null)
             {
-                _logger.LogInformation("Video {VideoId} already exists in library for user {UserId}", video.YouTubeVideoId, userId);
                 return false; // Already exists
             }
 
-            // Get or create the channel
-            var channel = await GetOrCreateChannelAsync(video.ChannelId, video.ChannelTitle, video.ThumbnailUrl);
+            // Ensure channel exists
+            var channel = await EnsureChannelExistsAsync(video.ChannelId, video.ChannelTitle);
 
-            // Get or create the video
-            var videoEntity = await GetOrCreateVideoAsync(video, channel.Id);
-
-            // Create the user-video relationship
-            var userVideo = new UserVideoEntity
+            // Ensure video exists
+            var videoInfo = new VideoInfo
             {
-                Id = Guid.NewGuid(),
+                YouTubeVideoId = video.YouTubeVideoId,
+                Title = video.Title,
+                ChannelId = video.ChannelId,
+                ChannelName = video.ChannelTitle,
+                PublishedAt = video.PublishedAt,
+                Duration = !string.IsNullOrEmpty(video.Duration) ? int.Parse(video.Duration) : 0,
+                ViewCount = (int)(video.ViewCount ?? 0),        
+                LikeCount = (int)(video.LikeCount ?? 0),        
+                CommentCount = (int)(video.CommentCount ?? 0),  
+                Description = video.Description ?? string.Empty,
+                ThumbnailUrl = video.ThumbnailUrl ?? string.Empty
+            };
+
+            var videoEntity = await EnsureVideoExistsAsync(videoInfo);
+
+            // Create user-video relationship
+            var userVideoEntity = new UserVideoEntity
+            {
                 UserId = userId,
                 VideoId = videoEntity.Id,
-                AddedToLibraryAt = DateTime.UtcNow,
+                AddedToLibraryAt = video.AddedToLibrary ?? DateTime.UtcNow,
                 Status = WatchStatus.NotWatched
             };
 
-            _context.UserVideos.Add(userVideo);
+            _context.UserVideos.Add(userVideoEntity);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            _logger.LogInformation("Successfully added video {VideoId} to library for user {UserId}", video.YouTubeVideoId, userId);
             return true;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error adding video {VideoId} for user {UserId}", video.YouTubeVideoId, userId);
+            _logger.LogError(ex, "Error adding video {VideoId} to library for user {UserId}",
+                video.YouTubeVideoId, userId);
             return false;
         }
     }
@@ -375,7 +231,7 @@ public class VideoRepository : IVideoRepository
         try
         {
             var userVideo = await _context.UserVideos
-                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
+                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Id == videoId);
 
             if (userVideo == null)
             {
@@ -385,12 +241,12 @@ public class VideoRepository : IVideoRepository
             _context.UserVideos.Remove(userVideo);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully removed video {VideoId} from library for user {UserId}", videoId, userId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing video {VideoId} for user {UserId}", videoId, userId);
+            _logger.LogError(ex, "Error removing video {VideoId} from library for user {UserId}",
+                videoId, userId);
             return false;
         }
     }
@@ -403,26 +259,24 @@ public class VideoRepository : IVideoRepository
         try
         {
             var userVideo = await _context.UserVideos
-                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
+                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Id == videoId);
 
             if (userVideo == null)
             {
-                _logger.LogWarning("Video {VideoId} not found in library for user {UserId}", videoId, userId);
                 return false;
             }
 
             userVideo.Status = watchStatus;
             userVideo.StatusChangedAt = DateTime.UtcNow;
+            userVideo.LastModifiedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Successfully updated watch status for video {VideoId} to {Status} for user {UserId}",
-                videoId, watchStatus, userId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating watch status for video {VideoId} for user {UserId}", videoId, userId);
+            _logger.LogError(ex, "Error updating watch status for video {VideoId} for user {UserId}",
+                videoId, userId);
             return false;
         }
     }
@@ -435,11 +289,13 @@ public class VideoRepository : IVideoRepository
         try
         {
             return await _context.UserVideos
-                .AnyAsync(uv => uv.UserId == userId && uv.Video.YouTubeVideoId == youTubeVideoId);
+                .AnyAsync(uv => uv.UserId == userId &&
+                               uv.Video.YouTubeVideoId == youTubeVideoId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if video {VideoId} exists for user {UserId}", youTubeVideoId, userId);
+            _logger.LogError(ex, "Error checking if video {VideoId} is in library for user {UserId}",
+                youTubeVideoId, userId);
             return false;
         }
     }
@@ -457,7 +313,7 @@ public class VideoRepository : IVideoRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting video count for user {UserId}", userId);
-            return 0;
+            throw;
         }
     }
 
@@ -470,7 +326,7 @@ public class VideoRepository : IVideoRepository
         {
             var userVideo = await _context.UserVideos
                 .Include(uv => uv.Video)
-                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Video.Id == videoId);
+                .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Id == videoId);
 
             if (userVideo == null)
             {
@@ -479,10 +335,11 @@ public class VideoRepository : IVideoRepository
 
             // Update video metadata
             userVideo.Video.Title = updatedVideo.Title;
-            userVideo.Video.Duration = ConvertIso8601ToSeconds(updatedVideo.Duration);
             userVideo.Video.ViewCount = (int)(updatedVideo.ViewCount ?? 0);
             userVideo.Video.LikeCount = (int)(updatedVideo.LikeCount ?? 0);
             userVideo.Video.CommentCount = (int)(updatedVideo.CommentCount ?? 0);
+            userVideo.Video.Duration = !string.IsNullOrEmpty(updatedVideo.Duration) ? int.Parse(updatedVideo.Duration) : 0;
+            userVideo.Video.LastModifiedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return true;
@@ -494,126 +351,243 @@ public class VideoRepository : IVideoRepository
         }
     }
 
-    #region Private Helper Methods
+    // NEW IMPLEMENTATIONS FOR YT-010-03
 
     /// <summary>
-    /// Gets the proper YouTube thumbnail URL for a video.
-    /// Uses maxresdefault for best quality, with fallback handled by the UI.
+    /// Ensures a video entity exists in the database with complete metadata.
+    /// Creates new video and channel entities if they don't exist.
     /// </summary>
-    private static string GetVideoThumbnailUrl(string youTubeVideoId)
+    public async Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video)
     {
-        return $"https://img.youtube.com/vi/{youTubeVideoId}/maxresdefault.jpg";
-    }
-
-    /// <summary>
-    /// Gets an existing channel or creates a new one.
-    /// </summary>
-    private async Task<ChannelEntity> GetOrCreateChannelAsync(string youTubeChannelId, string channelTitle, string? thumbnailUrl)
-    {
-        var existingChannel = await _context.Channels
-            .FirstOrDefaultAsync(c => c.YouTubeChannelId == youTubeChannelId);
-
-        if (existingChannel != null)
-        {
-            // Update channel info if needed
-            if (existingChannel.Name != channelTitle && !string.IsNullOrEmpty(channelTitle))
-            {
-                existingChannel.Name = channelTitle;
-            }
-            if (!string.IsNullOrEmpty(thumbnailUrl) && existingChannel.ThumbnailUrl != thumbnailUrl)
-            {
-                existingChannel.ThumbnailUrl = thumbnailUrl;
-            }
-            return existingChannel;
-        }
-
-        // Create new channel
-        var newChannel = new ChannelEntity
-        {
-            Id = Guid.NewGuid(),
-            YouTubeChannelId = youTubeChannelId,
-            Name = channelTitle ?? "Unknown Channel",
-            ThumbnailUrl = thumbnailUrl,
-            PublishedAt = DateTime.UtcNow, // We don't have channel creation date from video API
-            VideoCount = 0,
-            SubscriberCount = 0
-        };
-
-        _context.Channels.Add(newChannel);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Created new channel {ChannelId} with name {ChannelName}", youTubeChannelId, channelTitle);
-        return newChannel;
-    }
-
-    /// <summary>
-    /// Gets an existing video or creates a new one.
-    /// </summary>
-    private async Task<VideoEntity> GetOrCreateVideoAsync(VideoDisplayModel video, Guid channelId)
-    {
-        var existingVideo = await _context.Videos
-            .FirstOrDefaultAsync(v => v.YouTubeVideoId == video.YouTubeVideoId);
-
-        if (existingVideo != null)
-        {
-            // Update video metadata with latest info
-            existingVideo.Title = video.Title;
-            existingVideo.Duration = ConvertIso8601ToSeconds(video.Duration);
-            existingVideo.ViewCount = (int)(video.ViewCount ?? 0);
-            existingVideo.LikeCount = (int)(video.LikeCount ?? 0);
-            existingVideo.CommentCount = (int)(video.CommentCount ?? 0);
-            return existingVideo;
-        }
-
-        // Create new video
-        var newVideo = new VideoEntity
-        {
-            Id = Guid.NewGuid(),
-            YouTubeVideoId = video.YouTubeVideoId,
-            Title = video.Title,
-            ChannelId = channelId,
-            PublishedAt = video.PublishedAt,
-            ViewCount = (int)(video.ViewCount ?? 0),
-            LikeCount = (int)(video.LikeCount ?? 0),
-            CommentCount = (int)(video.CommentCount ?? 0),
-            Duration = ConvertIso8601ToSeconds(video.Duration),
-            RawTranscript = "" // Will be populated later when needed
-        };
-
-        _context.Videos.Add(newVideo);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Created new video {VideoId} with title {VideoTitle}", video.YouTubeVideoId, video.Title);
-        return newVideo;
-    }
-
-    /// <summary>
-    /// Converts ISO 8601 duration string to seconds.
-    /// </summary>
-    private static int ConvertIso8601ToSeconds(string? duration)
-    {
-        if (string.IsNullOrWhiteSpace(duration))
-            return 0;
-
         try
         {
-            var timespan = System.Xml.XmlConvert.ToTimeSpan(duration);
-            return (int)timespan.TotalSeconds;
+            // First try to find existing video
+            var existingVideo = await _context.Videos
+                .Include(v => v.Channel)
+                .FirstOrDefaultAsync(v => v.YouTubeVideoId == video.YouTubeVideoId);
+
+            if (existingVideo != null)
+            {
+                // Update metadata if video exists
+                existingVideo.Title = video.Title;
+                existingVideo.ViewCount = video.ViewCount;
+                existingVideo.LikeCount = video.LikeCount;
+                existingVideo.CommentCount = video.CommentCount;
+                existingVideo.Duration = video.Duration;
+                existingVideo.LastModifiedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return existingVideo;
+            }
+
+            // Ensure channel exists first
+            var channel = await EnsureChannelExistsAsync(video.ChannelId, video.ChannelName);
+
+            // Create new video entity
+            var videoEntity = new VideoEntity
+            {
+                YouTubeVideoId = video.YouTubeVideoId,
+                Title = video.Title,
+                ChannelId = channel.Id,
+                PublishedAt = video.PublishedAt,
+                ViewCount = video.ViewCount,
+                LikeCount = video.LikeCount,
+                CommentCount = video.CommentCount,
+                Duration = video.Duration,
+                RawTranscript = string.Empty // Will be populated later if needed
+            };
+
+            _context.Videos.Add(videoEntity);
+            await _context.SaveChangesAsync();
+
+            // Load the channel relationship for return
+            await _context.Entry(videoEntity)
+                .Reference(v => v.Channel)
+                .LoadAsync();
+
+            _logger.LogDebug("Created new video entity for {VideoId}: {Title}", video.YouTubeVideoId, video.Title);
+
+            return videoEntity;
         }
-        catch
+        catch (Exception ex)
         {
-            return 0;
+            _logger.LogError(ex, "Error ensuring video {VideoId} exists", video.YouTubeVideoId);
+            throw;
         }
     }
 
     /// <summary>
-    /// Converts seconds to ISO 8601 duration string.
+    /// Ensures a channel entity exists in the database.
+    /// Creates new channel entity if it doesn't exist, updates if it does.
     /// </summary>
-    private static string ConvertSecondsToIso8601(int seconds)
+    public async Task<ChannelEntity> EnsureChannelExistsAsync(string channelId, string channelName)
     {
-        var timespan = TimeSpan.FromSeconds(seconds);
-        return System.Xml.XmlConvert.ToString(timespan);
+        try
+        {
+            var existingChannel = await _context.Channels
+                .FirstOrDefaultAsync(c => c.YouTubeChannelId == channelId);
+
+            if (existingChannel != null)
+            {
+                // Update name if changed
+                if (existingChannel.Name != channelName)
+                {
+                    existingChannel.Name = channelName;
+                    existingChannel.LastModifiedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+                return existingChannel;
+            }
+
+            // Create new channel
+            var channelEntity = new ChannelEntity
+            {
+                YouTubeChannelId = channelId,
+                Name = channelName,
+                ThumbnailUrl = string.Empty, // Will be populated later if needed
+                VideoCount = 0,
+                SubscriberCount = 0,
+                PublishedAt = DateTime.UtcNow // Default value, will be updated when we have real data
+            };
+
+            _context.Channels.Add(channelEntity);
+            await _context.SaveChangesAsync();
+
+            _logger.LogDebug("Created new channel entity for {ChannelId}: {Name}", channelId, channelName);
+
+            return channelEntity;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ensuring channel {ChannelId} exists", channelId);
+            throw;
+        }
     }
 
-    #endregion
+    /// <summary>
+    /// Gets video entities by their YouTube video IDs.
+    /// Used for bulk operations and suggestion processing.
+    /// </summary>
+    public async Task<Dictionary<string, VideoEntity>> GetVideosByYouTubeIdsAsync(List<string> youTubeVideoIds)
+    {
+        try
+        {
+            if (!youTubeVideoIds.Any())
+            {
+                return new Dictionary<string, VideoEntity>();
+            }
+
+            var videos = await _context.Videos
+                .Include(v => v.Channel)
+                .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
+                .ToListAsync();
+
+            return videos.ToDictionary(v => v.YouTubeVideoId, v => v);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting videos by YouTube IDs");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Bulk creates video entities from VideoInfo objects.
+    /// Optimized for suggestion generation when processing many videos at once.
+    /// </summary>
+    public async Task<List<VideoEntity>> BulkCreateVideosAsync(List<VideoInfo> videos)
+    {
+        try
+        {
+            if (!videos.Any())
+            {
+                return new List<VideoEntity>();
+            }
+
+            var createdEntities = new List<VideoEntity>();
+
+            // Process in batches to avoid database timeout
+            const int batchSize = 50;
+            for (int i = 0; i < videos.Count; i += batchSize)
+            {
+                var batch = videos.Skip(i).Take(batchSize).ToList();
+                var batchEntities = new List<VideoEntity>();
+
+                foreach (var video in batch)
+                {
+                    try
+                    {
+                        var entity = await EnsureVideoExistsAsync(video);
+                        batchEntities.Add(entity);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to create video {VideoId} in bulk operation", video.YouTubeVideoId);
+                        // Continue with other videos
+                    }
+                }
+
+                createdEntities.AddRange(batchEntities);
+            }
+
+            _logger.LogInformation("Bulk created {CreatedCount} out of {TotalCount} videos",
+                createdEntities.Count, videos.Count);
+
+            return createdEntities;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk create videos operation");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Maps a UserVideoEntity to a VideoDisplayModel for presentation.
+    /// FIXED: Now properly includes rating information from the loaded data.
+    /// </summary>
+    private static VideoDisplayModel MapToDisplayModel(UserVideoEntity userVideo, string userId)
+    {
+        var displayModel = new VideoDisplayModel
+        {
+            Id = userVideo.Id,
+            YouTubeVideoId = userVideo.Video.YouTubeVideoId,
+            Title = userVideo.Video.Title,
+            Description = string.Empty, // Not stored in VideoEntity currently
+            ThumbnailUrl = string.Empty, // Not stored in VideoEntity currently
+            Duration = userVideo.Video.Duration > 0 ? userVideo.Video.Duration.ToString() : null,
+            ViewCount = userVideo.Video.ViewCount > 0 ? (ulong)userVideo.Video.ViewCount : null,
+            LikeCount = userVideo.Video.LikeCount > 0 ? (ulong)userVideo.Video.LikeCount : null,
+            CommentCount = userVideo.Video.CommentCount > 0 ? (ulong)userVideo.Video.CommentCount : null,
+            PublishedAt = userVideo.Video.PublishedAt,
+            ChannelId = userVideo.Video.Channel.YouTubeChannelId,
+            ChannelTitle = userVideo.Video.Channel.Name,
+            CategoryId = null, // Not stored currently
+            Tags = new List<string>(), // Not stored currently
+            DefaultLanguage = null, // Not stored currently
+            IsInLibrary = true,
+            AddedToLibrary = userVideo.AddedToLibraryAt,
+            WatchStatus = userVideo.Status
+        };
+
+        // FIXED: Map the rating information if it exists
+        var userRating = userVideo.Video.Ratings?.FirstOrDefault(r => r.UserId == userId);
+        if (userRating != null)
+        {
+            displayModel.UserRating = new VideoRatingModel
+            {
+                Id = userRating.Id,
+                VideoId = userRating.VideoId ?? Guid.Empty,
+                YouTubeVideoId = userVideo.Video.YouTubeVideoId,
+                VideoTitle = userVideo.Video.Title,
+                UserId = userRating.UserId,
+                Stars = userRating.Stars,
+                Notes = userRating.Notes,
+                CreatedAt = userRating.CreatedAt,
+                UpdatedAt = userRating.LastModifiedAt
+            };
+        }
+
+        return displayModel;
+    }
 }
