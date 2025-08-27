@@ -1,5 +1,6 @@
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -99,6 +100,36 @@ public interface IVideoService
     /// <param name="maxResults">Maximum number of suggestions</param>
     /// <returns>List of suggested videos</returns>
     Task<List<VideoDisplayModel>> GetSuggestedVideosFromChannelsAsync(string userId, int maxResults = 20);
+
+    // NEW METHODS FOR YT-010-03: Enhanced Suggestion Generation
+
+    /// <summary>
+    /// Saves all discovered videos to the database for historical browsing.
+    /// Handles duplicate prevention and ensures video metadata is stored.
+    /// Used by suggestion generation to persist all found videos regardless of approval status.
+    /// </summary>
+    /// <param name="videos">List of videos discovered during suggestion generation</param>
+    /// <param name="userId">User identifier for logging context</param>
+    /// <returns>List of video entities that were created or updated</returns>
+    Task<List<VideoEntity>> SaveDiscoveredVideosAsync(List<VideoInfo> videos, string userId);
+
+    /// <summary>
+    /// Ensures a video exists in the database with complete metadata.
+    /// Creates the video entity if it doesn't exist, updates metadata if it does.
+    /// Handles channel relationship and maintains data integrity.
+    /// </summary>
+    /// <param name="video">Video information to ensure exists</param>
+    /// <returns>Video entity from database</returns>
+    Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video);
+
+    /// <summary>
+    /// Gets videos from a specific channel published since a given date.
+    /// Delegates to YouTube service but provides consistent interface for suggestion generation.
+    /// </summary>
+    /// <param name="channelId">YouTube channel ID</param>
+    /// <param name="since">Only return videos published after this date</param>
+    /// <returns>List of videos from the channel</returns>
+    //Task<List<VideoInfo>> GetChannelVideosAsync(string channelId, DateTime since);
 }
 
 /// <summary>

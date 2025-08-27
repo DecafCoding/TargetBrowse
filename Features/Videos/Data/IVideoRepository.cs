@@ -1,5 +1,6 @@
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
 
 namespace TargetBrowse.Features.Videos.Data;
 
@@ -97,4 +98,42 @@ public interface IVideoRepository
     /// <param name="updatedVideo">Updated video information</param>
     /// <returns>True if updated successfully</returns>
     Task<bool> UpdateVideoAsync(string userId, Guid videoId, VideoDisplayModel updatedVideo);
+
+    // NEW METHODS FOR YT-010-03: Enhanced Suggestion Generation
+
+    /// <summary>
+    /// Ensures a video entity exists in the database with complete metadata.
+    /// Creates new video and channel entities if they don't exist, updates metadata if they do.
+    /// Handles channel relationships and maintains referential integrity.
+    /// </summary>
+    /// <param name="video">Video information to ensure exists</param>
+    /// <returns>Video entity from database with proper ID and relationships</returns>
+    Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video);
+
+    /// <summary>
+    /// Ensures a channel entity exists in the database.
+    /// Creates new channel entity if it doesn't exist, updates if it does.
+    /// Used by EnsureVideoExistsAsync to maintain channel relationships.
+    /// </summary>
+    /// <param name="channelId">YouTube channel ID</param>
+    /// <param name="channelName">Channel name/title</param>
+    /// <returns>Channel entity from database with proper ID</returns>
+    Task<ChannelEntity> EnsureChannelExistsAsync(string channelId, string channelName);
+
+    /// <summary>
+    /// Gets video entities by their YouTube video IDs.
+    /// Used for bulk operations and suggestion processing.
+    /// </summary>
+    /// <param name="youTubeVideoIds">List of YouTube video IDs</param>
+    /// <returns>Dictionary mapping YouTube video IDs to video entities</returns>
+    Task<Dictionary<string, VideoEntity>> GetVideosByYouTubeIdsAsync(List<string> youTubeVideoIds);
+
+    /// <summary>
+    /// Bulk creates video entities from VideoInfo objects.
+    /// Optimized for suggestion generation when processing many videos at once.
+    /// Handles duplicate prevention and maintains data integrity.
+    /// </summary>
+    /// <param name="videos">List of videos to create</param>
+    /// <returns>List of created video entities</returns>
+    Task<List<VideoEntity>> BulkCreateVideosAsync(List<VideoInfo> videos);
 }

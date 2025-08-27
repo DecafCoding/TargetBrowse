@@ -1,10 +1,12 @@
-﻿@page "/video-library"
+@page "/video-library"
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using TargetBrowse.Features.Videos.Models
+@using TargetBrowse.Features.Videos.Services
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IVideoService VideoService
+@inject IVideoRatingService VideoRatingService
 @inject IMessageCenterService MessageCenter
 
 <PageTitle>Video Library - YouTube Video Tracker</PageTitle>
@@ -152,13 +154,13 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><button class="dropdown-item" @onclick='() => SetRatingFilter("All Videos")'>All Videos</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" Rated")'>Rated Videos</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" Not Rated")'>Not Rated</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Rated")'>Rated Videos</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Not Rated")'>Not Rated</button></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 5 Stars")'>5 Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 4+ Stars")'>4+ Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 3+ Stars")'>3+ Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter(" 1-2 Stars")'>1-2 Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("5 Stars")'>5 Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("4+ Stars")'>4+ Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("3+ Stars")'>3+ Stars</button></li>
+                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("1-2 Stars")'>1-2 Stars</button></li>
                             </ul>
                         </div>
 
@@ -194,35 +196,6 @@
                             }
                         </div>
                     </div>
-
-                    <!-- Rating Summary Bar (if there are rated videos) -->
-                    @if (RatedVideosCount > 0)
-                    {
-                        <div class="rating-summary-bar mb-4 p-3 bg-light rounded">
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <h6 class="mb-1">
-                                        <i class="bi bi-star-fill text-warning me-2"></i>
-                                        Your Rating Summary
-                                    </h6>
-                                    <small class="text-muted">
-                                        @RatedVideosCount of @Videos.Count videos rated • Average: @AverageUserRating.ToString("F1") stars
-                                    </small>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex justify-content-md-end">
-                                        @for (int stars = 1; stars <= 5; stars++)
-                                        {
-                                            var count = GetRatingCount(stars);
-                                            <span class="badge @GetStarBadgeClass(stars) me-1" title="@count videos with @stars stars">
-                                                @stars★ @count
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
 
                     <!-- Video Grid using VideoCard Component -->
                     <div class="row">
@@ -294,6 +267,7 @@
 
     /// <summary>
     /// Loads the user's video library from the service.
+    /// FIXED: Removed mock rating data loading - now uses real database data.
     /// </summary>
     private async Task LoadLibraryAsync()
     {
@@ -313,11 +287,11 @@
                 return;
             }
 
+            // Load videos from database - this should now include rating information
             Videos = await VideoService.GetUserLibraryAsync(CurrentUserId);
 
-            // Load mock rating data for demonstration
-            LoadMockRatingData();
-
+            // REMOVED: LoadMockRatingData() call - we now use real data from the database
+            
             ApplyFiltersAndSort();
 
             if (!Videos.Any())
@@ -337,46 +311,6 @@
         {
             IsLoading = false;
             StateHasChanged();
-        }
-    }
-
-    /// <summary>
-    /// Loads mock rating data for demonstration purposes.
-    /// TODO: Replace with actual rating service integration.
-    /// </summary>
-    private void LoadMockRatingData()
-    {
-        var random = new Random();
-        var sampleNotes = new[]
-        {
-            "Great explanation of the concepts. Very clear and easy to follow.",
-            "Good content but could be more concise. Still worth watching.",
-            "Excellent tutorial! Exactly what I was looking for.",
-            "Too basic for my level, but well presented.",
-            "Amazing insights and practical examples. Highly recommended!",
-            "Decent content but the audio quality could be better.",
-            "Comprehensive coverage of the topic. Very thorough.",
-            "Not what I expected but still learned something new.",
-            "Outstanding presentation and valuable information.",
-            "Good starting point for beginners in this topic."
-        };
-
-        // Add mock ratings to 40% of videos
-        foreach (var video in Videos.Take((int)(Videos.Count * 0.4)))
-        {
-            var stars = random.Next(1, 6);
-            video.UserRating = new VideoRatingModel
-                {
-                    Id = Guid.NewGuid(),
-                    VideoId = video.Id,
-                    YouTubeVideoId = video.YouTubeVideoId,
-                    VideoTitle = video.Title,
-                    UserId = CurrentUserId ?? string.Empty,
-                    Stars = stars,
-                    Notes = sampleNotes[random.Next(sampleNotes.Length)],
-                    CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30)),
-                    UpdatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
-                };
         }
     }
 
@@ -626,7 +560,7 @@
 
     /* Consistent card heights in grid */
     .row > [class*="col-"] {
-        display: flex;
+        /* display: flex; */
         align-items: stretch;
     }
 
@@ -667,15 +601,12 @@
     }
 
     @@media (max-width: 768px) {
-        .rating-summary-bar .row
+        .rating-summary-bar .row {
+            text-align: center;
+        }
 
-    {
-        text-align: center;
-    }
-
-    .rating-summary-bar .col-md-6:last-child {
-        margin-top: 0.5rem;
-    }
-
+        .rating-summary-bar .col-md-6:last-child {
+            margin-top: 0.5rem;
+        }
     }
 </style>
