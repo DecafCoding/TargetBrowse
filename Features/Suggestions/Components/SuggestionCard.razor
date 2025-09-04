@@ -1,0 +1,550 @@
+﻿@using TargetBrowse.Features.Suggestions.Models
+@using TargetBrowse.Features.Suggestions.Components
+
+<div class="card suggestion-card h-100 @GetCardCssClass()">
+    <!-- Selection Checkbox (Batch Mode) -->
+    @if (AllowSelection)
+    {
+        <div class="selection-checkbox">
+            <input type="checkbox"
+                   class="form-check-input"
+                   @onchange="ToggleSelection"
+                   checked="@IsSelected"
+                   id="suggestion-@Suggestion.Id" />
+            <label class="form-check-label visually-hidden" for="suggestion-@Suggestion.Id">
+                Select suggestion
+            </label>
+        </div>
+    }
+
+    <!-- Video Thumbnail Container -->
+    <div class="position-relative video-thumbnail-container">
+        <img src="@GetThumbnailUrl()"
+             class="card-img-top video-thumbnail"
+             alt="@Suggestion.Video.Title"
+             loading="lazy"
+             onerror="handleThumbnailError(this, '@Suggestion.Video.YouTubeVideoId')" />
+
+        <!-- Duration Badge -->
+        @if (Suggestion.Video.Duration > 0)
+        {
+            <span class="badge bg-dark position-absolute duration-badge">
+                @Suggestion.Video.FormattedDuration
+            </span>
+        }
+
+        <!-- Source Badge -->
+        <div class="position-absolute source-badge-container">
+            <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="false" Size="small" />
+        </div>
+
+        <!-- Score Badge (if available) -->
+        @if (Suggestion.Score.HasValue)
+        {
+            <span class="badge bg-secondary position-absolute score-badge" title="Suggestion Score: @Suggestion.FormattedScore">
+                @Suggestion.FormattedScore
+            </span>
+        }
+
+        <!-- Expiry Warning -->
+        @if (Suggestion.IsNearExpiry)
+        {
+            <span class="badge bg-warning text-dark position-absolute expiry-badge" title="Expires in @Suggestion.DaysUntilExpiry days">
+                <i class="bi bi-clock"></i>
+                @Suggestion.DaysUntilExpiry d
+            </span>
+        }
+    </div>
+
+    <!-- Video Details -->
+    <div class="card-body d-flex flex-column p-3">
+        <!-- Video Title -->
+        <h6 class="card-title video-title mb-2">
+            <a href="@GetYouTubeUrl(Suggestion.Video)"
+               target="_blank"
+               class="text-decoration-none title-link"
+               title="@Suggestion.Video.Title">
+                @Suggestion.Video.Title
+            </a>
+        </h6>
+
+        <!-- Channel Info -->
+        <div class="video-channel mb-2">
+            <a href="@GetChannelUrl(Suggestion.Video)"
+               target="_blank"
+               class="text-muted text-decoration-none channel-link">
+                <i class="bi bi-person-circle me-1"></i>
+                @Suggestion.Video.ChannelName
+            </a>
+        </div>
+
+        <!-- Video Metadata -->
+        <div class="video-metadata mb-2">
+            <small class="text-muted">
+                @if (!string.IsNullOrEmpty(Suggestion.Video.FormattedViewCount))
+                {
+                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.FormattedViewCount</span>
+                    <span class="mx-1">•</span>
+                }
+                <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.TimeSincePublished</span>
+            </small>
+        </div>
+
+        <!-- Suggestion Reason -->
+        <div class="suggestion-reason mb-2">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="true" Size="small" />
+            </div>
+            <small class="text-muted suggestion-reason-text">
+                @GetReasonDescription()
+            </small>
+        </div>
+
+        <!-- Suggestion Metadata -->
+        <div class="suggestion-metadata mb-3">
+            <small class="text-muted d-flex justify-content-between">
+                <span title="Suggested @Suggestion.CreatedAt.ToString("MMM d, yyyy h:mm tt")">
+                    <i class="bi bi-clock me-1"></i>
+                    @Suggestion.TimeSinceCreated
+                </span>
+                <span title="Expires in @Suggestion.DaysUntilExpiry days">
+                    <i class="bi bi-hourglass-split me-1"></i>
+                    @Suggestion.DaysUntilExpiry days left
+                </span>
+            </small>
+        </div>
+
+        <!-- Video Description -->
+        @if (!string.IsNullOrEmpty(Suggestion.Video.Description) && Suggestion.Video.Description != "No description available")
+        {
+            <p class="video-description text-muted small mb-3 flex-grow-1">
+                @GetTruncatedDescription()
+            </p>
+        }
+
+        <!-- Action Buttons -->
+        <div class="mt-auto">
+            <SuggestionActions Mode="ActionMode.Individual"
+                               Suggestion="@Suggestion"
+                               OnSuggestionApproved="@OnSuggestionApproved"
+                               OnSuggestionDenied="@OnSuggestionDenied" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SuggestionDisplayModel Suggestion { get; set; } = null!;
+    [Parameter] public bool AllowSelection { get; set; } = false;
+    [Parameter] public bool IsSelected { get; set; } = false;
+    [Parameter] public EventCallback<SuggestionDisplayModel> OnSelectionChanged { get; set; }
+    [Parameter] public EventCallback<SuggestionDisplayModel> OnSuggestionApproved { get; set; }
+    [Parameter] public EventCallback<SuggestionDisplayModel> OnSuggestionDenied { get; set; }
+
+    private async Task ToggleSelection()
+    {
+        IsSelected = !IsSelected;
+        await OnSelectionChanged.InvokeAsync(Suggestion);
+    }
+
+    private string GetCardCssClass()
+    {
+        var classes = new List<string>();
+
+        if (IsSelected)
+        {
+            classes.Add("selected");
+        }
+
+        if (Suggestion.IsNearExpiry)
+        {
+            classes.Add("near-expiry");
+        }
+
+        var source = Suggestion.GetSourceEnum();
+        if (source == SuggestionSource.Both)
+        {
+            classes.Add("high-priority");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetThumbnailUrl()
+    {
+        if (!string.IsNullOrEmpty(Suggestion.Video.ThumbnailUrl))
+        {
+            return Suggestion.Video.ThumbnailUrl;
+        }
+
+        // Start with hqdefault which is more reliable than maxresdefault
+        return $"https://img.youtube.com/vi/{Suggestion.Video.YouTubeVideoId}/hqdefault.jpg";
+    }
+
+    private string GetReasonDescription()
+    {
+        var source = Suggestion.GetSourceEnum();
+        return source switch
+        {
+            SuggestionSource.Both => "Matches your topics AND from a tracked channel",
+            SuggestionSource.TrackedChannel => $"New video from {Suggestion.Video.ChannelName}",
+            SuggestionSource.TopicSearch => "Matches your learning topics",
+            _ => "Suggested based on your preferences"
+        };
+    }
+
+    /// <summary>
+    /// Constructs the YouTube URL for a video.
+    /// </summary>
+    private static string GetYouTubeUrl(VideoInfo video)
+    {
+        return $"https://www.youtube.com/watch?v={video.YouTubeVideoId}";
+    }
+
+    /// <summary>
+    /// Constructs the YouTube channel URL.
+    /// </summary>
+    private static string GetChannelUrl(VideoInfo video)
+    {
+        return $"https://www.youtube.com/channel/{video.ChannelId}";
+    }
+
+    /// <summary>
+    /// Gets a truncated version of the video description for display.
+    /// Handles null values, removes HTML tags, and truncates at word boundaries.
+    /// </summary>
+    private string GetTruncatedDescription()
+    {
+        var description = Suggestion?.Video?.Description;
+        if (string.IsNullOrWhiteSpace(description))
+            return string.Empty;
+
+        // Remove any HTML tags if present
+        description = System.Text.RegularExpressions.Regex.Replace(description, "<.*?>", string.Empty);
+
+        // Truncate to approximately 120 characters, breaking at word boundaries
+        const int maxLength = 120;
+        if (description.Length <= maxLength)
+            return description.Trim();
+
+        var truncated = description.Substring(0, maxLength - 3);
+        var lastSpace = truncated.LastIndexOf(' ');
+
+        // If we can find a good word boundary, use it
+        if (lastSpace > maxLength / 2)
+        {
+            return truncated.Substring(0, lastSpace).Trim() + "...";
+        }
+
+        // Otherwise, just truncate at the character limit
+        return truncated.Trim() + "...";
+    }
+}
+
+<script>
+    function handleThumbnailError(img, videoId) {
+        // Prevent infinite error loops
+        if (img.dataset.errorCount) {
+            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
+        } else {
+            img.dataset.errorCount = "1";
+        }
+
+        // Stop after 3 attempts to prevent infinite loops
+        if (parseInt(img.dataset.errorCount) > 3) {
+            return;
+        }
+
+        if (img.dataset.attempt === 'maxres') {
+            // Try hqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+            img.dataset.attempt = 'hq';
+        } else if (img.dataset.attempt === 'hq') {
+            // Try mqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
+            img.dataset.attempt = 'mq';
+        } else if (img.dataset.attempt === 'mq') {
+            // Try default
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
+            img.dataset.attempt = 'default';
+        } else if (!img.dataset.attempt) {
+            // First error - try maxresdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
+            img.dataset.attempt = 'maxres';
+        }
+    }
+</script>
+
+<style>
+    .suggestion-card {
+        transition: all 0.2s ease;
+        border: 1px solid var(--bs-border-color);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .suggestion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: var(--bs-primary);
+        }
+
+        .suggestion-card.selected {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        .suggestion-card.high-priority {
+            border-left: 4px solid var(--bs-primary);
+        }
+
+        .suggestion-card.near-expiry {
+            border-top: 3px solid var(--bs-warning);
+        }
+
+    /* Selection Checkbox */
+    .selection-checkbox {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 4px;
+        padding: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .suggestion-card:hover .selection-checkbox,
+    .suggestion-card.selected .selection-checkbox {
+        opacity: 1;
+    }
+
+    .selection-checkbox .form-check-input {
+        margin: 0;
+    }
+
+    /* Video Thumbnail Container */
+    .video-thumbnail-container {
+        position: relative;
+        width: 100%;
+        height: 0;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        overflow: hidden;
+        background-color: #000;
+        background-image: linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa), linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+    }
+
+    .video-thumbnail {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.2s ease;
+        display: block;
+        background-color: #000;
+    }
+
+    .suggestion-card:hover .video-thumbnail {
+        transform: scale(1.02);
+    }
+
+    /* Badge Positioning */
+    .duration-badge {
+        bottom: 8px;
+        right: 8px;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        color: white;
+    }
+
+    .source-badge-container {
+        top: 8px;
+        right: 8px;
+    }
+
+    .score-badge {
+        top: 8px;
+        left: 8px;
+        font-size: 0.65rem;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+
+    .expiry-badge {
+        bottom: 8px;
+        left: 8px;
+        font-size: 0.65rem;
+        padding: 2px 5px;
+        border-radius: 3px;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    /* Card Content */
+    .video-title {
+        font-size: 0.9rem;
+        line-height: 1.3;
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.4rem;
+    }
+
+    .title-link {
+        color: inherit;
+    }
+
+        .title-link:hover {
+            color: var(--bs-primary) !important;
+        }
+
+    .video-channel {
+        font-size: 0.8rem;
+    }
+
+    .channel-link:hover {
+        color: var(--bs-primary) !important;
+    }
+
+    .video-metadata {
+        font-size: 0.75rem;
+    }
+
+    .suggestion-reason {
+        font-size: 0.75rem;
+        background-color: var(--bs-light);
+        border-radius: 0.375rem;
+        padding: 0.5rem;
+        border-left: 3px solid var(--bs-primary);
+    }
+
+    .suggestion-reason-text {
+        font-style: italic;
+        line-height: 1.3;
+    }
+
+    .suggestion-metadata {
+        font-size: 0.7rem;
+    }
+
+    .video-description {
+        font-size: 0.75rem;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 2.1rem;
+    }
+
+    /* Mobile responsive */
+    @@media (max-width: 768px) {
+        .video-title {
+            font-size: 0.85rem;
+        }
+
+        .video-channel {
+            font-size: 0.75rem;
+        }
+
+        .suggestion-reason {
+            padding: 0.375rem;
+        }
+        /* Show selection checkbox on mobile */
+        .selection-checkbox {
+            opacity: 1;
+        }
+    }
+
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .suggestion-card {
+        border-color: var(--bs-border-color);
+        background-color: var(--bs-dark);
+    }
+
+        [data-bs-theme="dark"] .suggestion-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+    [data-bs-theme="dark"] .title-link {
+        color: var(--bs-light);
+    }
+
+        [data-bs-theme="dark"] .title-link:hover {
+            color: var(--bs-primary) !important;
+        }
+
+    [data-bs-theme="dark"] .suggestion-reason {
+        background-color: var(--bs-gray-800);
+        border-left-color: var(--bs-primary);
+    }
+
+    [data-bs-theme="dark"] .selection-checkbox {
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    [data-bs-theme="dark"] .video-thumbnail-container {
+        background-color: #000;
+        background-image: linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333), linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333);
+    }
+
+    /* Animation for new cards */
+    @@keyframes cardAppear {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .suggestion-card {
+        animation: cardAppear 0.3s ease-out;
+    }
+
+        /* Loading state */
+        .suggestion-card.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* High priority card special effects */
+        .suggestion-card.high-priority::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+            z-index: 1;
+        }
+</style>

@@ -124,4 +124,21 @@ public interface IChannelRatingService
     /// <param name="channelId">Channel ID to check</param>
     /// <returns>True if channel is rated 1-star by user, false otherwise</returns>
     Task<bool> IsChannelLowRatedAsync(string userId, Guid channelId);
+
+    /// <summary>
+    /// Gets channel ratings optimized for suggestion processing.
+    /// Returns a dictionary keyed by channel ID for fast lookup during suggestion scoring.
+    /// Excludes 1-star rated channels to prevent them from appearing in suggestions.
+    /// </summary>
+    /// <param name="userId">User ID to get channel ratings for</param>
+    /// <returns>Dictionary of channel ID to star rating (1-star channels excluded)</returns>
+    Task<Dictionary<Guid, int>> GetChannelRatingsForSuggestionsAsync(string userId);
+
+    /// <summary>
+    /// Gets YouTube channel IDs for channels rated 1-star by the user.
+    /// These channels should be completely excluded from suggestion processing.
+    /// </summary>
+    /// <param name="userId">User ID to get low-rated channels for</param>
+    /// <returns>List of YouTube channel IDs that are rated 1-star</returns>
+    Task<List<string>> GetLowRatedYouTubeChannelIdsAsync(string userId);
 }

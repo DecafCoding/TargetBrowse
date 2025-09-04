@@ -34,7 +34,7 @@ public class SuggestionService : ISuggestionService
     private const int MAX_PENDING_SUGGESTIONS = 100;
     private const int SUGGESTION_EXPIRY_DAYS = 30;
     private const int MAX_SUGGESTIONS_PER_REQUEST = 50;
-    private const int DEFAULT_DAYS_LOOKBACK = 7;
+    private const int DEFAULT_DAYS_LOOKBACK = 30;
 
     public SuggestionService(
         ISuggestionRepository suggestionRepository,
@@ -698,6 +698,7 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Creates suggestion entities and saves them to the database.
+    /// Enhanced to support topic relationships.
     /// </summary>
     private async Task<List<SuggestionEntity>> CreateSuggestionEntities(
         List<VideoSuggestion> videoSuggestions, List<VideoEntity> videoEntities, string userId)
@@ -711,24 +712,66 @@ public class SuggestionService : ISuggestionService
             if (videoEntity == null)
                 continue;
 
-            var suggestion = new SuggestionEntity
+            // Get topic IDs if this suggestion has matched topics
+            var topicIds = new List<Guid>();
+            if (videoSuggestion.MatchedTopics?.Any() == true)
             {
-                UserId = userId,
-                VideoId = videoEntity.Id,
-                Reason = videoSuggestion.Reason,
-                IsApproved = false,
-                IsDenied = false
-            };
+                var userTopics = await _topicService.GetUserTopicsAsync(userId);
+                topicIds = userTopics
+                    .Where(t => videoSuggestion.MatchedTopics.Contains(t.Name))
+                    .Select(t => t.Id)
+                    .ToList();
+            }
 
-            suggestions.Add(suggestion);
+            // Use enhanced repository method if we have topic relationships
+            SuggestionEntity suggestion;
+            if (topicIds.Any())
+            {
+                suggestion = await _suggestionRepository.CreateSuggestionWithTopicsAsync(
+                    userId, videoEntity.Id, videoSuggestion.Reason, topicIds);
+            }
+            else
+            {
+                // Fallback to existing method for channel-only suggestions
+                suggestion = new SuggestionEntity
+                {
+                    UserId = userId,
+                    VideoId = videoEntity.Id,
+                    Reason = videoSuggestion.Reason,
+                    IsApproved = false,
+                    IsDenied = false
+                };
+                suggestions.Add(suggestion);
+            }
+
+            if (topicIds.Any())
+            {
+                suggestions.Add(suggestion);
+            }
         }
 
-        if (suggestions.Any())
+        // Create any remaining suggestions without topics using existing bulk method
+        var suggestionsWithoutTopics = suggestions.Where(s => s.Id == Guid.Empty).ToList();
+        if (suggestionsWithoutTopics.Any())
         {
-            return await _suggestionRepository.CreateSuggestionsAsync(suggestions);
+            var createdSuggestions = await _suggestionRepository.CreateSuggestionsAsync(suggestionsWithoutTopics);
+
+            // Replace the temporary suggestions with the created ones
+            for (int i = 0; i < suggestions.Count; i++)
+            {
+                if (suggestions[i].Id == Guid.Empty)
+                {
+                    var created = createdSuggestions.FirstOrDefault();
+                    if (created != null)
+                    {
+                        suggestions[i] = created;
+                        createdSuggestions.Remove(created);
+                    }
+                }
+            }
         }
 
-        return new List<SuggestionEntity>();
+        return suggestions.Where(s => s.Id != Guid.Empty).ToList();
     }
 
     /// <summary>

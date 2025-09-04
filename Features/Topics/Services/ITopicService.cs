@@ -49,4 +49,12 @@ public interface ITopicService
     /// <param name="topicName">Topic name to check</param>
     /// <returns>True if topic already exists, false otherwise</returns>
     Task<bool> TopicExistsAsync(string userId, string topicName);
+
+    /// <summary>
+    /// Gets all topic names for the specified user as simple strings.
+    /// Used by suggestion service for YouTube search queries.
+    /// </summary>
+    /// <param name="userId">User ID to get topic names for</param>
+    /// <returns>List of topic names as strings, empty list if none found</returns>
+    Task<List<string>> GetUserTopicNamesAsync(string userId);
 }

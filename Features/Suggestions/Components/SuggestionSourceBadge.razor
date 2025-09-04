@@ -1,0 +1,162 @@
+﻿@using TargetBrowse.Features.Suggestions.Models
+
+<span class="@GetBadgeClass()"
+      title="@GetTooltipText()"
+      data-bs-toggle="tooltip"
+      data-bs-placement="top">
+    <span class="source-icon">@GetSourceIcon()</span>
+    @if (ShowText)
+    {
+        <span class="source-text">@GetSourceText()</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public SuggestionDisplayModel Suggestion { get; set; } = null!;
+    [Parameter] public bool ShowText { get; set; } = true;
+    [Parameter] public string Size { get; set; } = "normal"; // "small", "normal", "large"
+
+    private string GetBadgeClass()
+    {
+        var baseClass = Suggestion.GetSourceBadgeClass();
+        var sizeClass = Size switch
+        {
+            "small" => " badge-sm",
+            "large" => " badge-lg",
+            _ => ""
+        };
+        return $"{baseClass}{sizeClass} suggestion-source-badge";
+    }
+
+    private string GetSourceIcon()
+    {
+        return Suggestion.GetSourceIcon();
+    }
+
+    private string GetSourceText()
+    {
+        if (!ShowText) return string.Empty;
+
+        return Suggestion.GetSourceEnum() switch
+        {
+            SuggestionSource.Both => "Channel + Topic",
+            SuggestionSource.TrackedChannel => "Channel Update",
+            SuggestionSource.TopicSearch => "Topic Match",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetTooltipText()
+    {
+        return Suggestion.GetSourceEnum() switch
+        {
+            SuggestionSource.Both => "Found through both tracked channels AND topic searches - highest priority!",
+            SuggestionSource.TrackedChannel => "New video from one of your tracked channels",
+            SuggestionSource.TopicSearch => "Found through topic-based search matching your interests",
+            _ => "Unknown suggestion source"
+        };
+    }
+}
+
+<style>
+    .suggestion-source-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+        .suggestion-source-badge.badge-sm {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .suggestion-source-badge.badge-lg {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+    .source-icon {
+        font-size: 1em;
+        line-height: 1;
+        display: inline-block;
+    }
+
+    .source-text {
+        margin-left: 0.1rem;
+        font-weight: 500;
+    }
+
+    /* Enhanced colors for better visual hierarchy */
+    .suggestion-source-badge.bg-primary {
+        background-color: #0d6efd !important;
+        color: white;
+        box-shadow: 0 1px 3px rgba(13, 110, 253, 0.3);
+    }
+
+    .suggestion-source-badge.bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000;
+        box-shadow: 0 1px 3px rgba(13, 202, 240, 0.3);
+    }
+
+    .suggestion-source-badge.bg-success {
+        background-color: #198754 !important;
+        color: white;
+        box-shadow: 0 1px 3px rgba(25, 135, 84, 0.3);
+    }
+
+    .suggestion-source-badge.bg-secondary {
+        background-color: #6c757d !important;
+        color: white;
+        box-shadow: 0 1px 3px rgba(108, 117, 125, 0.3);
+    }
+
+    /* Hover effects */
+    .suggestion-source-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Dark theme adjustments */
+    [data-bs-theme="dark"] .suggestion-source-badge.bg-info {
+        background-color: #3dd5f3 !important;
+        color: #000;
+    }
+
+    /* Mobile responsive */
+    @@media (max-width: 576px) {
+        .suggestion-source-badge {
+            font-size: 0.7rem;
+        }
+
+            .suggestion-source-badge.badge-sm {
+                font-size: 0.6rem;
+            }
+
+        .source-text {
+            display: none;
+        }
+    }
+
+    /* Animation for new badges */
+    @@keyframes badgeAppear {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .suggestion-source-badge {
+        animation: badgeAppear 0.3s ease-out;
+    }
+</style>

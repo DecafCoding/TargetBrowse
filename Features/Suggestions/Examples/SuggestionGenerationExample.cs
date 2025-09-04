@@ -236,39 +236,39 @@ public class SuggestionGenerationExample
     /// <summary>
     /// Example: Search within specific channels for targeted content discovery.
     /// </summary>
-    public async Task<List<VideoInfo>> SearchTopicInUserChannels(string userId, string topic)
-    {
-        try
-        {
-            var userChannels = await GetUserTrackedChannelIds(userId);
+    //public async Task<List<VideoInfo>> SearchTopicInUserChannels(string userId, string topic)
+    //{
+    //    try
+    //    {
+    //        var userChannels = await GetUserTrackedChannelIds(userId);
 
-            if (!userChannels.Any())
-            {
-                _logger.LogInformation("No tracked channels found for user {UserId}", userId);
-                return new List<VideoInfo>();
-            }
+    //        if (!userChannels.Any())
+    //        {
+    //            _logger.LogInformation("No tracked channels found for user {UserId}", userId);
+    //            return new List<VideoInfo>();
+    //        }
 
-            var publishedAfter = DateTime.UtcNow.AddDays(-30); // Last 30 days
-            var result = await _youTubeService.SearchTopicInChannelsAsync(
-                topic, userChannels, publishedAfter, maxResults: 50);
+    //        var publishedAfter = DateTime.UtcNow.AddDays(-30); // Last 30 days
+    //        var result = await _youTubeService.SearchTopicInChannelsAsync(
+    //            topic, userChannels, publishedAfter, maxResults: 50);
 
-            if (result.IsSuccess)
-            {
-                _logger.LogInformation("Found {Count} videos for topic '{Topic}' in user's {ChannelCount} channels",
-                    result.Data?.Count ?? 0, topic, userChannels.Count);
+    //        if (result.IsSuccess)
+    //        {
+    //            _logger.LogInformation("Found {Count} videos for topic '{Topic}' in user's {ChannelCount} channels",
+    //                result.Data?.Count ?? 0, topic, userChannels.Count);
 
-                return result.Data ?? new List<VideoInfo>();
-            }
+    //            return result.Data ?? new List<VideoInfo>();
+    //        }
 
-            _logger.LogWarning("Failed to search topic in channels: {Error}", result.ErrorMessage);
-            return new List<VideoInfo>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error searching topic '{Topic}' in user channels", topic);
-            return new List<VideoInfo>();
-        }
-    }
+    //        _logger.LogWarning("Failed to search topic in channels: {Error}", result.ErrorMessage);
+    //        return new List<VideoInfo>();
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error searching topic '{Topic}' in user channels", topic);
+    //        return new List<VideoInfo>();
+    //    }
+    //}
 
     #region Helper Methods (Mock implementations for example)
 

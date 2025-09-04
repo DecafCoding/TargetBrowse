@@ -62,6 +62,11 @@ public class VideoInfo
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
+    /// Duration category based on YouTube API search filter
+    /// </summary>
+    public string DurationCategory { get; set; } = string.Empty; // "Medium", "Long", or empty
+
+    /// <summary>
     /// Helper property to get formatted duration for display.
     /// </summary>
     public string FormattedDuration
