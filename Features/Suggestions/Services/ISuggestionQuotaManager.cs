@@ -9,7 +9,7 @@ namespace TargetBrowse.Features.Suggestions.Services;
 /// Tracks usage, enforces limits, and provides intelligent quota planning.
 /// Fixed to resolve service lifetime dependency issues.
 /// </summary>
-public interface IYouTubeQuotaManager
+public interface ISuggestionQuotaManager
 {
     /// <summary>
     /// Checks if sufficient quota is available for an operation.
@@ -67,11 +67,11 @@ public interface IYouTubeQuotaManager
 /// Thread-safe implementation with in-memory tracking for MVP.
 /// Fixed to resolve service lifetime issues by using IServiceProvider.
 /// </summary>
-public class YouTubeQuotaManager : IYouTubeQuotaManager
+public class SuggestionQuotaManager : ISuggestionQuotaManager
 {
     private readonly YouTubeApiSettings _settings;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<YouTubeQuotaManager> _logger;
+    private readonly ILogger<SuggestionQuotaManager> _logger;
     private readonly SemaphoreSlim _quotaSemaphore;
 
     // Thread-safe quota tracking
@@ -87,10 +87,10 @@ public class YouTubeQuotaManager : IYouTubeQuotaManager
     private const int CHANNEL_DETAILS_QUOTA_COST = 1;
     private const int PLAYLIST_ITEMS_QUOTA_COST = 1;
 
-    public YouTubeQuotaManager(
+    public SuggestionQuotaManager(
         IOptions<YouTubeApiSettings> settings,
         IServiceProvider serviceProvider,
-        ILogger<YouTubeQuotaManager> logger)
+        ILogger<SuggestionQuotaManager> logger)
     {
         _settings = settings.Value;
         _serviceProvider = serviceProvider;

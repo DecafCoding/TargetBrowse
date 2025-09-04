@@ -45,8 +45,8 @@
                         <tr>
                             <th scope="col" class="border-0">Topic</th>
                             <th scope="col" class="border-0">Age</th>
-                            <th scope="col" class="border-0 text-center">Suggestions</th>
-                            <th scope="col" class="border-0 text-center" style="width: 80px;">Action</th>
+                            <th scope="col" class="border-0 text-center">Recent Videos</th>
+                            <th scope="col" class="border-0 text-center" style="width: 120px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,27 +63,42 @@
                                     @topic.CreatedAtDisplay
                                 </td>
 
-                                <!-- Suggestions (placeholder) -->
+                                <!-- Recent Videos Link -->
                                 <td class="text-center">
-                                    <span class="badge bg-secondary">Coming Soon</span>
+                                    <a href="/topics/@topic.Id/videos"
+                                       class="btn btn-outline-primary btn-sm"
+                                       title="View recent YouTube videos for this topic">
+                                        <i class="bi bi-play-circle me-1"></i>
+                                        View Videos
+                                    </a>
                                 </td>
 
-                                <!-- Delete Action -->
+                                <!-- Actions -->
                                 <td class="text-center">
-                                    <button type="button"
-                                            class="btn btn-outline-danger btn-sm"
-                                            @onclick="() => ShowDeleteConfirmation(topic)"
-                                            disabled="@IsDeleting"
-                                            title="Delete topic">
-                                        @if (IsDeleting && _topicToDelete?.Id == topic.Id)
-                                        {
-                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-trash"></i>
-                                        }
-                                    </button>
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <!-- View Recent Videos (icon version for mobile) -->
+                                        <a href="/topics/@topic.Id/videos"
+                                           class="btn btn-outline-info btn-sm d-md-none"
+                                           title="View recent videos">
+                                            <i class="bi bi-play-circle"></i>
+                                        </a>
+
+                                        <!-- Delete Action -->
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => ShowDeleteConfirmation(topic)"
+                                                disabled="@IsDeleting"
+                                                title="Delete topic">
+                                            @if (IsDeleting && _topicToDelete?.Id == topic.Id)
+                                            {
+                                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-trash"></i>
+                                            }
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -335,8 +350,14 @@
         letter-spacing: 0.025em;
     }
 
-    /* Delete button hover effect */
+    /* Button hover effects */
     .btn-outline-danger:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s ease;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-info:hover {
         transform: translateY(-1px);
         transition: transform 0.2s ease;
     }
@@ -346,18 +367,12 @@
         background-color: var(--bs-light);
     }
 
-    /* Badge styling for suggestions placeholder */
-    .badge {
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    /* Loading state for delete button */
-    .btn-outline-danger:disabled {
+    /* Loading state for buttons */
+    .btn:disabled {
         opacity: 0.6;
     }
 
-    /* Responsive table improvements */
+    /* Responsive improvements */
     @@media (max-width: 768px) {
         .table-responsive
 
@@ -370,5 +385,40 @@
         font-size: 0.775rem;
     }
 
+    /* Hide text on mobile for View Videos button in actions column */
+    .d-md-none {
+        display: inline-block !important;
+    }
+
+    }
+
+    @@media (min-width: 769px) {
+        .d-md-none
+
+    {
+        display: none !important;
+    }
+
+    }
+
+    /* Enhanced button styling */
+    .btn-outline-primary {
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+    }
+
+        .btn-outline-primary:hover {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: white;
+        }
+
+    /* Dark theme support */
+    [data-bs-theme="dark"] .table-hover tbody tr:hover {
+        background-color: var(--bs-dark);
+    }
+
+    [data-bs-theme="dark"] .table > tbody > tr > td {
+        border-top-color: var(--bs-border-color);
     }
 </style>

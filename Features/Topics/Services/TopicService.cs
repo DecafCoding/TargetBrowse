@@ -215,4 +215,35 @@ public class TopicService : ITopicService
             return false;
         }
     }
+
+    /// <summary>
+    /// Gets all topic names for the specified user as simple strings.
+    /// Used by suggestion service for YouTube search queries.
+    /// </summary>
+    /// <param name="userId">User ID to get topic names for</param>
+    /// <returns>List of topic names as strings, empty list if none found</returns>
+    public async Task<List<string>> GetUserTopicNamesAsync(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("GetUserTopicNamesAsync called with null or empty userId");
+                return new List<string>();
+            }
+
+            var topicNames = await _context.Topics
+                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Select(t => t.Name)
+                .ToListAsync();
+
+            _logger.LogDebug("Retrieved {TopicCount} topic names for user {UserId}", topicNames.Count, userId);
+            return topicNames;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving topic names for user {UserId}", userId);
+            return new List<string>();
+        }
+    }
 }

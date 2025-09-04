@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SuggestionEntity> Suggestions { get; set; }
     public DbSet<SummaryEntity> Summaries { get; set; }
     public DbSet<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; }
+    public DbSet<SuggestionTopicEntity> SuggestionTopics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -40,6 +41,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new SuggestionEntityConfiguration());
         builder.ApplyConfiguration(new SummaryEntityConfiguration());
         builder.ApplyConfiguration(new SummaryGenerationRequestEntityConfiguration());
+        builder.ApplyConfiguration(new SuggestionTopicEntityConfiguration());
 
         // Configure Identity tables to avoid conflicts
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers");

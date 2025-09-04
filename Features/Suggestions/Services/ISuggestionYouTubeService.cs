@@ -108,11 +108,11 @@ public interface ISuggestionYouTubeService
     /// <param name="publishedAfter">Only include videos published after this date (optional)</param>
     /// <param name="maxResults">Maximum number of videos to return total</param>
     /// <returns>API result containing videos matching topic within specified channels</returns>
-    Task<YouTubeApiResult<List<VideoInfo>>> SearchTopicInChannelsAsync(
-        string topicQuery,
-        List<string> youTubeChannelIds,
-        DateTime? publishedAfter = null,
-        int maxResults = 25);
+    //Task<YouTubeApiResult<List<VideoInfo>>> SearchTopicInChannelsAsync(
+    //    string topicQuery,
+    //    List<string> youTubeChannelIds,
+    //    DateTime? publishedAfter = null,
+    //    int maxResults = 25);
 
     /// <summary>
     /// Preloads video details for a list of videos to optimize future requests.

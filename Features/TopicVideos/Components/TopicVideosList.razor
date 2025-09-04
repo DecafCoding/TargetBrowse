@@ -1,0 +1,414 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject ITopicVideosService TopicVideosService
+@inject IMessageCenterService MessageCenter
+@attribute [Authorize]
+
+<div class="topic-videos-container">
+    @if (IsLoading)
+    {
+        <!-- Loading State with Skeleton Cards -->
+        <div class="row">
+            @for (int i = 0; i < 12; i++)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="card skeleton-card h-100">
+                        <div class="skeleton-thumbnail"></div>
+                        <div class="card-body">
+                            <div class="skeleton-text skeleton-title"></div>
+                            <div class="skeleton-text skeleton-channel"></div>
+                            <div class="skeleton-text skeleton-metadata"></div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (HasError)
+    {
+        <!-- Error State -->
+        <div class="text-center py-5">
+            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+            <h4 class="mt-3 text-muted">Unable to Load Videos</h4>
+            <p class="text-muted mb-4">
+                We encountered an error while searching for videos related to this topic.
+                This could be due to API limits or network issues.
+            </p>
+            <button type="button"
+                    class="btn btn-primary"
+                    @onclick="LoadVideosAsync">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Try Again
+            </button>
+        </div>
+    }
+    else if (!Videos.Any())
+    {
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+            <h4 class="mt-3 text-muted">No Videos Found</h4>
+            <p class="text-muted mb-4">
+                @if (!string.IsNullOrEmpty(TopicName))
+                {
+                    <span>We couldn't find any recent videos for "<strong>@TopicName</strong>".</span>
+                }
+                else
+                {
+                    <span>We couldn't find any recent videos for this topic.</span>
+                }
+            </p>
+            <div class="text-muted small">
+                <p class="mb-2"><strong>Suggestions:</strong></p>
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-arrow-right me-2"></i>Try a broader or more common term</li>
+                    <li><i class="bi bi-arrow-right me-2"></i>Check your spelling</li>
+                    <li><i class="bi bi-arrow-right me-2"></i>Consider using different keywords</li>
+                </ul>
+            </div>
+            <button type="button"
+                    class="btn btn-outline-primary mt-3"
+                    @onclick="LoadVideosAsync">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Search Again
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- Results Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="mb-1">
+                    @Videos.Count Video@(Videos.Count == 1 ? "" : "s") Found
+                </h5>
+                <p class="text-muted small mb-0">
+                    @if (HighRelevanceCount > 0)
+                    {
+                        <span>@HighRelevanceCount highly relevant • </span>
+                    }
+                    Searched from the last year
+                </p>
+            </div>
+            <div>
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="LoadVideosAsync"
+                        disabled="@IsLoading"
+                        title="Refresh results">
+                    @if (IsLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                    }
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Video Grid -->
+        <div class="row">
+            @foreach (var video in Videos)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <!-- Topic-specific relevance indicator -->
+                    <div class="position-relative">
+                        @if (video.IsHighRelevance)
+                        {
+                            <div class="relevance-indicator high-relevance" title="Highly relevant to @TopicName">
+                                <i class="bi @video.RelevanceIcon"></i>
+                            </div>
+                        }
+
+                        <!-- Standard VideoCard component -->
+                        <VideoCard Video="@video"
+                                   DisplayMode="VideoDisplayMode.Search"
+                                   OnVideoAdded="@HandleVideoAdded" />
+
+                        <!-- Topic match information overlay -->
+                        @if (video.MatchedKeywords.Any())
+                        {
+                            <div class="match-info">
+                                <small class="text-muted">
+                                    <i class="bi bi-tag me-1"></i>
+                                    @video.MatchReason
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Load More Button (if we want to implement pagination in the future) -->
+        @if (Videos.Count >= MaxResults)
+        {
+            <div class="text-center mt-4">
+                <p class="text-muted small">
+                    Showing @Videos.Count results. Some videos may not be displayed due to API limits.
+                </p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter, EditorRequired]
+    public Guid TopicId { get; set; }
+
+    [Parameter]
+    public string? TopicName { get; set; }
+
+    [Parameter]
+    public int MaxResults { get; set; } = 50;
+
+    [Parameter]
+    public EventCallback<TopicVideoDisplayModel> OnVideoAdded { get; set; }
+
+    private List<TopicVideoDisplayModel> Videos { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool HasError { get; set; } = false;
+    private string? CurrentUserId { get; set; }
+
+    private int HighRelevanceCount => Videos.Count(v => v.IsHighRelevance);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserIdAsync();
+        await LoadVideosAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reload videos if TopicId changes
+        if (Videos.Any() && Videos.First().TopicId != TopicId)
+        {
+            await LoadVideosAsync();
+        }
+    }
+
+    /// <summary>
+    /// Gets the current authenticated user's ID.
+    /// </summary>
+    private async Task GetCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch (Exception)
+        {
+            CurrentUserId = null;
+        }
+    }
+
+    /// <summary>
+    /// Loads videos for the current topic from YouTube.
+    /// </summary>
+    public async Task LoadVideosAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            HasError = false;
+            StateHasChanged();
+
+            if (TopicId == Guid.Empty)
+            {
+                HasError = true;
+                return;
+            }
+
+            Videos = await TopicVideosService.GetRecentVideosAsync(TopicId, CurrentUserId, MaxResults);
+
+            // Update TopicName if we don't have it and we got results
+            if (string.IsNullOrEmpty(TopicName) && Videos.Any())
+            {
+                TopicName = Videos.First().TopicName;
+            }
+
+            HasError = false;
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            await MessageCenter.ShowErrorAsync("Failed to load topic videos. Please try again.");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Handles when a video is successfully added to the user's library.
+    /// </summary>
+    private async Task HandleVideoAdded(VideoDisplayModel video)
+    {
+        // Update the video in our list to reflect it's now in the library
+        var topicVideo = Videos.FirstOrDefault(v => v.YouTubeVideoId == video.YouTubeVideoId);
+        if (topicVideo != null)
+        {
+            topicVideo.IsInLibrary = true;
+            topicVideo.AddedToLibrary = video.AddedToLibrary;
+            StateHasChanged();
+        }
+
+        // Notify parent component if needed
+        if (OnVideoAdded.HasDelegate && topicVideo != null)
+        {
+            await OnVideoAdded.InvokeAsync(topicVideo);
+        }
+    }
+
+    /// <summary>
+    /// Public method to refresh videos (called from parent component).
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await LoadVideosAsync();
+    }
+}
+
+<style>
+    .topic-videos-container {
+        min-height: 400px;
+    }
+
+    /* Skeleton loading cards */
+    .skeleton-card {
+        border: 1px solid var(--bs-border-color);
+        animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+    }
+
+    .skeleton-thumbnail {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+    }
+
+    .skeleton-text {
+        height: 16px;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        margin-bottom: 8px;
+        border-radius: 4px;
+    }
+
+    .skeleton-title {
+        height: 20px;
+        width: 90%;
+    }
+
+    .skeleton-channel {
+        width: 70%;
+    }
+
+    .skeleton-metadata {
+        width: 50%;
+    }
+
+    @@keyframes skeleton-loading {
+        0%
+
+    {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+
+    }
+
+    @@keyframes skeleton-pulse {
+        0%
+
+    {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+
+    }
+
+    /* Dark theme skeleton support */
+    [data-bs-theme="dark"] .skeleton-thumbnail,
+    [data-bs-theme="dark"] .skeleton-text {
+        background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+        background-size: 200% 100%;
+    }
+
+    /* Relevance indicators */
+    .relevance-indicator {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 10;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+
+        .relevance-indicator.high-relevance {
+            background-color: rgba(25, 135, 84, 0.9);
+            color: white;
+        }
+
+    /* Match information overlay */
+    .match-info {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .col-lg-3:hover .match-info,
+    .col-md-4:hover .match-info,
+    .col-sm-6:hover .match-info {
+        opacity: 1;
+    }
+
+    /* Empty state styling */
+    .text-center ul {
+        display: inline-block;
+        text-align: left;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .relevance-indicator
+
+    {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .match-info {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    }
+</style>

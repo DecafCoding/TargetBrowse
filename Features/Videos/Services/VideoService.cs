@@ -402,11 +402,10 @@ public class VideoService : IVideoService
         }
     }
 
-    // NEW IMPLEMENTATIONS FOR YT-010-03
-
     /// <summary>
     /// Saves all discovered videos to the database for historical browsing.
     /// Handles duplicate prevention and ensures video metadata is stored.
+    /// Used by suggestion generation to persist all found videos regardless of approval status.
     /// </summary>
     public async Task<List<VideoEntity>> SaveDiscoveredVideosAsync(List<VideoInfo> videos, string userId)
     {
@@ -445,6 +444,13 @@ public class VideoService : IVideoService
                 }
 
                 savedEntities.AddRange(batchEntities);
+
+                // Log progress for large batches
+                if (videos.Count > 50)
+                {
+                    _logger.LogDebug("Processed batch {BatchNumber} of {TotalBatches} for user {UserId}",
+                        (i / batchSize) + 1, (videos.Count + batchSize - 1) / batchSize, userId);
+                }
             }
 
             _logger.LogInformation("Successfully saved {SavedCount} out of {TotalCount} videos for user {UserId}",

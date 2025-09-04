@@ -18,5 +18,7 @@ namespace TargetBrowse.Data.Entities
 
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;
+
+        public virtual ICollection<SuggestionTopicEntity> SuggestionTopics { get; set; } = new List<SuggestionTopicEntity>();
     }
 }

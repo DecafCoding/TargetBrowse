@@ -1,0 +1,661 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.Suggestions.Models
+@using TargetBrowse.Features.Suggestions.Services
+@using TargetBrowse.Services
+@inject ISuggestionService SuggestionService
+@inject IMessageCenterService MessageCenter
+@inject ILogger<SuggestionQueue> Logger
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+<div class="suggestion-queue-container">
+    <!-- Queue Header with Controls -->
+    <div class="queue-header mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+            <!-- Queue Stats -->
+            <div class="queue-stats">
+                <h5 class="mb-1">
+                    <i class="bi bi-collection-play me-2"></i>
+                    Your Suggestion Queue
+                </h5>
+                @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+                {
+                    var counts = QueueModel.GetSourceCounts();
+                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                        <span><strong>@counts.Total</strong> total</span>
+                        @if (counts.BothSources > 0)
+                        {
+                            <span>• <span class="text-primary"><strong>@counts.BothSources</strong> high priority</span></span>
+                        }
+                        @if (counts.NearExpiry > 0)
+                        {
+                            <span>• <span class="text-warning"><strong>@counts.NearExpiry</strong> expiring soon</span></span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Filter and Sort Controls -->
+            @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+            {
+                <div class="queue-controls d-flex flex-wrap gap-2">
+                    <!-- Filter Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-funnel me-1"></i>
+                            @GetFilterDisplayText()
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.All ? "active" : "")"
+                                        @onclick="() => SetFilter(SuggestionFilter.All)">
+                                    All Suggestions
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.BothSources ? "active" : "")"
+                                        @onclick="() => SetFilter(SuggestionFilter.BothSources)">
+                                    ⭐ High Priority
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.ChannelOnly ? "active" : "")"
+                                        @onclick="() => SetFilter(SuggestionFilter.ChannelOnly)">
+                                    📺 Channel Updates
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.TopicOnly ? "active" : "")"
+                                        @onclick="() => SetFilter(SuggestionFilter.TopicOnly)">
+                                    🔍 Topic Matches
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.NearExpiry ? "active" : "")"
+                                        @onclick="() => SetFilter(SuggestionFilter.NearExpiry)">
+                                    ⏰ Expiring Soon
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Sort Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-sort-down me-1"></i>
+                            Sort
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedDesc ? "active" : "")"
+                                        @onclick="() => SetSort(SuggestionSort.CreatedDesc)">
+                                    Newest First
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedAsc ? "active" : "")"
+                                        @onclick="() => SetSort(SuggestionSort.CreatedAsc)">
+                                    Oldest First
+                                </button>
+                            </li>
+                            @if (QueueModel.Suggestions.Any(s => s.Score.HasValue))
+                            {
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ScoreDesc ? "active" : "")"
+                                            @onclick="() => SetSort(SuggestionSort.ScoreDesc)">
+                                        Highest Score
+                                    </button>
+                                </li>
+                            }
+                            <li>
+                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ExpiryAsc ? "active" : "")"
+                                        @onclick="() => SetSort(SuggestionSort.ExpiryAsc)">
+                                    Expiring Soon
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Batch Actions Toggle -->
+                    @if (QueueModel.FilteredSuggestions.Any())
+                    {
+                        <button class="btn @(ShowBatchMode ? "btn-primary" : "btn-outline-secondary") btn-sm"
+                                @onclick="ToggleBatchMode">
+                            <i class="bi bi-check2-square me-1"></i>
+                            @(ShowBatchMode ? "Cancel" : "Select")
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Batch Actions Bar -->
+        @if (ShowBatchMode && QueueModel.ShowBatchActions)
+        {
+            <div class="batch-actions-bar mt-3 p-3 bg-light rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>@QueueModel.SelectedSuggestionIds.Count</strong> suggestions selected
+                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="SelectAll">Select All</button>
+                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="ClearSelection">Clear</button>
+                    </div>
+                    <SuggestionActions Mode="ActionMode.Batch"
+                                       SelectedSuggestionIds="@QueueModel.SelectedSuggestionIds"
+                                       OnBatchApproved="@HandleBatchApproved"
+                                       OnBatchDenied="@HandleBatchDenied" />
+                </div>
+            </div>
+        }
+
+        <!-- Progress Bar -->
+        @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+        {
+            <div class="queue-progress mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">Queue Usage</small>
+                    <small class="text-muted">@QueueModel.Suggestions.Count / 100</small>
+                </div>
+                <div class="progress" style="height: 4px;">
+                    <div class="progress-bar @GetProgressBarClass()"
+                         style="width: @(QueueModel.ProgressPercentage)%"></div>
+                </div>
+                @if (QueueModel.IsNearLimit)
+                {
+                    <small class="text-warning mt-1 d-block">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        @if (QueueModel.IsAtLimit)
+                        {
+                            @:Queue is full. Approve or remove suggestions to get new ones.
+                        }
+                        else
+                        {
+                            @:Approaching queue limit. Consider reviewing suggestions.
+                        }
+                    </small>
+                }
+            </div>
+        }
+    </div>
+
+    @if (QueueModel.IsLoading)
+    {
+        <div class="loading-state">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading suggestions...</span>
+                </div>
+                <h6>Loading your suggestions...</h6>
+                <p class="text-muted mb-0">Gathering your personalized video recommendations</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(QueueModel.ErrorMessage))
+    {
+        <div class="error-state">
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    <strong>Error loading suggestions:</strong>
+                    <div>@QueueModel.ErrorMessage</div>
+                </div>
+            </div>
+            <div class="text-center">
+                <button class="btn btn-primary" @onclick="RefreshSuggestions">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    Try Again
+                </button>
+            </div>
+        </div>
+    }
+    else if (!QueueModel.Suggestions.Any())
+    {
+        <div class="empty-state text-center py-5">
+            <i class="bi bi-collection text-muted mb-3" style="font-size: 4rem;"></i>
+            <h4 class="text-muted mb-3">No suggestions yet</h4>
+            <p class="text-muted mb-4">
+                Get personalized video suggestions based on your tracked channels and topics.
+                <br>
+                Click "Get New Suggestions" to generate recommendations!
+            </p>
+            <div class="empty-state-tips">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4">
+                        <div class="tip-card p-3 border rounded">
+                            <i class="bi bi-youtube text-primary mb-2 d-block" style="font-size: 1.5rem;"></i>
+                            <h6>Track Channels</h6>
+                            <small class="text-muted">Add YouTube channels you follow to get notified of new videos</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tip-card p-3 border rounded">
+                            <i class="bi bi-tags text-success mb-2 d-block" style="font-size: 1.5rem;"></i>
+                            <h6>Set Topics</h6>
+                            <small class="text-muted">Define learning topics to discover relevant content across YouTube</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tip-card p-3 border rounded">
+                            <i class="bi bi-star text-warning mb-2 d-block" style="font-size: 1.5rem;"></i>
+                            <h6>Rate Content</h6>
+                            <small class="text-muted">Rate channels and videos to improve future suggestions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+            var filteredSuggestions = QueueModel.FilteredSuggestions;
+
+        if (!filteredSuggestions.Any())
+        {
+            <div class="no-results-state text-center py-4">
+                <i class="bi bi-funnel text-muted mb-3" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mb-2">No suggestions match your filter</h5>
+                <p class="text-muted mb-3">Try adjusting your filter criteria or clearing all filters.</p>
+                <button class="btn btn-outline-primary" @onclick="ClearFilters">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Clear Filters
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="suggestions-grid">
+                <div class="row g-4">
+                    @foreach (var suggestion in filteredSuggestions)
+                    {
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <SuggestionCard Suggestion="@suggestion"
+                                            AllowSelection="@ShowBatchMode"
+                                            IsSelected="@QueueModel.SelectedSuggestionIds.Contains(suggestion.Id)"
+                                            OnSelectionChanged="@HandleSelectionChanged"
+                                            OnSuggestionApproved="@HandleSuggestionApproved"
+                                            OnSuggestionDenied="@HandleSuggestionDenied" />
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Load More Button (if needed for large queues) -->
+            @if (filteredSuggestions.Count >= 12 && HasMoreSuggestions)
+            {
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-primary" @onclick="LoadMoreSuggestions">
+                        <i class="bi bi-arrow-down-circle me-1"></i>
+                        Load More Suggestions
+                    </button>
+                </div>
+            }
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter] public EventCallback OnSuggestionsChanged { get; set; }
+
+    private SuggestionQueueModel QueueModel { get; set; } = new();
+    private bool ShowBatchMode { get; set; } = false;
+    private bool HasMoreSuggestions { get; set; } = false;
+    private string? CurrentUserId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserIdAsync();
+        await LoadSuggestionsAsync();
+    }
+
+    private async Task GetCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get current user ID");
+            CurrentUserId = null;
+        }
+    }
+
+    /// <summary>
+    /// Public method to refresh suggestions from parent component.
+    /// </summary>
+    public async Task RefreshSuggestionsAsync()
+    {
+        await LoadSuggestionsAsync();
+    }
+
+    #region Data Loading
+
+    private async Task LoadSuggestionsAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId))
+        {
+            QueueModel.ErrorMessage = "Please log in to view suggestions";
+            return;
+        }
+
+        try
+        {
+            QueueModel.IsLoading = true;
+            QueueModel.ErrorMessage = null;
+            StateHasChanged();
+
+            var suggestions = await SuggestionService.GetPendingSuggestionsAsync(CurrentUserId);
+            QueueModel.Suggestions = suggestions.ToList();
+
+            // Determine if there are more suggestions available
+            HasMoreSuggestions = suggestions.Count >= 12;
+
+            await OnSuggestionsChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load suggestions for user {UserId}", CurrentUserId);
+            QueueModel.ErrorMessage = "Failed to load suggestions. Please try again.";
+            await MessageCenter.ShowErrorAsync("Failed to load suggestions. Please try again.");
+        }
+        finally
+        {
+            QueueModel.IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshSuggestions()
+    {
+        await LoadSuggestionsAsync();
+    }
+
+    private async Task LoadMoreSuggestions()
+    {
+        // Future implementation for pagination
+        // For MVP, this is a placeholder
+        HasMoreSuggestions = false;
+    }
+
+    #endregion
+
+    #region Filter and Sort
+
+    private void SetFilter(SuggestionFilter filter)
+    {
+        QueueModel.Filter = filter;
+        StateHasChanged();
+    }
+
+    private void SetSort(SuggestionSort sort)
+    {
+        QueueModel.SortBy = sort;
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        QueueModel.Filter = SuggestionFilter.All;
+        QueueModel.SortBy = SuggestionSort.CreatedDesc;
+        StateHasChanged();
+    }
+
+    private string GetFilterDisplayText()
+    {
+        return QueueModel.Filter switch
+        {
+            SuggestionFilter.All => "All",
+            SuggestionFilter.BothSources => "High Priority",
+            SuggestionFilter.ChannelOnly => "Channels",
+            SuggestionFilter.TopicOnly => "Topics",
+            SuggestionFilter.NearExpiry => "Expiring",
+            _ => "Filter"
+        };
+    }
+
+    #endregion
+
+    #region Batch Actions
+
+    private void ToggleBatchMode()
+    {
+        ShowBatchMode = !ShowBatchMode;
+        if (!ShowBatchMode)
+        {
+            QueueModel.ClearSelection();
+        }
+        StateHasChanged();
+    }
+
+    private void SelectAll()
+    {
+        QueueModel.SelectAll();
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        QueueModel.ClearSelection();
+        StateHasChanged();
+    }
+
+    private void HandleSelectionChanged(SuggestionDisplayModel suggestion)
+    {
+        QueueModel.ToggleSelection(suggestion.Id);
+        StateHasChanged();
+    }
+
+    private async Task HandleBatchApproved(HashSet<Guid> approvedIds)
+    {
+        QueueModel.RemoveSuggestions(approvedIds);
+        ShowBatchMode = false;
+        await OnSuggestionsChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task HandleBatchDenied(HashSet<Guid> deniedIds)
+    {
+        QueueModel.RemoveSuggestions(deniedIds);
+        ShowBatchMode = false;
+        await OnSuggestionsChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    #endregion
+
+    #region Individual Actions
+
+    private async Task HandleSuggestionApproved(SuggestionDisplayModel suggestion)
+    {
+        QueueModel.RemoveSuggestions(new[] { suggestion.Id });
+        await OnSuggestionsChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task HandleSuggestionDenied(SuggestionDisplayModel suggestion)
+    {
+        QueueModel.RemoveSuggestions(new[] { suggestion.Id });
+        await OnSuggestionsChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private string GetProgressBarClass()
+    {
+        return QueueModel.ProgressPercentage switch
+        {
+            >= 90 => "bg-danger",
+            >= 75 => "bg-warning",
+            >= 50 => "bg-info",
+            _ => "bg-success"
+        };
+    }
+
+    #endregion
+}
+
+<style>
+    .suggestion-queue-container {
+        min-height: 400px;
+    }
+
+    /* Queue Header */
+    .queue-header {
+        background: linear-gradient(135deg, var(--bs-light) 0%, var(--bs-body-bg) 100%);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border: 1px solid var(--bs-border-color);
+    }
+
+    .queue-stats h5 {
+        color: var(--bs-primary);
+        font-weight: 600;
+    }
+
+    .queue-controls .btn {
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+
+    .dropdown-item.active {
+        background-color: var(--bs-primary);
+        color: white;
+    }
+
+    /* Batch Actions Bar */
+    .batch-actions-bar {
+        border: 1px solid var(--bs-border-color);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    /* Progress Bar */
+    .queue-progress {
+        margin-top: 1rem;
+    }
+
+    /* Empty State */
+    .empty-state .tip-card {
+        transition: transform 0.2s ease;
+        background: var(--bs-body-bg);
+    }
+
+        .empty-state .tip-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+    /* Suggestions Grid */
+    .suggestions-grid {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Loading State */
+    .loading-state {
+        padding: 4rem 0;
+    }
+
+    /* No Results State */
+    .no-results-state {
+        background: var(--bs-light);
+        border-radius: 0.5rem;
+        padding: 3rem 1rem;
+        margin: 2rem 0;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .queue-header {
+            padding: 1rem;
+        }
+
+        .queue-controls {
+            width: 100%;
+        }
+
+            .queue-controls .dropdown {
+                flex: 1;
+            }
+
+            .queue-controls .btn {
+                flex: 1;
+            }
+
+        .batch-actions-bar {
+            padding: 1rem !important;
+        }
+
+            .batch-actions-bar .d-flex {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch !important;
+            }
+
+        .empty-state .tip-card {
+            text-align: center;
+        }
+    }
+
+    /* Dark Theme */
+    [data-bs-theme="dark"] .queue-header {
+        background: linear-gradient(135deg, var(--bs-gray-800) 0%, var(--bs-body-bg) 100%);
+    }
+
+    [data-bs-theme="dark"] .batch-actions-bar {
+        background-color: var(--bs-gray-800) !important;
+        border-color: var(--bs-border-color);
+    }
+
+    [data-bs-theme="dark"] .empty-state .tip-card {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-border-color);
+    }
+
+    [data-bs-theme="dark"] .no-results-state {
+        background: var(--bs-gray-800);
+    }
+
+    /* Animations */
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Utility Classes */
+    .visually-hidden {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+    }
+</style>

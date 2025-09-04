@@ -8,6 +8,7 @@ namespace TargetBrowse.Features.Suggestions.Data;
 /// <summary>
 /// Implementation of suggestion repository for data access operations.
 /// Handles database operations for suggestion entities using Entity Framework Core.
+/// Enhanced implementation with improved error handling, performance optimization, and business logic.
 /// </summary>
 public class SuggestionRepository : ISuggestionRepository
 {
@@ -15,7 +16,8 @@ public class SuggestionRepository : ISuggestionRepository
     private readonly ILogger<SuggestionRepository> _logger;
 
     private const int SuggestionExpiryDays = 30;
-    private const int MAX_PENDING_SUGGESTIONS = 100;  // Added for YT-010-03
+    private const int MAX_PENDING_SUGGESTIONS = 100;
+    private const int BATCH_SIZE = 50; // For bulk operations
 
     public SuggestionRepository(ApplicationDbContext context, ILogger<SuggestionRepository> logger)
     {
@@ -28,6 +30,13 @@ public class SuggestionRepository : ISuggestionRepository
     /// </summary>
     public async Task<List<SuggestionEntity>> CreateSuggestionsAsync(List<SuggestionEntity> suggestions)
     {
+        if (!suggestions.Any())
+        {
+            _logger.LogInformation("No suggestions provided for creation");
+            return new List<SuggestionEntity>();
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             foreach (var suggestion in suggestions)
@@ -38,32 +47,34 @@ public class SuggestionRepository : ISuggestionRepository
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             _logger.LogInformation("Created {Count} suggestions", suggestions.Count);
             return suggestions;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating suggestions");
             throw;
         }
     }
 
-    // NEW METHOD FOR YT-010-03: Create suggestions from VideoSuggestion objects with business logic
     /// <summary>
     /// Creates suggestion entities from video suggestions with enhanced business logic.
     /// Ensures proper user-video relationships and maintains business rules for YT-010-03.
     /// </summary>
     public async Task<List<SuggestionEntity>> CreateSuggestionsFromVideoSuggestionsAsync(List<VideoSuggestion> videoSuggestions, string userId)
     {
+        if (!videoSuggestions.Any())
+        {
+            _logger.LogInformation("No video suggestions to create for user {UserId}", userId);
+            return new List<SuggestionEntity>();
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            if (!videoSuggestions.Any())
-            {
-                _logger.LogInformation("No video suggestions to create for user {UserId}", userId);
-                return new List<SuggestionEntity>();
-            }
-
             // Check if user can request more suggestions
             if (!await CanUserRequestSuggestionsAsync(userId))
             {
@@ -74,10 +85,9 @@ public class SuggestionRepository : ISuggestionRepository
             var createdSuggestions = new List<SuggestionEntity>();
 
             // Process suggestions in batches to avoid overwhelming database
-            const int batchSize = 25;
-            for (int i = 0; i < videoSuggestions.Count; i += batchSize)
+            for (int i = 0; i < videoSuggestions.Count; i += BATCH_SIZE)
             {
-                var batch = videoSuggestions.Skip(i).Take(batchSize).ToList();
+                var batch = videoSuggestions.Skip(i).Take(BATCH_SIZE).ToList();
                 var batchEntities = new List<SuggestionEntity>();
 
                 foreach (var suggestion in batch)
@@ -97,11 +107,13 @@ public class SuggestionRepository : ISuggestionRepository
 
                         var suggestionEntity = new SuggestionEntity
                         {
+                            Id = Guid.NewGuid(),
                             UserId = userId,
                             VideoId = videoEntity.Id,
                             Reason = suggestion.Reason,
                             IsApproved = false,
-                            IsDenied = false
+                            IsDenied = false,
+                            CreatedAt = DateTime.UtcNow
                         };
 
                         _context.Suggestions.Add(suggestionEntity);
@@ -125,6 +137,8 @@ public class SuggestionRepository : ISuggestionRepository
                 }
             }
 
+            await transaction.CommitAsync();
+
             _logger.LogInformation("Created {CreatedCount} out of {TotalCount} suggestions for user {UserId}",
                 createdSuggestions.Count, videoSuggestions.Count, userId);
 
@@ -132,12 +146,12 @@ public class SuggestionRepository : ISuggestionRepository
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating suggestions from video suggestions for user {UserId}", userId);
             throw;
         }
     }
 
-    // NEW METHOD FOR YT-010-03: Check if user can request suggestions
     /// <summary>
     /// Checks if a user can request new suggestions based on business rules.
     /// Validates against maximum pending suggestions limit for YT-010-03.
@@ -164,6 +178,7 @@ public class SuggestionRepository : ISuggestionRepository
         try
         {
             var skip = (pageNumber - 1) * pageSize;
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
 
             return await _context.Suggestions
                 .Include(s => s.Video)
@@ -172,10 +187,11 @@ public class SuggestionRepository : ISuggestionRepository
                            !s.IsApproved &&
                            !s.IsDenied &&
                            !s.IsDeleted &&
-                           s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays))
+                           s.CreatedAt > cutoffDate)
                 .OrderByDescending(s => s.CreatedAt)
                 .Skip(skip)
                 .Take(pageSize)
+                .AsSplitQuery() // Optimize for multiple includes
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -192,12 +208,14 @@ public class SuggestionRepository : ISuggestionRepository
     {
         try
         {
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+
             return await _context.Suggestions
                 .Where(s => s.UserId == userId &&
                            !s.IsApproved &&
                            !s.IsDenied &&
                            !s.IsDeleted &&
-                           s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays))
+                           s.CreatedAt > cutoffDate)
                 .CountAsync();
         }
         catch (Exception ex)
@@ -220,6 +238,7 @@ public class SuggestionRepository : ISuggestionRepository
                 .Where(s => s.Id == suggestionId &&
                            s.UserId == userId &&
                            !s.IsDeleted)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync();
         }
         catch (Exception ex)
@@ -236,7 +255,7 @@ public class SuggestionRepository : ISuggestionRepository
     {
         try
         {
-            suggestion.LastModifiedAt = DateTime.UtcNow;  // Using UpdatedAt instead of LastModifiedAt for consistency
+            suggestion.LastModifiedAt = DateTime.UtcNow;
             _context.Suggestions.Update(suggestion);
             await _context.SaveChangesAsync();
             return suggestion;
@@ -253,6 +272,7 @@ public class SuggestionRepository : ISuggestionRepository
     /// </summary>
     public async Task<int> ApproveSuggestionsAsync(List<Guid> suggestionIds, string userId)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var suggestions = await _context.Suggestions
@@ -264,24 +284,32 @@ public class SuggestionRepository : ISuggestionRepository
                 .ToListAsync();
 
             var approvedCount = 0;
+            var currentTime = DateTime.UtcNow;
+
             foreach (var suggestion in suggestions)
             {
                 suggestion.IsApproved = true;
-                suggestion.ApprovedAt = DateTime.UtcNow;
-                suggestion.LastModifiedAt = DateTime.UtcNow;
+                suggestion.ApprovedAt = currentTime;
+                suggestion.LastModifiedAt = currentTime;
                 approvedCount++;
             }
 
             if (approvedCount > 0)
             {
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 _logger.LogInformation("Approved {Count} suggestions for user {UserId}", approvedCount, userId);
+            }
+            else
+            {
+                await transaction.RollbackAsync();
             }
 
             return approvedCount;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error approving suggestions for user {UserId}", userId);
             throw;
         }
@@ -292,6 +320,7 @@ public class SuggestionRepository : ISuggestionRepository
     /// </summary>
     public async Task<int> DenySuggestionsAsync(List<Guid> suggestionIds, string userId)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var suggestions = await _context.Suggestions
@@ -303,24 +332,32 @@ public class SuggestionRepository : ISuggestionRepository
                 .ToListAsync();
 
             var deniedCount = 0;
+            var currentTime = DateTime.UtcNow;
+
             foreach (var suggestion in suggestions)
             {
                 suggestion.IsDenied = true;
-                suggestion.DeniedAt = DateTime.UtcNow;
-                suggestion.LastModifiedAt = DateTime.UtcNow;
+                suggestion.DeniedAt = currentTime;
+                suggestion.LastModifiedAt = currentTime;
                 deniedCount++;
             }
 
             if (deniedCount > 0)
             {
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 _logger.LogInformation("Denied {Count} suggestions for user {UserId}", deniedCount, userId);
+            }
+            else
+            {
+                await transaction.RollbackAsync();
             }
 
             return deniedCount;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error denying suggestions for user {UserId}", userId);
             throw;
         }
@@ -328,10 +365,10 @@ public class SuggestionRepository : ISuggestionRepository
 
     /// <summary>
     /// Removes expired suggestions (older than 30 days and not reviewed).
-    /// NOTE: This method exists but is excluded from MVP scope per YT-010-03 requirements.
     /// </summary>
     public async Task<int> CleanupExpiredSuggestionsAsync()
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var expiryDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
@@ -345,20 +382,25 @@ public class SuggestionRepository : ISuggestionRepository
 
             if (expiredSuggestions.Any())
             {
+                var currentTime = DateTime.UtcNow;
                 foreach (var suggestion in expiredSuggestions)
                 {
                     suggestion.IsDeleted = true;
-                    suggestion.LastModifiedAt = DateTime.UtcNow;
+                    suggestion.LastModifiedAt = currentTime;
                 }
 
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 _logger.LogInformation("Cleaned up {Count} expired suggestions", expiredSuggestions.Count);
+                return expiredSuggestions.Count;
             }
 
-            return expiredSuggestions.Count;
+            await transaction.RollbackAsync();
+            return 0;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error cleaning up expired suggestions");
             throw;
         }
@@ -366,9 +408,11 @@ public class SuggestionRepository : ISuggestionRepository
 
     /// <summary>
     /// Removes all suggestions from a specific channel for a user.
+    /// Called when user rates a channel 1-star.
     /// </summary>
     public async Task<int> RemoveSuggestionsByChannelAsync(string userId, Guid channelId)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var channelSuggestions = await _context.Suggestions
@@ -382,21 +426,27 @@ public class SuggestionRepository : ISuggestionRepository
 
             if (channelSuggestions.Any())
             {
+                var currentTime = DateTime.UtcNow;
                 foreach (var suggestion in channelSuggestions)
                 {
                     suggestion.IsDeleted = true;
-                    suggestion.LastModifiedAt = DateTime.UtcNow;
+                    suggestion.LastModifiedAt = currentTime;
                 }
 
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
                 _logger.LogInformation("Removed {Count} suggestions from channel {ChannelId} for user {UserId}",
                     channelSuggestions.Count, channelId, userId);
+                return channelSuggestions.Count;
             }
 
-            return channelSuggestions.Count;
+            await transaction.RollbackAsync();
+            return 0;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error removing suggestions by channel {ChannelId} for user {UserId}", channelId, userId);
             throw;
         }
@@ -409,13 +459,15 @@ public class SuggestionRepository : ISuggestionRepository
     {
         try
         {
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+
             return await _context.Suggestions
                 .AnyAsync(s => s.UserId == userId &&
                               s.VideoId == videoId &&
                               !s.IsApproved &&
                               !s.IsDenied &&
                               !s.IsDeleted &&
-                              s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays));
+                              s.CreatedAt > cutoffDate);
         }
         catch (Exception ex)
         {
@@ -431,9 +483,9 @@ public class SuggestionRepository : ISuggestionRepository
     {
         try
         {
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+
             var suggestions = await _context.Suggestions
-                .Include(s => s.Video)
-                    .ThenInclude(v => v.Channel)
                 .Where(s => s.UserId == userId && !s.IsDeleted)
                 .ToListAsync();
 
@@ -443,7 +495,7 @@ public class SuggestionRepository : ISuggestionRepository
                 SuggestionsApproved = suggestions.Count(s => s.IsApproved),
                 SuggestionsDenied = suggestions.Count(s => s.IsDenied),
                 PendingSuggestions = suggestions.Count(s => !s.IsApproved && !s.IsDenied &&
-                                                          s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays)),
+                                                          s.CreatedAt > cutoffDate),
                 LastSuggestionGenerated = suggestions.Any() ? suggestions.Max(s => s.CreatedAt) : null
             };
 
@@ -468,6 +520,8 @@ public class SuggestionRepository : ISuggestionRepository
     {
         try
         {
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+
             var query = _context.Suggestions
                 .Include(s => s.Video)
                     .ThenInclude(v => v.Channel)
@@ -479,11 +533,11 @@ public class SuggestionRepository : ISuggestionRepository
                 query = status.Value switch
                 {
                     SuggestionStatus.Pending => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays)),
+                                                                 s.CreatedAt > cutoffDate),
                     SuggestionStatus.Approved => query.Where(s => s.IsApproved),
                     SuggestionStatus.Denied => query.Where(s => s.IsDenied),
                     SuggestionStatus.Expired => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt <= DateTime.UtcNow.AddDays(-SuggestionExpiryDays)),
+                                                                 s.CreatedAt <= cutoffDate),
                     _ => query
                 };
             }
@@ -493,6 +547,7 @@ public class SuggestionRepository : ISuggestionRepository
                 .OrderByDescending(s => s.CreatedAt)
                 .Skip(skip)
                 .Take(pageSize)
+                .AsSplitQuery()
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -512,6 +567,8 @@ public class SuggestionRepository : ISuggestionRepository
             if (string.IsNullOrWhiteSpace(searchQuery))
                 return new List<SuggestionEntity>();
 
+            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+
             var query = _context.Suggestions
                 .Include(s => s.Video)
                     .ThenInclude(v => v.Channel)
@@ -527,11 +584,11 @@ public class SuggestionRepository : ISuggestionRepository
                 query = status.Value switch
                 {
                     SuggestionStatus.Pending => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt > DateTime.UtcNow.AddDays(-SuggestionExpiryDays)),
+                                                                 s.CreatedAt > cutoffDate),
                     SuggestionStatus.Approved => query.Where(s => s.IsApproved),
                     SuggestionStatus.Denied => query.Where(s => s.IsDenied),
                     SuggestionStatus.Expired => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt <= DateTime.UtcNow.AddDays(-SuggestionExpiryDays)),
+                                                                 s.CreatedAt <= cutoffDate),
                     _ => query
                 };
             }
@@ -539,6 +596,7 @@ public class SuggestionRepository : ISuggestionRepository
             return await query
                 .OrderByDescending(s => s.CreatedAt)
                 .Take(100) // Limit search results
+                .AsSplitQuery()
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -579,7 +637,15 @@ public class SuggestionRepository : ISuggestionRepository
             if (channel != null)
             {
                 channel.LastCheckDate = lastCheckDate;
+                channel.LastModifiedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
+
+                _logger.LogDebug("Updated last check date for channel {ChannelId} to {LastCheckDate}",
+                    channelId, lastCheckDate);
+            }
+            else
+            {
+                _logger.LogWarning("Channel {ChannelId} not found for last check date update", channelId);
             }
         }
         catch (Exception ex)
@@ -590,25 +656,52 @@ public class SuggestionRepository : ISuggestionRepository
     }
 
     /// <summary>
-    /// Gets channels that need to be checked for new videos.
+    /// Gets channels that need to be checked for new videos with user ratings.
+    /// Enhanced to include proper channel rating information and exclude 1-star channels.
     /// </summary>
     public async Task<List<ChannelCheckInfo>> GetChannelsForUpdateCheckAsync(string userId)
     {
         try
         {
-            return await _context.UserChannels
-                .Include(uc => uc.Channel)
-                .Where(uc => uc.UserId == userId && !uc.IsDeleted)
-                .Select(uc => new ChannelCheckInfo
+            var query = from uc in _context.UserChannels
+                        join c in _context.Channels on uc.ChannelId equals c.Id
+                        where uc.UserId == userId && !uc.IsDeleted
+                        select new { UserChannel = uc, Channel = c };
+
+            var userChannelsWithChannels = await query.ToListAsync();
+
+            var channelCheckInfos = new List<ChannelCheckInfo>();
+
+            foreach (var item in userChannelsWithChannels)
+            {
+                // Get the user's rating for this channel
+                var channelRating = await _context.Ratings
+                    .Where(r => r.UserId == userId &&
+                               r.ChannelId == item.Channel.Id &&
+                               !r.IsDeleted)
+                    .Select(r => (int?)r.Stars)
+                    .FirstOrDefaultAsync();
+
+                // Skip 1-star rated channels as per business rules
+                if (channelRating == 1)
                 {
-                    Channel = uc.Channel,
-                    LastCheckDate = uc.Channel.LastCheckDate,
-                    UserRating = _context.Ratings
-                        .Where(r => r.UserId == userId && r.ChannelId == uc.ChannelId)
-                        .Select(r => (int?)r.Stars)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
+                    _logger.LogDebug("Skipping 1-star rated channel {ChannelId} for user {UserId}",
+                        item.Channel.Id, userId);
+                    continue;
+                }
+
+                channelCheckInfos.Add(new ChannelCheckInfo
+                {
+                    Channel = item.Channel,
+                    LastCheckDate = item.Channel.LastCheckDate,
+                    UserRating = channelRating
+                });
+            }
+
+            _logger.LogDebug("Found {Count} channels for update check for user {UserId} (excluding 1-star channels)",
+                channelCheckInfos.Count, userId);
+
+            return channelCheckInfos;
         }
         catch (Exception ex)
         {
@@ -619,21 +712,23 @@ public class SuggestionRepository : ISuggestionRepository
 
     /// <summary>
     /// Bulk creates video entities if they don't already exist.
-    /// Enhanced version for YT-010-03 with improved error handling.
+    /// Enhanced version for YT-010-03 with improved error handling and batch processing.
     /// </summary>
     public async Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos)
     {
+        if (!videos.Any())
+        {
+            return new List<VideoEntity>();
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            if (!videos.Any())
-            {
-                return new List<VideoEntity>();
-            }
-
-            var youTubeVideoIds = videos.Select(v => v.YouTubeVideoId).ToList();
+            var youTubeVideoIds = videos.Select(v => v.YouTubeVideoId).Distinct().ToList();
 
             // Get existing videos
             var existingVideos = await _context.Videos
+                .Include(v => v.Channel)
                 .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
                 .ToListAsync();
 
@@ -645,50 +740,15 @@ public class SuggestionRepository : ISuggestionRepository
                 var videoEntities = new List<VideoEntity>();
 
                 // Process in batches to avoid database timeout
-                const int batchSize = 50;
-                for (int i = 0; i < newVideos.Count; i += batchSize)
+                for (int i = 0; i < newVideos.Count; i += BATCH_SIZE)
                 {
-                    var batch = newVideos.Skip(i).Take(batchSize).ToList();
+                    var batch = newVideos.Skip(i).Take(BATCH_SIZE).ToList();
 
                     foreach (var video in batch)
                     {
                         try
                         {
-                            // Find or create the channel entity first
-                            var channel = await _context.Channels
-                                .FirstOrDefaultAsync(c => c.YouTubeChannelId == video.ChannelId);
-
-                            if (channel == null)
-                            {
-                                // Create channel if it doesn't exist
-                                channel = new ChannelEntity
-                                {
-                                    YouTubeChannelId = video.ChannelId,
-                                    Name = video.ChannelName,
-                                    ThumbnailUrl = string.Empty,
-                                    VideoCount = 0,
-                                    SubscriberCount = 0,
-                                    PublishedAt = DateTime.UtcNow
-                                };
-
-                                _context.Channels.Add(channel);
-                                await _context.SaveChangesAsync(); // Save to get the ID
-                            }
-
-                            var videoEntity = new VideoEntity
-                            {
-                                YouTubeVideoId = video.YouTubeVideoId,
-                                Title = video.Title,
-                                ChannelId = channel.Id,
-                                PublishedAt = video.PublishedAt,
-                                ViewCount = video.ViewCount,
-                                LikeCount = video.LikeCount,
-                                CommentCount = video.CommentCount,
-                                Duration = video.Duration,
-                                RawTranscript = string.Empty
-                            };
-
-                            _context.Videos.Add(videoEntity);
+                            var videoEntity = await EnsureVideoExistsInternalAsync(video);
                             videoEntities.Add(videoEntity);
                         }
                         catch (Exception ex)
@@ -698,27 +758,61 @@ public class SuggestionRepository : ISuggestionRepository
                         }
                     }
 
-                    if (videoEntities.Any())
-                    {
-                        await _context.SaveChangesAsync();
-                        _logger.LogDebug("Created batch of {Count} video entities", videoEntities.Count);
-                    }
+                    _logger.LogDebug("Processed batch {BatchNumber} of {TotalBatches} for video creation",
+                        (i / BATCH_SIZE) + 1, (newVideos.Count + BATCH_SIZE - 1) / BATCH_SIZE);
                 }
+
+                existingVideos.AddRange(videoEntities);
 
                 _logger.LogInformation("Created {Count} new video entities out of {Total} videos",
                     videoEntities.Count, newVideos.Count);
-
-                existingVideos.AddRange(videoEntities);
             }
 
+            await transaction.CommitAsync();
             return existingVideos;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error ensuring videos exist");
             throw;
         }
     }
+
+    /// <summary>
+    /// Creates suggestion with topic relationships.
+    /// </summary>
+    public async Task<SuggestionEntity> CreateSuggestionWithTopicsAsync(string userId, Guid videoId, string reason, List<Guid> topicIds)
+    {
+        var suggestion = new SuggestionEntity
+        {
+            UserId = userId,
+            VideoId = videoId,
+            Reason = reason, // Keep populating this
+            IsApproved = false,
+            IsDenied = false
+        };
+
+        _context.Suggestions.Add(suggestion);
+        await _context.SaveChangesAsync(); // Save to get the SuggestionId
+
+        // Create SuggestionTopicEntity records
+        if (topicIds?.Any() == true)
+        {
+            var suggestionTopics = topicIds.Select(topicId => new SuggestionTopicEntity
+            {
+                SuggestionId = suggestion.Id,
+                TopicId = topicId
+            }).ToList();
+
+            _context.SuggestionTopics.AddRange(suggestionTopics);
+            await _context.SaveChangesAsync();
+        }
+
+        return suggestion;
+    }
+
+    #region Private Helper Methods
 
     /// <summary>
     /// Internal helper method to ensure a video exists and return the VideoEntity.
@@ -747,21 +841,27 @@ public class SuggestionRepository : ISuggestionRepository
                 // Create channel if it doesn't exist
                 channel = new ChannelEntity
                 {
+                    Id = Guid.NewGuid(),
                     YouTubeChannelId = video.ChannelId,
                     Name = video.ChannelName,
                     ThumbnailUrl = string.Empty,
                     VideoCount = 0,
                     SubscriberCount = 0,
-                    PublishedAt = DateTime.UtcNow
+                    PublishedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Channels.Add(channel);
                 await _context.SaveChangesAsync(); // Save to get the ID
+
+                _logger.LogDebug("Created new channel entity {ChannelId} for {ChannelName}",
+                    channel.Id, channel.Name);
             }
 
             // Create new video entity
             var videoEntity = new VideoEntity
             {
+                Id = Guid.NewGuid(),
                 YouTubeVideoId = video.YouTubeVideoId,
                 Title = video.Title,
                 ChannelId = channel.Id,
@@ -770,16 +870,18 @@ public class SuggestionRepository : ISuggestionRepository
                 LikeCount = video.LikeCount,
                 CommentCount = video.CommentCount,
                 Duration = video.Duration,
-                RawTranscript = string.Empty
+                RawTranscript = string.Empty,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Videos.Add(videoEntity);
             await _context.SaveChangesAsync();
 
             // Load the channel relationship for return
-            await _context.Entry(videoEntity)
-                .Reference(v => v.Channel)
-                .LoadAsync();
+            videoEntity.Channel = channel;
+
+            _logger.LogDebug("Created new video entity {VideoId} for {VideoTitle}",
+                videoEntity.Id, videoEntity.Title);
 
             return videoEntity;
         }
@@ -790,21 +892,5 @@ public class SuggestionRepository : ISuggestionRepository
         }
     }
 
-    /// <summary>
-    /// Extracts the source type from a suggestion reason string for YT-010-03 analytics.
-    /// </summary>
-    private static string ExtractSourceFromReason(string reason)
-    {
-        if (string.IsNullOrEmpty(reason))
-            return "Unknown";
-
-        if (reason.StartsWith("📺"))
-            return "Channel Update";
-        if (reason.StartsWith("🔍"))
-            return "Topic Match";
-        if (reason.StartsWith("⭐"))
-            return "Channel + Topic";
-
-        return "Other";
-    }
+    #endregion
 }

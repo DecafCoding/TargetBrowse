@@ -162,6 +162,17 @@ public interface ISuggestionRepository
     /// <param name="videos">List of video information</param>
     /// <returns>List of created/existing video entities</returns>
     Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos);
+
+    /// <summary>
+    /// Creates suggestion with topic relationships.
+    /// Enhanced version that also creates SuggestionTopic junction records.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <param name="videoId">Video identifier</param>
+    /// <param name="reason">Suggestion reason text</param>
+    /// <param name="topicIds">List of topic IDs that matched this suggestion</param>
+    /// <returns>Created suggestion entity</returns>
+    Task<SuggestionEntity> CreateSuggestionWithTopicsAsync(string userId, Guid videoId, string reason, List<Guid> topicIds);
 }
 
 /// <summary>

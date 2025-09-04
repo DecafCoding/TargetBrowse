@@ -277,4 +277,40 @@ namespace TargetBrowse.Data.Configurations
                    .OnDelete(DeleteBehavior.SetNull); // Keep request record even if summary is deleted
         }
     }
+
+
+    /// <summary>
+    /// Entity configuration for SuggestionTopicEntity junction table.
+    /// Configures many-to-many relationship between Suggestions and Topics.
+    /// </summary>
+    public class SuggestionTopicEntityConfiguration : IEntityTypeConfiguration<SuggestionTopicEntity>
+    {
+        public void Configure(EntityTypeBuilder<SuggestionTopicEntity> builder)
+        {
+            builder.ToTable("SuggestionTopics");
+
+            // Configure relationships
+            builder.HasOne(st => st.Suggestion)
+                   .WithMany(s => s.SuggestionTopics)
+                   .HasForeignKey(st => st.SuggestionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(st => st.Topic)
+                   .WithMany(t => t.SuggestionTopics)
+                   .HasForeignKey(st => st.TopicId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            // Prevent duplicate suggestion-topic combinations
+            builder.HasIndex(st => new { st.SuggestionId, st.TopicId })
+                   .IsUnique()
+                   .HasDatabaseName("IX_SuggestionTopics_SuggestionId_TopicId");
+
+            // Configure properties
+            builder.Property(st => st.SuggestionId)
+                   .IsRequired();
+
+            builder.Property(st => st.TopicId)
+                   .IsRequired();
+        }
+    }
 }

@@ -405,6 +405,44 @@ namespace TargetBrowse.Migrations
                     b.ToTable("Suggestions", (string)null);
                 });
 
+            modelBuilder.Entity("TargetBrowse.Data.Entities.SuggestionTopicEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SuggestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TopicId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TopicId");
+
+                    b.HasIndex("SuggestionId", "TopicId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SuggestionTopics_SuggestionId_TopicId");
+
+                    b.ToTable("SuggestionTopics", (string)null);
+                });
+
             modelBuilder.Entity("TargetBrowse.Data.Entities.SummaryEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -817,6 +855,25 @@ namespace TargetBrowse.Migrations
                     b.Navigation("Video");
                 });
 
+            modelBuilder.Entity("TargetBrowse.Data.Entities.SuggestionTopicEntity", b =>
+                {
+                    b.HasOne("TargetBrowse.Data.Entities.SuggestionEntity", "Suggestion")
+                        .WithMany("SuggestionTopics")
+                        .HasForeignKey("SuggestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TargetBrowse.Data.Entities.TopicEntity", "Topic")
+                        .WithMany("SuggestionTopics")
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Suggestion");
+
+                    b.Navigation("Topic");
+                });
+
             modelBuilder.Entity("TargetBrowse.Data.Entities.SummaryEntity", b =>
                 {
                     b.HasOne("TargetBrowse.Data.Entities.VideoEntity", "Video")
@@ -938,9 +995,19 @@ namespace TargetBrowse.Migrations
                     b.Navigation("Videos");
                 });
 
+            modelBuilder.Entity("TargetBrowse.Data.Entities.SuggestionEntity", b =>
+                {
+                    b.Navigation("SuggestionTopics");
+                });
+
             modelBuilder.Entity("TargetBrowse.Data.Entities.SummaryEntity", b =>
                 {
                     b.Navigation("GenerationRequests");
+                });
+
+            modelBuilder.Entity("TargetBrowse.Data.Entities.TopicEntity", b =>
+                {
+                    b.Navigation("SuggestionTopics");
                 });
 
             modelBuilder.Entity("TargetBrowse.Data.Entities.VideoEntity", b =>

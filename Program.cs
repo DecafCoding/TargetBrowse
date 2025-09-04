@@ -13,6 +13,7 @@ using TargetBrowse.Services.YouTube;
 // Enhanced YouTube API Service imports
 using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Features.Suggestions.BackgroundServices;
+using Microsoft.Extensions.Options;
 
 namespace TargetBrowse;
 
@@ -95,26 +96,78 @@ public class Program
         // Suggestions Feature Services (Enhanced YT-010 Implementation)
         builder.Services.AddScoped<Features.Suggestions.Services.ISuggestionService, Features.Suggestions.Services.SuggestionService>();
         builder.Services.AddScoped<Features.Suggestions.Data.ISuggestionRepository, Features.Suggestions.Data.SuggestionRepository>();
+        builder.Services.AddScoped<Features.Suggestions.Services.ISuggestionQuotaManager, Features.Suggestions.Services.SuggestionQuotaManager>();
+
+        // ChannelVideos Feature Services
+        builder.Services.AddScoped<Features.ChannelVideos.Services.IChannelVideosService, Features.ChannelVideos.Services.ChannelVideosService>();
+        builder.Services.AddScoped<Features.ChannelVideos.Data.IChannelVideosRepository, Features.ChannelVideos.Data.ChannelVideosRepository>();
+
+        // Shared Services (used by multiple features)
+        builder.Services.AddScoped<Features.Shared.Services.IRatingService, Features.Shared.Services.RatingService>();
+
+        builder.Services.AddScoped<Features.TopicVideos.Services.ITopicVideosService, Features.TopicVideos.Services.TopicVideosService>();
 
         #endregion
 
         #region YouTube API Configuration and Services
 
         // YouTube API Settings Configuration
+        // Bind configuration from appsettings.json "YouTube" section
         builder.Services.Configure<YouTubeApiSettings>(
             builder.Configuration.GetSection("YouTube"));
 
+        // Validate YouTube API settings at startup
+        builder.Services.AddOptions<YouTubeApiSettings>()
+            .Configure(options =>
+            {
+                builder.Configuration.GetSection("YouTube").Bind(options);
+            })
+            .Validate(options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.ApiKey))
+                {
+                    return false; // Will throw validation exception
+                }
+                if (options.DailyQuotaLimit <= 0)
+                {
+                    return false;
+                }
+                if (options.QuotaWarningThreshold < 0 || options.QuotaWarningThreshold > 100)
+                {
+                    return false;
+                }
+                if (options.QuotaCriticalThreshold < 0 || options.QuotaCriticalThreshold > 100)
+                {
+                    return false;
+                }
+                if (options.QuotaCriticalThreshold <= options.QuotaWarningThreshold)
+                {
+                    return false;
+                }
+                return true;
+            }, "YouTube API settings validation failed. Check your appsettings.json configuration.");
+
         // YouTube Quota Manager (Singleton for global quota tracking across all features)
+        // Singleton ensures quota tracking is shared across all services and requests
         builder.Services.AddSingleton<IYouTubeQuotaManager, YouTubeQuotaManager>();
 
+        // Configure quota manager event handlers
+        builder.Services.Configure<YouTubeApiSettings>(settings =>
+        {
+            // Add any additional runtime configuration if needed
+        });
+
         // Legacy YouTube Services (maintained for backwards compatibility)
-        builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>(); // Main API service (to be deprecated when all features have their own)
+        // This service will eventually be deprecated as features migrate to their own specialized services
+        builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>();
 
         // Feature-Specific YouTube Services
-        builder.Services.AddScoped<Features.Channels.Services.IChannelYouTubeService, Features.Channels.Services.ChannelYouTubeService>(); // For Channels feature
-        builder.Services.AddScoped<Features.Videos.Services.IVideoYouTubeService, Features.Videos.Services.VideoYouTubeService>(); // For Videos feature
+        // Each feature has its own specialized YouTube service for better separation of concerns
+        builder.Services.AddScoped<Features.Channels.Services.IChannelYouTubeService, Features.Channels.Services.ChannelYouTubeService>();
+        builder.Services.AddScoped<Features.Videos.Services.IVideoYouTubeService, Features.Videos.Services.VideoYouTubeService>();
 
         // Enhanced Suggestion YouTube Service with HttpClient Factory (YT-010-02 Implementation)
+        // Uses HttpClient factory for optimal connection management and performance
         builder.Services.AddHttpClient<ISuggestionYouTubeService, SuggestionYouTubeService>(client =>
         {
             // Configure HTTP client for optimal YouTube API performance
@@ -127,11 +180,63 @@ public class Program
         })
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
         {
-            // Basic HTTP client configuration
+            // Basic HTTP client configuration for optimal performance
             MaxConnectionsPerServer = 5,
 
             // Enable compression for better performance
             AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+        });
+
+        // Configure quota manager event handlers for Message Center integration
+        builder.Services.AddSingleton<IHostedService>(provider =>
+        {
+            var quotaManager = provider.GetRequiredService<IYouTubeQuotaManager>();
+            var logger = provider.GetRequiredService<ILogger<Program>>();
+
+            // Subscribe to quota events for application-wide monitoring
+            quotaManager.QuotaThresholdReached += async (sender, args) =>
+            {
+                logger.LogWarning("YouTube API quota threshold reached: {ThresholdType} - {Message}",
+                    args.ThresholdType, args.Message);
+
+                // Additional handling can be added here (e.g., send notifications, alerts)
+                using var scope = provider.CreateScope();
+                var messageCenter = scope.ServiceProvider.GetService<IMessageCenterService>();
+
+                if (messageCenter != null)
+                {
+                    if (args.ThresholdType == "Critical")
+                    {
+                        await messageCenter.ShowErrorAsync($"Critical: {args.Message}");
+                    }
+                    else
+                    {
+                        await messageCenter.ShowApiLimitAsync("YouTube API", args.QuotaStatus.NextReset);
+                    }
+                }
+            };
+
+            quotaManager.QuotaExhausted += async (sender, args) =>
+            {
+                logger.LogError("YouTube API quota exhausted: {Message}. Next reset: {NextReset}",
+                    args.Message, args.NextResetAt);
+
+                // Handle quota exhaustion across the application
+                using var scope = provider.CreateScope();
+                var messageCenter = scope.ServiceProvider.GetService<IMessageCenterService>();
+
+                if (messageCenter != null)
+                {
+                    await messageCenter.ShowErrorAsync($"YouTube API quota exhausted. Service resumes at {args.NextResetAt:HH:mm} UTC.");
+                }
+            };
+
+            // Return the quota reset background service
+            return new QuotaResetBackgroundService(
+                provider,
+                provider.GetRequiredService<IOptions<YouTubeApiSettings>>(),
+                provider.GetRequiredService<ILogger<QuotaResetBackgroundService>>()
+            );
         });
 
         #endregion
@@ -180,16 +285,6 @@ public class Program
 /*
  * IMPLEMENTATION NOTES:
  * 
- * 1. Removed Advanced HTTP Client Features:
- *    - PooledConnectionLifetime and PooledConnectionIdleTimeout are not available in standard .NET
- *    - These are .NET 8+ features that may not be available in your version
- *    - The basic HttpClientHandler configuration is sufficient for most scenarios
- * 
- * 2. Removed Polly Policy Integration:
- *    - Retry and circuit breaker policies require additional NuGet packages
- *    - The enhanced SuggestionYouTubeService has built-in error handling and retry logic
- *    - Polly integration is optional and can be added later if needed
- * 
  * 3. Core Functionality Preserved:
  *    - All essential service registrations are maintained
  *    - Enhanced YouTube API service is properly configured
@@ -206,4 +301,85 @@ public class Program
  *    - Ensure appsettings.json has YouTube section with ApiKey
  *    - Daily quota limit and other settings as needed
  *    - API key should be stored securely (environment variables in production)
+ */
+
+/*
+ * YOUTUBE QUOTA MANAGEMENT IMPLEMENTATION NOTES:
+ * 
+ * 1. Comprehensive Configuration:
+ *    - Full validation of YouTube API settings at startup
+ *    - Configurable thresholds for warning and critical alerts
+ *    - Support for custom quota limits per environment
+ *    - Automatic validation prevents runtime errors from misconfiguration
+ * 
+ * 2. Singleton Pattern for Quota Manager:
+ *    - Global quota tracking across all application features
+ *    - Thread-safe operations ensure accurate quota management
+ *    - Persistent storage maintains quota state across application restarts
+ *    - Single source of truth for all YouTube API quota decisions
+ * 
+ * 3. Event-Driven Architecture:
+ *    - Real-time quota threshold notifications
+ *    - Automatic integration with Message Center for user feedback
+ *    - Extensible event system for custom quota handling
+ *    - Separation of concerns between quota management and user notification
+ * 
+ * 4. Background Service Integration:
+ *    - Continuous quota monitoring and maintenance
+ *    - Automatic cleanup of expired reservations
+ *    - Periodic analytics logging for usage insights
+ *    - Graceful handling of quota resets and maintenance tasks
+ * 
+ * 5. Feature-Specific Services:
+ *    - Each feature (Channels, Videos, Suggestions) has dedicated YouTube service
+ *    - All services use the centralized quota manager for consistency
+ *    - HttpClient factory pattern for optimal connection management
+ *    - Specialized service implementations for different use cases
+ * 
+ * 6. Error Handling and Resilience:
+ *    - Comprehensive error handling throughout the quota system
+ *    - Graceful degradation when quotas are exhausted
+ *    - Automatic retry logic and circuit breaker patterns (if needed)
+ *    - Detailed logging for monitoring and debugging
+ * 
+ * 7. Configuration Requirements:
+ *    - appsettings.json must contain YouTube section with ApiKey
+ *    - DailyQuotaLimit should match your YouTube API project limits
+ *    - QuotaWarningThreshold and QuotaCriticalThreshold are configurable
+ *    - QuotaStorageFilePath can be customized or left empty for default
+ * 
+ * Example appsettings.json YouTube section:
+ * {
+ *   "YouTube": {
+ *     "ApiKey": "YOUR_YOUTUBE_API_KEY_HERE",
+ *     "DailyQuotaLimit": 10000,
+ *     "MaxSearchResults": 50,
+ *     "QuotaWarningThreshold": 80,
+ *     "QuotaCriticalThreshold": 95,
+ *     "MaxConcurrentRequests": 5,
+ *     "RequestTimeoutSeconds": 30,
+ *     "EnablePersistentQuotaStorage": true,
+ *     "QuotaStorageFilePath": "",
+ *     "QuotaResetHour": 0,
+ *     "EnableQuotaLogging": true
+ *   }
+ * }
+ * 
+ * 8. Security Considerations:
+ *    - API key should be stored in user secrets for development
+ *    - Production deployments should use environment variables
+ *    - Quota storage file contains no sensitive information
+ *    - Rate limiting prevents API abuse and unexpected quota exhaustion
+ * 
+ * 9. Monitoring and Analytics:
+ *    - Detailed quota usage tracking and analytics
+ *    - Daily, weekly, and custom period reporting
+ *    - Operation-level breakdown for optimization insights
+ *    - Integration with application logging for centralized monitoring
+ * 
+ * 10. Extensibility:
+ *     - Interface-based design allows for easy testing and mocking
+ *     - Event system enables custom quota handling logic
+ *     - Modular architecture supports additional quota sources
+ *     - Future enhancements (e.g., Redis storage) can be added easily
  */

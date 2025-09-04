@@ -471,4 +471,73 @@ public class ChannelRatingService : IChannelRatingService
             UpdatedAt = entity.LastModifiedAt
         };
     }
+
+    /// <summary>
+    /// Gets channel ratings optimized for suggestion processing.
+    /// Returns a dictionary keyed by channel ID for fast lookup during suggestion scoring.
+    /// Excludes 1-star rated channels to prevent them from appearing in suggestions.
+    /// </summary>
+    /// <param name="userId">User ID to get channel ratings for</param>
+    /// <returns>Dictionary of channel ID to star rating (1-star channels excluded)</returns>
+    public async Task<Dictionary<Guid, int>> GetChannelRatingsForSuggestionsAsync(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("GetChannelRatingsForSuggestionsAsync called with null or empty userId");
+                return new Dictionary<Guid, int>();
+            }
+
+            // Get all channel ratings except 1-star (which should be excluded from suggestions)
+            var channelRatings = await _context.Ratings
+                .Where(r => r.UserId == userId && r.ChannelId != null && r.Stars > 1)
+                .Select(r => new { ChannelId = r.ChannelId!.Value, Stars = r.Stars })
+                .ToDictionaryAsync(r => r.ChannelId, r => r.Stars);
+
+            _logger.LogDebug("Retrieved {RatingCount} channel ratings for suggestions for user {UserId}",
+                channelRatings.Count, userId);
+
+            return channelRatings;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting channel ratings for suggestions for user {UserId}", userId);
+            return new Dictionary<Guid, int>();
+        }
+    }
+
+    /// <summary>
+    /// Gets YouTube channel IDs for channels rated 1-star by the user.
+    /// These channels should be completely excluded from suggestion processing.
+    /// </summary>
+    /// <param name="userId">User ID to get low-rated channels for</param>
+    /// <returns>List of YouTube channel IDs that are rated 1-star</returns>
+    public async Task<List<string>> GetLowRatedYouTubeChannelIdsAsync(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return new List<string>();
+            }
+
+            var lowRatedChannelIds = await _context.Ratings
+                .Include(r => r.Channel)
+                .Where(r => r.UserId == userId && r.ChannelId != null && r.Stars == 1)
+                .Select(r => r.Channel!.YouTubeChannelId)
+                .Where(channelId => !string.IsNullOrEmpty(channelId))
+                .ToListAsync();
+
+            _logger.LogDebug("Found {Count} low-rated YouTube channels for user {UserId}",
+                lowRatedChannelIds.Count, userId);
+
+            return lowRatedChannelIds;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting low-rated YouTube channels for user {UserId}", userId);
+            return new List<string>();
+        }
+    }
 }
