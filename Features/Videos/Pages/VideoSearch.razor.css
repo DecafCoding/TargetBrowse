@@ -1,0 +1,28 @@
+﻿.advanced-options {
+    background-color: var(--bs-light) !important;
+    border: 1px solid var(--bs-border-color) !important;
+}
+
+.video-results-grid {
+    min-height: 200px;
+}
+
+/* Dark theme adjustments */
+[data-bs-theme="dark"] .advanced-options {
+    background-color: var(--bs-dark) !important;
+    border-color: var(--bs-border-color) !important;
+}
+
+/* Responsive form adjustments */
+@media (max-width: 768px) {
+    .advanced-options .row {
+        row-gap: 1rem;
+    }
+}
+
+/* Better spacing for search results */
+.video-results-grid > .col-12,
+.video-results-grid > .col-md-6,
+.video-results-grid > .col-lg-4 {
+    margin-bottom: 0;
+}

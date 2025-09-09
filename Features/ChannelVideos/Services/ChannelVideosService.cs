@@ -1,24 +1,24 @@
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
-using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services;
+using TargetBrowse.Services.YouTube; // Updated to use shared service
 
 namespace TargetBrowse.Features.ChannelVideos.Services;
 
 /// <summary>
 /// Service implementation for channel videos functionality.
-/// Handles business logic, data coordination, and YouTube API integration.
+/// Now uses shared YouTube service instead of Suggestions-specific service.
 /// </summary>
 public class ChannelVideosService : IChannelVideosService
 {
     private readonly IChannelVideosRepository _repository;
-    private readonly ISuggestionYouTubeService _youTubeService;
+    private readonly ISharedYouTubeService _youTubeService; // Updated to use shared service
     private readonly IMessageCenterService _messageCenter;
     private readonly ILogger<ChannelVideosService> _logger;
 
     public ChannelVideosService(
         IChannelVideosRepository repository,
-        ISuggestionYouTubeService youTubeService,
+        ISharedYouTubeService youTubeService, // Updated to use shared service
         IMessageCenterService messageCenter,
         ILogger<ChannelVideosService> logger)
     {
@@ -30,7 +30,7 @@ public class ChannelVideosService : IChannelVideosService
 
     /// <summary>
     /// Gets recent videos from a channel along with channel information.
-    /// Uses existing SuggestionYouTubeService with 1 year lookback as specified.
+    /// Uses shared YouTube service with 1 year lookback as specified.
     /// </summary>
     public async Task<ChannelVideosModel> GetChannelVideosAsync(string youTubeChannelId, string userId)
     {
@@ -71,13 +71,13 @@ public class ChannelVideosService : IChannelVideosService
             // Get recent videos from YouTube API (1 year lookback as specified)
             var oneYearAgo = DateTime.UtcNow.AddYears(-1);
             var videosResult = await _youTubeService.GetChannelVideosSinceAsync(
-                youTubeChannelId, 
-                oneYearAgo, 
+                youTubeChannelId,
+                oneYearAgo,
                 maxResults: 50); // Use default from service
 
             if (!videosResult.IsSuccess)
             {
-                _logger.LogWarning("Failed to get videos for channel {ChannelId}: {Error}", 
+                _logger.LogWarning("Failed to get videos for channel {ChannelId}: {Error}",
                     youTubeChannelId, videosResult.ErrorMessage);
 
                 if (videosResult.IsQuotaExceeded)
@@ -97,7 +97,7 @@ public class ChannelVideosService : IChannelVideosService
             var videos = videosResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
             model.Videos = videos.Select(MapToChannelVideoModel).ToList();
 
-            _logger.LogInformation("Successfully loaded {Count} recent videos for channel {ChannelName}", 
+            _logger.LogInformation("Successfully loaded {Count} recent videos for channel {ChannelName}",
                 model.Videos.Count, channelInfo.Name);
 
             model.IsLoading = false;
@@ -106,12 +106,12 @@ public class ChannelVideosService : IChannelVideosService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading channel videos for {ChannelId}", youTubeChannelId);
-            
+
             model.ErrorMessage = "An unexpected error occurred while loading channel videos.";
             model.IsLoading = false;
-            
+
             await _messageCenter.ShowErrorAsync("Failed to load channel videos. Please try again.");
-            
+
             return model;
         }
     }
@@ -177,14 +177,14 @@ public class ChannelVideosService : IChannelVideosService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking tracking status for user {UserId} and channel {ChannelId}", 
+            _logger.LogError(ex, "Error checking tracking status for user {UserId} and channel {ChannelId}",
                 userId, youTubeChannelId);
             return false;
         }
     }
 
     /// <summary>
-    /// Maps VideoInfo from YouTube service to ChannelVideoModel for display.
+    /// Maps VideoInfo from shared YouTube service to ChannelVideoModel for display.
     /// </summary>
     private static ChannelVideoModel MapToChannelVideoModel(Features.Suggestions.Models.VideoInfo video)
     {

@@ -1,0 +1,220 @@
+﻿.video-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--bs-border-color);
+    height: 100%;
+}
+
+    .video-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+/* FIXED: Improved thumbnail container to prevent black bars */
+.video-thumbnail-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    overflow: hidden;
+    background-color: #000; /* Black background for any gaps */
+    background-image: linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa), linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%, #f8f9fa);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+}
+
+/* FIXED: Improved thumbnail positioning and sizing */
+.video-thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.2s ease;
+    display: block;
+    background-color: #000;
+}
+
+.video-card:hover .video-thumbnail {
+    transform: scale(1.02);
+}
+
+.duration-badge {
+    bottom: 8px;
+    right: 8px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: white;
+}
+
+.status-badge {
+    top: 8px;
+    left: 8px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.rating-badge {
+    top: 8px;
+    right: 40px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.remove-btn {
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.video-card:hover .remove-btn {
+    opacity: 1;
+}
+
+.video-title {
+    font-size: 0.9rem;
+    line-height: 1.3;
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 2.4rem;
+}
+
+.title-link {
+    color: inherit;
+}
+
+    .title-link:hover {
+        color: var(--bs-primary) !important;
+    }
+
+.video-channel {
+    font-size: 0.8rem;
+}
+
+.channel-link:hover {
+    color: var(--bs-primary) !important;
+}
+
+.video-metadata, .video-stats {
+    font-size: 0.75rem;
+}
+
+.video-rating {
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+}
+
+.video-description {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 2.1rem;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: var(--bs-border-radius-sm);
+        border-bottom-left-radius: var(--bs-border-radius-sm);
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: var(--bs-border-radius-sm);
+        border-bottom-right-radius: var(--bs-border-radius-sm);
+    }
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .video-title {
+        font-size: 0.85rem;
+    }
+
+    .video-channel {
+        font-size: 0.75rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+        .btn-group .btn {
+            border-radius: var(--bs-border-radius-sm) !important;
+            margin-bottom: 0.25rem;
+        }
+
+            .btn-group .btn:last-child {
+                margin-bottom: 0;
+            }
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .video-card {
+    border-color: var(--bs-border-color);
+    background-color: var(--bs-dark);
+}
+
+    [data-bs-theme="dark"] .video-card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+[data-bs-theme="dark"] .title-link {
+    color: var(--bs-light);
+}
+
+    [data-bs-theme="dark"] .title-link:hover {
+        color: var(--bs-primary) !important;
+    }
+
+/* Updated background pattern for dark theme */
+[data-bs-theme="dark"] .video-thumbnail-container {
+    background-color: #000;
+    background-image: linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333), linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+}
+
+/* Fallback for browsers that don't support aspect-ratio */
+@supports not (padding-bottom: 56.25%) {
+    .video-thumbnail-container {
+        height: 200px;
+        padding-bottom: 0;
+    }
+}
+
+/* Improved loading state */
+.video-thumbnail[src=""] {
+    background-color: var(--bs-secondary-bg);
+    opacity: 0.5;
+}
+
+/* Better error state styling */
+.video-thumbnail[alt]:after {
+    content: attr(alt);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--bs-secondary);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 1rem;
+    max-width: 80%;
+}

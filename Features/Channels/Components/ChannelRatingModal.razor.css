@@ -1,0 +1,58 @@
+﻿/* Modal styling to ensure proper display */
+.modal.show {
+    display: block !important;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+/* Channel thumbnail styling */
+.modal img {
+    border: 1px solid var(--bs-border-color);
+}
+
+/* Form styling improvements */
+.form-label.fw-medium {
+    color: var(--bs-body-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Star rating alignment */
+.d-flex.align-items-center .badge {
+    white-space: nowrap;
+}
+
+/* Character count styling */
+.text-muted.small {
+    font-size: 0.85rem;
+}
+
+/* Alert styling */
+.alert ul {
+    padding-left: 1.2rem;
+}
+
+    .alert ul li {
+        margin-bottom: 0.25rem;
+    }
+
+/* Button spacing */
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .modal-dialog {
+        margin: 1rem;
+    }
+
+    .d-flex.justify-content-end {
+        flex-direction: column;
+    }
+
+    .gap-2 {
+        gap: 0.75rem !important;
+    }
+}

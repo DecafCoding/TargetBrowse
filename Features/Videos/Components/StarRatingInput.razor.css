@@ -1,0 +1,114 @@
+﻿.star-rating-input {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+}
+
+.star-button {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .star-button:focus {
+        outline: 2px solid var(--bs-focus-ring-color);
+        outline-offset: 2px;
+    }
+
+/* Star sizes */
+.star-small {
+    font-size: 0.875rem;
+    padding: 0.125rem;
+}
+
+.star-normal {
+    font-size: 1.25rem;
+    padding: 0.25rem;
+}
+
+.star-large {
+    font-size: 1.5rem;
+    padding: 0.375rem;
+}
+
+/* Star states */
+.star-unselected {
+    color: #dee2e6;
+}
+
+    .star-unselected:hover {
+        color: #ffc107;
+        transform: scale(1.1);
+    }
+
+.star-selected {
+    color: #ffc107;
+}
+
+    .star-selected:hover {
+        color: #ffb300;
+        transform: scale(1.1);
+    }
+
+.star-hovered {
+    color: #ffc107;
+    transform: scale(1.1);
+}
+
+.star-disabled {
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+    .star-disabled:hover {
+        transform: none;
+    }
+
+.rating-label {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .star-unselected {
+    color: #495057;
+}
+
+[data-bs-theme="dark"] .star-disabled {
+    color: #495057;
+}
+
+/* Focus and accessibility improvements */
+.star-button:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Animation for smooth transitions */
+.star-button i {
+    transition: transform 0.15s ease;
+}
+
+.star-button:hover:not(.star-disabled) i {
+    transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .star-normal {
+        font-size: 1.1rem;
+        padding: 0.2rem;
+    }
+
+    .star-large {
+        font-size: 1.3rem;
+        padding: 0.3rem;
+    }
+}

@@ -77,30 +77,3 @@
         </div>
     </div>
 </div>
-
-@code {
-    private AddTopic? AddTopicComponent;
-    private TopicList? TopicListComponent;
-
-    /// <summary>
-    /// Handles when a new topic is successfully added.
-    /// Refreshes the topic list to show the new topic.
-    /// </summary>
-    private async Task HandleTopicAdded()
-    {
-        if (TopicListComponent != null)
-        {
-            await TopicListComponent.RefreshAsync();
-        }
-    }
-
-    /// <summary>
-    /// Handles when topics change (loaded, added, etc.).
-    /// Can be used for additional coordination between components.
-    /// </summary>
-    private async Task HandleTopicsChanged()
-    {
-        // Future: Could update global topic count, analytics, etc.
-        await Task.CompletedTask;
-    }
-}

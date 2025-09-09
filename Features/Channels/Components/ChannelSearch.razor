@@ -1,8 +1,6 @@
 @using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims
 @using TargetBrowse.Features.Channels.Models
-@using TargetBrowse.Features.Channels.Services
-@inject IChannelService ChannelService
+
 @attribute [Authorize]
 
 @rendermode InteractiveServer
@@ -59,7 +57,7 @@
                         <i class="bi bi-list-ul me-2"></i>
                         Search Results (@SearchResults.Count found)
                     </h6>
-                    
+
                     <div class="row g-3">
                         @foreach (var channel in SearchResults)
                         {
@@ -74,13 +72,11 @@
                                                     {
                                                         <img src="@channel.ThumbnailUrl"
                                                              alt="@channel.Name thumbnail"
-                                                             class="rounded me-3"
-                                                             style="width: 60px; height: 60px; object-fit: cover;" />
+                                                             class="rounded me-3 channel-thumbnail" />
                                                     }
                                                     else
                                                     {
-                                                        <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center"
-                                                             style="width: 60px; height: 60px;">
+                                                        <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center channel-thumbnail-placeholder">
                                                             <i class="bi bi-person-circle text-white fs-4"></i>
                                                         </div>
                                                     }
@@ -140,7 +136,7 @@
             {
                 <!-- No Results -->
                 <div class="mt-4 text-center py-4">
-                    <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                    <i class="bi bi-search text-muted no-results-icon"></i>
                     <h6 class="mt-3 text-muted">No channels found</h6>
                     <p class="text-muted small mb-0">
                         Try a different search term or check your URL format. Make sure the channel exists and is public.
@@ -150,162 +146,3 @@
         }
     </div>
 </div>
-
-@code {
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
-
-    [Parameter]
-    public EventCallback OnChannelAdded { get; set; }
-
-    private ChannelSearchModel SearchModel { get; set; } = new();
-    private List<ChannelDisplayModel> SearchResults { get; set; } = new();
-    private bool IsSearching { get; set; } = false;
-    private bool IsAdding { get; set; } = false;
-    private bool HasSearched { get; set; } = false;
-    private ChannelDisplayModel? _channelBeingAdded;
-
-    /// <summary>
-    /// Handles the search form submission.
-    /// </summary>
-    private async Task HandleSearch()
-    {
-        if (IsSearching) return;
-
-        try
-        {
-            IsSearching = true;
-            HasSearched = false;
-            SearchResults.Clear();
-            StateHasChanged();
-
-            // Perform the search
-            var results = await ChannelService.SearchChannelsAsync(SearchModel.SearchQuery);
-            SearchResults = results ?? new List<ChannelDisplayModel>();
-            HasSearched = true;
-
-            // Clear search form if results found
-            if (SearchResults.Any())
-            {
-                SearchModel.Reset();
-            }
-        }
-        finally
-        {
-            IsSearching = false;
-            StateHasChanged();
-        }
-    }
-
-    /// <summary>
-    /// Adds a channel to the user's tracking list.
-    /// </summary>
-    private async Task AddChannelToTracking(ChannelDisplayModel channel)
-    {
-        if (IsAdding) return;
-
-        try
-        {
-            IsAdding = true;
-            _channelBeingAdded = channel;
-            StateHasChanged();
-
-            // Get current user
-            var authState = await AuthenticationStateTask!;
-            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                // This shouldn't happen with [Authorize] attribute, but safety first
-                return;
-            }
-
-            // Convert to AddChannelModel and add to tracking
-            var addChannelModel = AddChannelModel.FromDisplayModel(channel);
-            var success = await ChannelService.AddChannelToTrackingAsync(userId, addChannelModel);
-
-            if (success)
-            {
-                // Remove the added channel from search results
-                SearchResults.Remove(channel);
-
-                // Notify parent component that a channel was added
-                if (OnChannelAdded.HasDelegate)
-                {
-                    await OnChannelAdded.InvokeAsync();
-                }
-            }
-        }
-        finally
-        {
-            IsAdding = false;
-            _channelBeingAdded = null;
-            StateHasChanged();
-        }
-    }
-}
-
-<style>
-    /* Search result cards */
-    .card.border {
-        border: 1px solid var(--bs-border-color) !important;
-        transition: box-shadow 0.2s ease, border-color 0.2s ease;
-    }
-
-        .card.border:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-color: var(--bs-primary);
-        }
-
-    /* Channel thumbnail styling */
-    .card img {
-        border: 1px solid var(--bs-border-color);
-    }
-
-    /* Search input styling */
-    .input-group .form-control:focus {
-        border-color: var(--bs-primary);
-        box-shadow: none;
-    }
-
-    .input-group .btn-primary {
-        border-color: var(--bs-primary);
-    }
-
-    /* Loading states */
-    .btn:disabled {
-        cursor: not-allowed;
-    }
-
-    /* Responsive adjustments */
-    @@media (max-width: 768px) {
-        .card-body .row {
-            text-align: center;
-        }
-
-        .d-flex.align-items-center {
-            flex-direction: column;
-            text-align: center;
-        }
-
-            .d-flex.align-items-center img,
-            .d-flex.align-items-center > div:first-child {
-                margin-bottom: 1rem;
-                margin-right: 0 !important;
-            }
-
-        .btn-group-vertical .btn {
-            margin-bottom: 0.5rem;
-        }
-    }
-
-    /* Dark theme adjustments */
-    [data-bs-theme="dark"] .card.border {
-        border-color: var(--bs-gray-600) !important;
-    }
-
-        [data-bs-theme="dark"] .card.border:hover {
-            border-color: var(--bs-primary);
-            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
-        }
-</style>

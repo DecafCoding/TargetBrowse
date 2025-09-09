@@ -102,9 +102,6 @@ public class Program
         builder.Services.AddScoped<Features.ChannelVideos.Services.IChannelVideosService, Features.ChannelVideos.Services.ChannelVideosService>();
         builder.Services.AddScoped<Features.ChannelVideos.Data.IChannelVideosRepository, Features.ChannelVideos.Data.ChannelVideosRepository>();
 
-        // Shared Services (used by multiple features)
-        builder.Services.AddScoped<Features.Shared.Services.IRatingService, Features.Shared.Services.RatingService>();
-
         builder.Services.AddScoped<Features.TopicVideos.Services.ITopicVideosService, Features.TopicVideos.Services.TopicVideosService>();
 
         #endregion
@@ -151,28 +148,16 @@ public class Program
         // Singleton ensures quota tracking is shared across all services and requests
         builder.Services.AddSingleton<IYouTubeQuotaManager, YouTubeQuotaManager>();
 
-        // Configure quota manager event handlers
-        builder.Services.Configure<YouTubeApiSettings>(settings =>
-        {
-            // Add any additional runtime configuration if needed
-        });
-
         // Legacy YouTube Services (maintained for backwards compatibility)
-        // This service will eventually be deprecated as features migrate to their own specialized services
         builder.Services.AddScoped<IYouTubeApiService, YouTubeApiService>();
 
-        // Feature-Specific YouTube Services
-        // Each feature has its own specialized YouTube service for better separation of concerns
-        builder.Services.AddScoped<Features.Channels.Services.IChannelYouTubeService, Features.Channels.Services.ChannelYouTubeService>();
-        builder.Services.AddScoped<Features.Videos.Services.IVideoYouTubeService, Features.Videos.Services.VideoYouTubeService>();
-
-        // Enhanced Suggestion YouTube Service with HttpClient Factory (YT-010-02 Implementation)
-        // Uses HttpClient factory for optimal connection management and performance
-        builder.Services.AddHttpClient<ISuggestionYouTubeService, SuggestionYouTubeService>(client =>
+        // Shared YouTube Service (REQUIRED - used by multiple features)
+        // This service provides common YouTube API operations used across features
+        builder.Services.AddHttpClient<ISharedYouTubeService, SharedYouTubeService>(client =>
         {
             // Configure HTTP client for optimal YouTube API performance
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Add("User-Agent", "YouTube-Video-Tracker-Suggestions/1.0");
+            client.DefaultRequestHeaders.Add("User-Agent", "YouTube-Video-Tracker-Shared/1.0");
 
             // Add additional headers for better API compatibility
             client.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -186,6 +171,15 @@ public class Program
             // Enable compression for better performance
             AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
         });
+
+        // Feature-Specific YouTube Services
+        // Each feature has its own specialized YouTube service for feature-specific functionality
+        builder.Services.AddScoped<Features.Channels.Services.IChannelYouTubeService, Features.Channels.Services.ChannelYouTubeService>();
+        builder.Services.AddScoped<Features.Videos.Services.IVideoYouTubeService, Features.Videos.Services.VideoYouTubeService>();
+
+        // Enhanced Suggestion YouTube Service (uses shared service for common operations)
+        // This service now focuses on Suggestions-specific functionality only
+        builder.Services.AddScoped<ISuggestionYouTubeService, SuggestionYouTubeService>();
 
         // Configure quota manager event handlers for Message Center integration
         builder.Services.AddSingleton<IHostedService>(provider =>

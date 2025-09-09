@@ -1,0 +1,87 @@
+﻿/* Modal styling to ensure proper display */
+.modal.show {
+    display: block !important;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+/* Table styling improvements */
+.table > tbody > tr > td {
+    vertical-align: middle;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.table > thead > tr > th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Button hover effects */
+.btn-outline-danger:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-info:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Table row hover effect */
+.table-hover tbody tr:hover {
+    background-color: var(--bs-light);
+}
+
+/* Loading state for buttons */
+.btn:disabled {
+    opacity: 0.6;
+}
+
+/* Enhanced button styling */
+.btn-outline-primary {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+
+    .btn-outline-primary:hover {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+
+    /* Hide text on mobile for View Videos button in actions column */
+    .d-md-none {
+        display: inline-block !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .d-md-none {
+        display: none !important;
+    }
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .table > tbody > tr > td {
+    border-top-color: var(--bs-border-color);
+}

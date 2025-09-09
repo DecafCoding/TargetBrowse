@@ -1,0 +1,120 @@
+﻿/* =============================================================================
+   ChannelRatingDisplay Component Styles
+   Provides styling for channel rating display component including stars, 
+   badges, buttons, and responsive behavior.
+   ============================================================================= */
+
+/* Star Icons */
+.bi-star,
+.bi-star-fill {
+    font-size: 0.9rem;
+    margin-right: 1px;
+}
+
+/* Rating Badge */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Button Styling */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.775rem;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-primary:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Details Panel */
+.bg-light {
+    background-color: var(--bs-gray-100) !important;
+}
+
+.rounded {
+    border-radius: 0.375rem !important;
+}
+
+/* Typography */
+.small {
+    font-size: 0.875rem;
+}
+
+.text-muted {
+    color: var(--bs-secondary) !important;
+}
+
+/* Link Buttons for Show More/Less */
+.btn-link {
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
+    .btn-link:hover {
+        color: var(--bs-primary);
+        text-decoration: underline;
+    }
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+@media (max-width: 576px) {
+    .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+    }
+
+    .bi-star,
+    .bi-star-fill {
+        font-size: 0.8rem;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+    }
+}
+
+/* =============================================================================
+   Dark Mode Support
+   ============================================================================= */
+
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--bs-gray-800) !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-gray-400) !important;
+}
+
+/* =============================================================================
+   Accessibility & Focus States
+   ============================================================================= */
+
+.btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* =============================================================================
+   Interactive Button Effects
+   ============================================================================= */
+
+.btn-outline-secondary:hover {
+    background-color: var(--bs-secondary);
+    border-color: var(--bs-secondary);
+    color: white;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
