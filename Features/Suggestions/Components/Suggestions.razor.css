@@ -1,0 +1,294 @@
+﻿.suggestions-page {
+    min-height: 100vh;
+}
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, transparent 50%);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+    .page-header h1 {
+        font-weight: 700;
+        color: var(--bs-emphasis-color);
+    }
+
+/* Suggestion Trigger Button */
+.suggestion-trigger .btn-primary {
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+    .suggestion-trigger .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+    }
+
+    .suggestion-trigger .btn-primary:disabled {
+        opacity: 0.8;
+        cursor: wait;
+    }
+
+.generation-status {
+    font-style: italic;
+    animation: pulse 1.5s infinite;
+}
+
+/* Quick Stats Card */
+.quick-stats-card .stat-item {
+    padding: 0.5rem;
+}
+
+.quick-stats-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.quick-stats-card .stat-label {
+    font-size: 0.875rem;
+    color: var(--bs-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Sidebar Content */
+.sidebar-content .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease;
+}
+
+    .sidebar-content .card:hover {
+        transform: translateY(-1px);
+    }
+
+.sidebar-content .card-header {
+    background: var(--bs-primary-bg-subtle);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 1rem;
+}
+
+.sidebar-content .card-title {
+    color: var(--bs-primary);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* How It Works Steps */
+.how-it-works-steps .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.how-it-works-steps .step-icon {
+    flex-shrink: 0;
+    font-weight: 600;
+    margin-top: 0.1rem;
+}
+
+.how-it-works-steps .step-content {
+    flex: 1;
+    line-height: 1.4;
+}
+
+/* Tips List */
+.tips-list .tip-item {
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
+    .tips-list .tip-item:last-child {
+        margin-bottom: 0 !important;
+    }
+
+/* Generation History */
+.generation-history .generation-item {
+    transition: background-color 0.2s ease;
+}
+
+    .generation-history .generation-item:hover {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .generation-history .generation-item:not(:last-child) {
+        border-bottom: 1px solid var(--bs-border-color) !important;
+    }
+
+/* Quick Actions */
+.card-body .btn {
+    transition: all 0.2s ease;
+}
+
+    .card-body .btn:hover {
+        transform: translateX(4px);
+    }
+
+/* Mobile Responsive */
+@@media (max-width: 992px) {
+    .page-header {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+        .page-header .d-flex {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+    .suggestion-trigger {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+        .suggestion-trigger .btn-primary {
+            width: 100%;
+            padding: 1rem;
+        }
+
+    .quick-stats-card .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .sidebar-content {
+        margin-top: 2rem;
+    }
+
+        .sidebar-content .card {
+            margin-bottom: 1rem !important;
+        }
+}
+
+@@media (max-width: 576px) {
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .quick-stats-card .row > div {
+        margin-bottom: 1rem;
+    }
+
+    .how-it-works-steps .step {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    .tips-list .tip-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.25rem;
+    }
+}
+
+/* Dark Theme */
+[data-bs-theme="dark"] .page-header {
+    background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, transparent 50%);
+}
+
+[data-bs-theme="dark"] .sidebar-content .card-header {
+    background: var(--bs-gray-800);
+    border-bottom-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .generation-history .generation-item:hover {
+    background-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .generation-history .generation-item:not(:last-child) {
+    border-bottom-color: var(--bs-border-color) !important;
+}
+
+/* Animations */
+@@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Loading Button Animation */
+.suggestion-trigger .btn-primary .spinner-border {
+    animation: spin 1s linear infinite;
+}
+
+@@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Success State Animation */
+.generation-status {
+    transition: color 0.3s ease;
+}
+
+    .generation-status.success {
+        color: var(--bs-success) !important;
+    }
+
+/* Button Magic Effect */
+.suggestion-trigger .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.suggestion-trigger .btn-primary:hover::before {
+    left: 100%;
+}
+
+/* Stat Value Animation */
+.quick-stats-card .stat-value {
+    transition: all 0.3s ease;
+}
+
+.quick-stats-card .stat-item:hover .stat-value {
+    transform: scale(1.1);
+}
+
+/* Card Hover Effects */
+.sidebar-content .card {
+    position: relative;
+    overflow: hidden;
+}
+
+    .sidebar-content .card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent, rgba(13, 110, 253, 0.05), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .sidebar-content .card:hover::after {
+        opacity: 1;
+    }

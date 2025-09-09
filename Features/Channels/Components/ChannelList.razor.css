@@ -1,0 +1,119 @@
+﻿/* Modal styling to ensure proper display */
+.modal.show {
+    display: block !important;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+/* Table styling improvements */
+.table > tbody > tr > td {
+    vertical-align: middle;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.table > thead > tr > th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Channel thumbnail styling */
+.table img, .modal img {
+    border: 1px solid var(--bs-border-color);
+}
+
+/* Remove button hover effect */
+.btn-outline-danger:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Table row hover effect */
+.table-hover tbody tr:hover {
+    background-color: var(--bs-light);
+}
+
+/* Loading state for remove button */
+.btn-outline-danger:disabled {
+    opacity: 0.6;
+}
+
+/* Rating column alignment */
+.table td:nth-child(5) {
+    min-width: 120px;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+
+    /* Stack channel info on mobile */
+    .table .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+        .table .d-flex img,
+        .table .d-flex > div:first-child {
+            margin-bottom: 0.5rem;
+        }
+
+    /* Hide some columns on mobile */
+    .table th:nth-child(3),
+    .table td:nth-child(3),
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+        display: none;
+    }
+}
+
+/* Rating display improvements */
+.table td:nth-child(5) .d-flex {
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Button group spacing */
+.btn-group-sm > .btn {
+    margin: 0;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: var(--bs-btn-border-radius);
+        border-bottom-left-radius: var(--bs-btn-border-radius);
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: var(--bs-btn-border-radius);
+        border-bottom-right-radius: var(--bs-btn-border-radius);
+    }
+
+/* Action column min-width */
+.table td:nth-child(6) {
+    min-width: 120px;
+}
+
+/* Dark mode adjustments */
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] .table > thead > tr > th {
+    background-color: var(--bs-gray-800);
+    color: var(--bs-gray-200);
+}

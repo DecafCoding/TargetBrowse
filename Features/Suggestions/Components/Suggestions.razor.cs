@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services;
 
@@ -12,13 +10,13 @@ namespace TargetBrowse.Features.Suggestions.Components;
 /// Code-behind for the main Suggestions page component.
 /// Handles suggestion generation, statistics, and user interactions.
 /// </summary>
-public partial class SuggestionsBase : ComponentBase
+public partial class Suggestions : ComponentBase
 {
     #region Injected Services
 
-    [Inject] protected ISuggestionService SuggestionService { get; set; } = null!;
-    [Inject] protected IMessageCenterService MessageCenter { get; set; } = null!;
-    [Inject] protected ILogger<Suggestions> Logger { get; set; } = null!;
+    [Inject] protected ISuggestionService SuggestionService { get; set; } = default!;
+    [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
+    [Inject] protected ILogger<Suggestions> Logger { get; set; } = default!;
 
     #endregion
 

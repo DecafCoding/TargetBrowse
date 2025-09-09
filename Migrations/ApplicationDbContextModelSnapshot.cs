@@ -399,8 +399,7 @@ namespace TargetBrowse.Migrations
 
                     b.HasIndex("VideoId");
 
-                    b.HasIndex("UserId", "VideoId")
-                        .IsUnique();
+                    b.HasIndex("UserId", "VideoId");
 
                     b.ToTable("Suggestions", (string)null);
                 });

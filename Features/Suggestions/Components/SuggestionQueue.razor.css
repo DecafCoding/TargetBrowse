@@ -1,0 +1,154 @@
+﻿.suggestion-queue-container {
+    min-height: 400px;
+}
+
+/* Queue Header */
+.queue-header {
+    background: linear-gradient(135deg, var(--bs-light) 0%, var(--bs-body-bg) 100%);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.queue-stats h5 {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+.queue-controls .btn {
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.dropdown-item.active {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+/* Batch Actions Bar */
+.batch-actions-bar {
+    border: 1px solid var(--bs-border-color);
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Progress Bar */
+.queue-progress {
+    margin-top: 1rem;
+}
+
+/* Empty State */
+.empty-state .tip-card {
+    transition: transform 0.2s ease;
+    background: var(--bs-body-bg);
+}
+
+    .empty-state .tip-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+/* Suggestions Grid */
+.suggestions-grid {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Loading State */
+.loading-state {
+    padding: 4rem 0;
+}
+
+/* No Results State */
+.no-results-state {
+    background: var(--bs-light);
+    border-radius: 0.5rem;
+    padding: 3rem 1rem;
+    margin: 2rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .queue-header {
+        padding: 1rem;
+    }
+
+    .queue-controls {
+        width: 100%;
+    }
+
+        .queue-controls .dropdown {
+            flex: 1;
+        }
+
+        .queue-controls .btn {
+            flex: 1;
+        }
+
+    .batch-actions-bar {
+        padding: 1rem !important;
+    }
+
+        .batch-actions-bar .d-flex {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch !important;
+        }
+
+    .empty-state .tip-card {
+        text-align: center;
+    }
+}
+
+/* Dark Theme */
+[data-bs-theme="dark"] .queue-header {
+    background: linear-gradient(135deg, var(--bs-gray-800) 0%, var(--bs-body-bg) 100%);
+}
+
+[data-bs-theme="dark"] .batch-actions-bar {
+    background-color: var(--bs-gray-800) !important;
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .empty-state .tip-card {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .no-results-state {
+    background: var(--bs-gray-800);
+}
+
+/* Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Utility Classes */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}

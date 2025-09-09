@@ -189,8 +189,15 @@ namespace TargetBrowse.Data.Configurations
 
             // Primary key and indexes
             builder.HasKey(s => s.Id);
-            builder.HasIndex(s => new { s.UserId, s.VideoId }).IsUnique();
+
+            // REMOVE THIS LINE - it's causing the duplicate key error:
+            // builder.HasIndex(s => new { s.UserId, s.VideoId }).IsUnique();
+
+            // Replace with non-unique indexes for performance:
             builder.HasIndex(s => s.UserId);
+            builder.HasIndex(s => s.VideoId);
+            builder.HasIndex(s => new { s.UserId, s.VideoId }); // Non-unique for queries
+
             builder.HasIndex(s => s.CreatedAt);
             builder.HasIndex(s => s.IsApproved);
             builder.HasIndex(s => s.IsDenied);

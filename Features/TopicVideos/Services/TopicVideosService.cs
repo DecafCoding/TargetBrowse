@@ -1,19 +1,19 @@
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Topics.Services;
-using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services;
+using TargetBrowse.Services.YouTube; // Updated to use shared service
 using TargetBrowse.Data.Entities;
 
 namespace TargetBrowse.Features.TopicVideos.Services;
 
 /// <summary>
 /// Service implementation for topic-based video discovery.
-/// Integrates with YouTube API through SuggestionYouTubeService to find relevant videos.
+/// Now uses shared YouTube service instead of Suggestions-specific service.
 /// </summary>
 public class TopicVideosService : ITopicVideosService
 {
-    private readonly ISuggestionYouTubeService _youTubeService;
+    private readonly ISharedYouTubeService _youTubeService; // Updated to use shared service
     private readonly ITopicService _topicService;
     private readonly IVideoService _videoService;
     private readonly IMessageCenterService _messageCenterService;
@@ -24,7 +24,7 @@ public class TopicVideosService : ITopicVideosService
     private const int LOOKBACK_YEARS = 1;
 
     public TopicVideosService(
-        ISuggestionYouTubeService youTubeService,
+        ISharedYouTubeService youTubeService, // Updated to use shared service
         ITopicService topicService,
         IVideoService videoService,
         IMessageCenterService messageCenterService,
@@ -48,7 +48,7 @@ public class TopicVideosService : ITopicVideosService
                 topicId, maxResults);
 
             // Get topic information first
-            var userTopics = await _topicService.GetUserTopicsAsync(currentUserId); // We'll need user context
+            var userTopics = await _topicService.GetUserTopicsAsync(currentUserId);
             var topic = userTopics.FirstOrDefault(t => t.Id == topicId);
 
             if (topic == null)
@@ -81,7 +81,7 @@ public class TopicVideosService : ITopicVideosService
             // Calculate the lookback date (1 year from now)
             var publishedAfter = DateTime.UtcNow.AddYears(-LOOKBACK_YEARS);
 
-            // Search YouTube using the suggestion service
+            // Search YouTube using the shared service
             var youTubeResult = await _youTubeService.SearchVideosByTopicAsync(
                 topicName,
                 publishedAfter,
@@ -104,7 +104,7 @@ public class TopicVideosService : ITopicVideosService
                 return new List<TopicVideoDisplayModel>();
             }
 
-            var videos = youTubeResult.Data ?? new List<Suggestions.Models.VideoInfo>();
+            var videos = youTubeResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
 
             if (!videos.Any())
             {
