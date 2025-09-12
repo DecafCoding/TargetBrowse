@@ -33,10 +33,10 @@
             </span>
         }
 
-        <!-- Source Badge -->
+@*         <!-- Source Badge -->
         <div class="position-absolute source-badge-container">
             <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="false" Size="small" />
-        </div>
+        </div> *@
 
         <!-- Score Badge (if available) -->
         @if (Suggestion.Score.HasValue)
@@ -80,25 +80,24 @@
 
         <!-- Video Metadata -->
         <div class="video-metadata mb-2">
-            <small class="text-muted">
+            <small class="text-muted d-flex justify-content-between">
                 @if (!string.IsNullOrEmpty(Suggestion.Video.FormattedViewCount))
                 {
                     <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.FormattedViewCount</span>
                     <span class="mx-1">•</span>
                 }
                 <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.TimeSincePublished</span>
+                <span class="mx-1">•</span>
+                <span>
+                    <!-- Suggestion Reason -->
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="true" Size="small" />
+                    </div>
+                </span>
             </small>
         </div>
 
-        <!-- Suggestion Reason -->
-        <div class="suggestion-reason mb-2">
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="true" Size="small" />
-            </div>
-            <small class="text-muted suggestion-reason-text">
-                @GetReasonDescription()
-            </small>
-        </div>
+
 
         <!-- Suggestion Metadata -->
         <div class="suggestion-metadata mb-3">

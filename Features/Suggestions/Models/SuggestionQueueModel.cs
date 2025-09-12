@@ -232,6 +232,7 @@ public static class SuggestionDisplayModelExtensions
             SuggestionSource.Both => "badge bg-primary",
             SuggestionSource.TrackedChannel => "badge bg-info",
             SuggestionSource.TopicSearch => "badge bg-success",
+            SuggestionSource.NewChannel => "badge bg-success",
             _ => "badge bg-secondary"
         };
     }
@@ -246,6 +247,7 @@ public static class SuggestionDisplayModelExtensions
             SuggestionSource.Both => "⭐",
             SuggestionSource.TrackedChannel => "📺",
             SuggestionSource.TopicSearch => "🔍",
+            SuggestionSource.NewChannel => "🔍",
             _ => "❓"
         };
     }

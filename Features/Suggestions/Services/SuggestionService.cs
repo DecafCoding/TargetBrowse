@@ -31,7 +31,7 @@ public class SuggestionService : ISuggestionService
     private const double DUAL_SOURCE_BONUS = 1.0;
 
     // Business rules
-    private const int MAX_PENDING_SUGGESTIONS = 100;
+    private const int MAX_PENDING_SUGGESTIONS = 1000;
     private const int SUGGESTION_EXPIRY_DAYS = 30;
     private const int MAX_SUGGESTIONS_PER_REQUEST = 50;
     private const int DEFAULT_DAYS_LOOKBACK = 30;

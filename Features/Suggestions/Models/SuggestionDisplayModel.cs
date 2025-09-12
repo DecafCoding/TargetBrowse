@@ -1,4 +1,4 @@
-namespace TargetBrowse.Features.Suggestions.Models;
+﻿namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
 /// Display model for showing suggestions in the UI.
@@ -92,12 +92,31 @@ public class SuggestionDisplayModel
             var timeSince = DateTime.UtcNow - CreatedAt;
             return timeSince.TotalDays switch
             {
-                < 1 => "Today",
-                < 7 => $"{(int)timeSince.TotalDays} days ago",
-                < 30 => $"{(int)(timeSince.TotalDays / 7)} weeks ago",
-                _ => $"{(int)(timeSince.TotalDays / 30)} months ago"
+                < 1 => "Added Today",
+                < 7 => $"Added {(int)timeSince.TotalDays} days ago",
+                < 30 => $"Added {(int)(timeSince.TotalDays / 7)} weeks ago",
+                _ => $"Added {(int)(timeSince.TotalDays / 30)} months ago"
             };
         }
+    }
+
+    /// <summary>
+    /// Gets the suggestion source enum based on the reason text.
+    /// Analyzes the reason string to determine how this suggestion was generated.
+    /// </summary>
+    /// <returns>The corresponding SuggestionSource enum value</returns>
+    public SuggestionSource GetSourceEnum()
+    {
+        if (Reason.Contains("🎯 New Channel:"))
+            return SuggestionSource.NewChannel;
+        else if (Reason.Contains("⭐"))
+            return SuggestionSource.Both;
+        else if (Reason.Contains("📺"))
+            return SuggestionSource.TrackedChannel;
+        else if (Reason.Contains("🔍"))
+            return SuggestionSource.TopicSearch;
+        else
+            return SuggestionSource.TrackedChannel; // Default fallback
     }
 }
 

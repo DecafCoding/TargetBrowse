@@ -111,6 +111,14 @@ public interface IVideoRepository
     Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video);
 
     /// <summary>
+    /// Bulk creates video entities if they don't already exist.
+    /// Used by Channel onboarding to store initial videos.
+    /// </summary>
+    /// <param name="videos">List of video information</param>
+    /// <returns>List of created/existing video entities</returns>
+    Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos);
+
+    /// <summary>
     /// Ensures a channel entity exists in the database.
     /// Creates new channel entity if it doesn't exist, updates if it does.
     /// Used by EnsureVideoExistsAsync to maintain channel relationships.

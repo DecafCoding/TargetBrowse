@@ -8,9 +8,9 @@
     @if (Mode == ActionMode.Individual)
     {
         <!-- Individual Suggestion Actions -->
-        <div class="btn-group w-100" role="group">
+        <div class="d-flex gap-2 w-100">
             <button type="button"
-                    class="btn btn-success btn-sm"
+                    class="btn btn-success btn-sm flex-fill"
                     @onclick="ApproveSuggestion"
                     disabled="@IsProcessing"
                     title="Approve and add to library">
@@ -24,9 +24,9 @@
                 }
                 Approve
             </button>
-            
+
             <button type="button"
-                    class="btn btn-outline-danger btn-sm"
+                    class="btn btn-outline-danger btn-sm flex-fill"
                     @onclick="DenySuggestion"
                     disabled="@IsProcessing"
                     title="Remove from suggestions">
@@ -40,7 +40,7 @@
                 }
                 Pass
             </button>
-            
+
             <a href="@GetYouTubeUrl(Suggestion.Video)"
                target="_blank"
                class="btn btn-outline-primary btn-sm"
@@ -52,9 +52,9 @@
     else if (Mode == ActionMode.Batch)
     {
         <!-- Batch Actions -->
-        <div class="btn-group w-100" role="group">
+        <div class="d-flex gap-2 w-100">
             <button type="button"
-                    class="btn btn-success btn-sm"
+                    class="btn btn-success btn-sm flex-fill"
                     @onclick="ApproveSelected"
                     disabled="@(IsProcessing || !SelectedSuggestionIds.Any())"
                     title="Approve selected suggestions">
@@ -68,9 +68,9 @@
                 }
                 Approve (@SelectedSuggestionIds.Count)
             </button>
-            
+
             <button type="button"
-                    class="btn btn-outline-danger btn-sm"
+                    class="btn btn-outline-danger btn-sm flex-fill"
                     @onclick="DenySelected"
                     disabled="@(IsProcessing || !SelectedSuggestionIds.Any())"
                     title="Remove selected suggestions">
@@ -122,8 +122,8 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" 
-                            class="btn btn-secondary" 
+                    <button type="button"
+                            class="btn btn-secondary"
                             @onclick="CancelConfirmation"
                             disabled="@IsProcessing">
                         Cancel
@@ -142,5 +142,4 @@
             </div>
         </div>
     </div>
-    }
 }

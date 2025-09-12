@@ -20,7 +20,13 @@ public enum SuggestionSource
     /// Video found through both tracked channels AND topic searches.
     /// Receives highest priority with bonus scoring.
     /// </summary>
-    Both
+    Both,
+
+    /// <summary>
+    /// Video added as part of initial channel onboarding.
+    /// Bypasses normal suggestion limits to provide immediate value to users.
+    /// </summary>
+    NewChannel
 }
 
 /// <summary>

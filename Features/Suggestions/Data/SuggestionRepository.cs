@@ -16,7 +16,7 @@ public class SuggestionRepository : ISuggestionRepository
     private readonly ILogger<SuggestionRepository> _logger;
 
     private const int SuggestionExpiryDays = 30;
-    private const int MAX_PENDING_SUGGESTIONS = 100;
+    private const int MAX_PENDING_SUGGESTIONS = 1000;
     private const int BATCH_SIZE = 50; // For bulk operations
 
     public SuggestionRepository(ApplicationDbContext context, ILogger<SuggestionRepository> logger)

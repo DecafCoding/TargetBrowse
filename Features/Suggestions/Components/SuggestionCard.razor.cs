@@ -104,20 +104,20 @@ public partial class SuggestionCard : ComponentBase
         return $"https://img.youtube.com/vi/{Suggestion.Video.YouTubeVideoId}/hqdefault.jpg";
     }
 
-    /// <summary>
-    /// Gets a human-readable description of why this video was suggested.
-    /// </summary>
-    private string GetReasonDescription()
-    {
-        var source = Suggestion.GetSourceEnum();
-        return source switch
-        {
-            SuggestionSource.Both => "Matches your topics AND from a tracked channel",
-            SuggestionSource.TrackedChannel => $"New video from {Suggestion.Video.ChannelName}",
-            SuggestionSource.TopicSearch => "Matches your learning topics",
-            _ => "Suggested based on your preferences"
-        };
-    }
+    ///// <summary>
+    ///// Gets a human-readable description of why this video was suggested.
+    ///// </summary>
+    //private string GetReasonDescription()
+    //{
+    //    var source = Suggestion.GetSourceEnum();
+    //    return source switch
+    //    {
+    //        SuggestionSource.Both => "Matches your topics AND from a tracked channel",
+    //        SuggestionSource.TrackedChannel => $"New video from {Suggestion.Video.ChannelName}",
+    //        SuggestionSource.TopicSearch => "Matches your learning topics",
+    //        _ => "Suggested based on your preferences"
+    //    };
+    //}
 
     /// <summary>
     /// Gets a truncated version of the video description for display.
