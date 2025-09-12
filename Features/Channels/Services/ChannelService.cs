@@ -3,7 +3,6 @@ using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Utilities;
 using TargetBrowse.Services;
-
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -16,6 +15,7 @@ public class ChannelService : IChannelService
 {
     private readonly IChannelYouTubeService _youTubeService;
     private readonly IChannelRepository _channelRepository;
+    private readonly IChannelOnboardingService _onboardingService;
     private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<ChannelService> _logger;
 
@@ -24,11 +24,13 @@ public class ChannelService : IChannelService
     public ChannelService(
         IChannelYouTubeService youTubeService,
         IChannelRepository channelRepository,
+        IChannelOnboardingService onboardingService,
         IMessageCenterService messageCenterService,
         ILogger<ChannelService> logger)
     {
         _youTubeService = youTubeService;
         _channelRepository = channelRepository;
+        _onboardingService = onboardingService;
         _messageCenterService = messageCenterService;
         _logger = logger;
     }
@@ -121,7 +123,7 @@ public class ChannelService : IChannelService
     }
 
     /// <summary>
-    /// Adds a channel to the user's tracking list.
+    /// Adds a channel to the user's tracking list with complete onboarding.
     /// </summary>
     public async Task<bool> AddChannelToTrackingAsync(string userId, AddChannelModel channelModel)
     {
@@ -134,50 +136,35 @@ public class ChannelService : IChannelService
                 return false;
             }
 
-            if (!ChannelMappingService.IsValidAddChannelModel(channelModel))
+            // Use the onboarding service for complete channel setup
+            var onboardingResult = await _onboardingService.OnboardChannelAsync(userId, channelModel);
+
+            // Provide appropriate user feedback
+            if (onboardingResult.IsSuccess)
             {
-                await _messageCenterService.ShowErrorAsync("Invalid channel data. Please try searching again.");
+                await _messageCenterService.ShowSuccessAsync(onboardingResult.GetSummaryMessage());
+
+                _logger.LogInformation("User {UserId} successfully onboarded channel: {ChannelName} ({YouTubeChannelId}) with {VideoCount} initial suggestions",
+                    userId, channelModel.Name, channelModel.YouTubeChannelId, onboardingResult.InitialVideosAdded);
+
+                return true;
+            }
+            else
+            {
+                // Show the first error message
+                var errorMessage = onboardingResult.Errors.FirstOrDefault() ?? "Failed to add channel. Please try again.";
+                await _messageCenterService.ShowErrorAsync(errorMessage);
+
+                _logger.LogWarning("Channel onboarding failed for user {UserId}, channel {ChannelName}: {Errors}",
+                    userId, channelModel.Name, string.Join("; ", onboardingResult.Errors));
+
                 return false;
             }
-
-            // Check current tracking count
-            var currentCount = await _channelRepository.GetTrackedChannelCountAsync(userId);
-            if (currentCount >= MaxChannelsPerUser)
-            {
-                await _messageCenterService.ShowWarningAsync($"You have reached the maximum limit of {MaxChannelsPerUser} tracked channels. Remove some channels before adding new ones.");
-                return false;
-            }
-
-            // Check for duplicates
-            if (await _channelRepository.IsChannelTrackedByUserAsync(userId, channelModel.YouTubeChannelId))
-            {
-                await _messageCenterService.ShowWarningAsync($"Channel '{channelModel.Name}' is already in your tracking list.");
-                return false;
-            }
-
-            // Find or create the channel in the database
-            var channelEntity = await _channelRepository.FindOrCreateChannelAsync(
-                channelModel.YouTubeChannelId,
-                channelModel.Name,
-                channelModel.Description,
-                channelModel.ThumbnailUrl,
-                channelModel.SubscriberCount,
-                channelModel.VideoCount,
-                channelModel.PublishedAt);
-
-            // Add the user-channel relationship
-            await _channelRepository.AddChannelToUserTrackingAsync(userId, channelEntity.Id);
-
-            await _messageCenterService.ShowSuccessAsync($"Channel '{channelModel.Name}' added to your tracking list!");
-
-            _logger.LogInformation("User {UserId} added channel: {ChannelName} ({YouTubeChannelId})",
-                userId, channelModel.Name, channelModel.YouTubeChannelId);
-
-            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding channel {ChannelName} for user {UserId}", channelModel.Name, userId);
+            _logger.LogError(ex, "Unexpected error adding channel {ChannelName} for user {UserId}",
+                channelModel.Name, userId);
             await _messageCenterService.ShowErrorAsync("Failed to add channel. Please try again.");
             return false;
         }

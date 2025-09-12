@@ -11,7 +11,6 @@ using TargetBrowse.Services.YouTube.Models;
 using TargetBrowse.Services.YouTube;
 
 // Enhanced YouTube API Service imports
-using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Features.Suggestions.BackgroundServices;
 using Microsoft.Extensions.Options;
 
@@ -87,6 +86,7 @@ public class Program
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();
         builder.Services.AddScoped<Features.Channels.Data.IChannelRepository, Features.Channels.Data.ChannelRepository>();
         builder.Services.AddScoped<Features.Channels.Services.IChannelRatingService, Features.Channels.Services.ChannelRatingService>();
+        builder.Services.AddScoped<Features.Channels.Services.IChannelOnboardingService, Features.Channels.Services.ChannelOnboardingService>();
 
         // Videos Feature Services
         builder.Services.AddScoped<Features.Videos.Services.IVideoService, Features.Videos.Services.VideoService>();
@@ -179,7 +179,7 @@ public class Program
 
         // Enhanced Suggestion YouTube Service (uses shared service for common operations)
         // This service now focuses on Suggestions-specific functionality only
-        builder.Services.AddScoped<ISuggestionYouTubeService, SuggestionYouTubeService>();
+        builder.Services.AddScoped<Features.Suggestions.Services.ISuggestionYouTubeService, Features.Suggestions.Services.SuggestionYouTubeService>();
 
         // Configure quota manager event handlers for Message Center integration
         builder.Services.AddSingleton<IHostedService>(provider =>

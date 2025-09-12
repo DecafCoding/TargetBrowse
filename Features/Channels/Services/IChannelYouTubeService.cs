@@ -1,3 +1,4 @@
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -43,6 +44,14 @@ public interface IChannelYouTubeService
     /// <param name="customUrl">Custom URL identifier</param>
     /// <returns>Channel information or null if not found</returns>
     Task<YouTubeApiResult<YouTubeChannelResponse?>> GetChannelByCustomUrlAsync(string customUrl);
+
+    /// <summary>
+    /// Gets recent videos from multiple channels for suggestion generation.
+    /// Used by channel onboarding to fetch initial videos from newly added channels.
+    /// </summary>
+    /// <param name="channelRequests">List of channel update requests with parameters</param>
+    /// <returns>Consolidated list of videos from all requested channels</returns>
+    Task<YouTubeApiResult<List<VideoInfo>>> GetBulkChannelUpdatesAsync(List<ChannelUpdateRequest> channelRequests);
 
     /// <summary>
     /// Checks if the YouTube API is currently available and within quota limits.

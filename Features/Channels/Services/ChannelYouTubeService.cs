@@ -2,6 +2,7 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Extensions.Options;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -311,6 +312,298 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
 
         return YouTubeApiResult<YouTubeChannelResponse?>.Failure(
             "Channel not found.", isInvalidChannel: true);
+    }
+
+    /// <summary>
+    /// Gets recent videos from multiple channels for suggestion generation.
+    /// Used by channel onboarding to fetch initial videos from newly added channels.
+    /// </summary>
+    public async Task<YouTubeApiResult<List<VideoInfo>>> GetBulkChannelUpdatesAsync(List<ChannelUpdateRequest> channelRequests)
+    {
+        if (!channelRequests?.Any() == true)
+        {
+            return YouTubeApiResult<List<VideoInfo>>.Success(new List<VideoInfo>());
+        }
+
+        try
+        {
+            _logger.LogInformation("Getting bulk channel updates for {ChannelCount} channels", channelRequests.Count);
+
+            var allVideos = new List<VideoInfo>();
+            var processedChannels = 0;
+            var failedChannels = 0;
+
+            // Process channels individually to handle errors gracefully
+            foreach (var channelRequest in channelRequests)
+            {
+                try
+                {
+                    var channelVideos = await GetChannelVideosAsync(channelRequest);
+                    if (channelVideos.IsSuccess && channelVideos.Data?.Any() == true)
+                    {
+                        allVideos.AddRange(channelVideos.Data);
+                        processedChannels++;
+
+                        _logger.LogDebug("Retrieved {VideoCount} videos from channel {ChannelName}",
+                            channelVideos.Data.Count, channelRequest.ChannelName);
+                    }
+                    else if (channelVideos.IsQuotaExceeded)
+                    {
+                        // If quota exceeded, stop processing and return what we have
+                        _logger.LogWarning("YouTube API quota exceeded while processing channel {ChannelName}. Returning {VideoCount} videos from {ProcessedCount} channels.",
+                            channelRequest.ChannelName, allVideos.Count, processedChannels);
+
+                        if (allVideos.Any())
+                        {
+                            return YouTubeApiResult<List<VideoInfo>>.Success(allVideos);
+                        }
+                        else
+                        {
+                            return YouTubeApiResult<List<VideoInfo>>.Failure(
+                                "YouTube API quota exceeded before any videos could be retrieved.",
+                                isQuotaExceeded: true);
+                        }
+                    }
+                    else
+                    {
+                        failedChannels++;
+                        _logger.LogWarning("Failed to get videos from channel {ChannelName}: {Error}",
+                            channelRequest.ChannelName, channelVideos.ErrorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failedChannels++;
+                    _logger.LogWarning(ex, "Exception while processing channel {ChannelName}",
+                        channelRequest.ChannelName);
+                }
+            }
+
+            _logger.LogInformation("Bulk channel update completed: {TotalVideos} videos from {ProcessedChannels}/{TotalChannels} channels ({FailedChannels} failed)",
+                allVideos.Count, processedChannels, channelRequests.Count, failedChannels);
+
+            // Remove duplicates by video ID (in case same video appears in multiple channels)
+            var uniqueVideos = allVideos
+                .GroupBy(v => v.YouTubeVideoId)
+                .Select(g => g.First())
+                .OrderByDescending(v => v.PublishedAt)
+                .ToList();
+
+            if (uniqueVideos.Count != allVideos.Count)
+            {
+                _logger.LogDebug("Removed {DuplicateCount} duplicate videos", allVideos.Count - uniqueVideos.Count);
+            }
+
+            return YouTubeApiResult<List<VideoInfo>>.Success(uniqueVideos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during bulk channel updates for {ChannelCount} channels", channelRequests.Count);
+            return YouTubeApiResult<List<VideoInfo>>.Failure(
+                "Failed to retrieve channel videos. Please try again later.");
+        }
+    }
+
+    /// <summary>
+    /// Gets recent videos from a single channel.
+    /// Private helper method for bulk channel updates.
+    /// </summary>
+    private async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosAsync(ChannelUpdateRequest channelRequest)
+    {
+        try
+        {
+            // Estimate quota cost for this operation
+            const int searchCost = 100; // Cost for search operation
+            const int videoDetailsCost = 1; // Cost per video for details (we'll estimate based on max results)
+            var estimatedCost = searchCost + (channelRequest.MaxResults * videoDetailsCost / 50); // Video details are batched
+
+            if (!await CheckQuotaAvailableAsync(estimatedCost))
+            {
+                return YouTubeApiResult<List<VideoInfo>>.Failure(
+                    "YouTube API quota insufficient for this operation.",
+                    isQuotaExceeded: true);
+            }
+
+            await _rateLimitSemaphore.WaitAsync();
+
+            try
+            {
+                // Search for videos from this specific channel
+                var searchRequest = _youTubeClient.Search.List("snippet");
+                searchRequest.ChannelId = channelRequest.YouTubeChannelId;
+                searchRequest.Type = "video";
+                searchRequest.Order = SearchResource.ListRequest.OrderEnum.Date; // Most recent first
+                searchRequest.MaxResults = Math.Min(channelRequest.MaxResults, 50); // YouTube API limit
+                searchRequest.PublishedAfter = channelRequest.LastCheckDate;
+                searchRequest.Fields = "items(id/videoId,snippet(title,channelId,channelTitle,publishedAt,thumbnails/medium))";
+
+                var searchResponse = await searchRequest.ExecuteAsync();
+                await IncrementQuotaUsageAsync(searchCost);
+
+                if (!searchResponse.Items?.Any() == true)
+                {
+                    _logger.LogDebug("No recent videos found for channel {ChannelName} since {LastCheck}",
+                        channelRequest.ChannelName, channelRequest.LastCheckDate);
+                    return YouTubeApiResult<List<VideoInfo>>.Success(new List<VideoInfo>());
+                }
+
+                // Get detailed video information in batches
+                var videoIds = searchResponse.Items.Select(item => item.Id.VideoId).ToList();
+                var videoDetails = await GetVideoDetailsBatchAsync(videoIds);
+
+                // Combine search results with detailed information
+                var videos = new List<VideoInfo>();
+
+                foreach (var searchItem in searchResponse.Items)
+                {
+                    var details = videoDetails.FirstOrDefault(d => d.VideoId == searchItem.Id.VideoId);
+
+                    var videoInfo = new VideoInfo
+                    {
+                        YouTubeVideoId = searchItem.Id.VideoId,
+                        Title = searchItem.Snippet.Title,
+                        ChannelId = searchItem.Snippet.ChannelId,
+                        ChannelName = searchItem.Snippet.ChannelTitle,
+                        PublishedAt = searchItem.Snippet.PublishedAtDateTimeOffset?.DateTime ?? DateTime.MinValue,
+                        ThumbnailUrl = searchItem.Snippet.Thumbnails?.Medium?.Url ?? string.Empty,
+                        Description = string.Empty, // Not included in search snippet to save quota
+
+                        // Add detailed statistics if available
+                        ViewCount = details?.ViewCount ?? 0,
+                        LikeCount = details?.LikeCount ?? 0,
+                        CommentCount = details?.CommentCount ?? 0,
+                        Duration = details?.Duration ?? 0
+                    };
+
+                    videos.Add(videoInfo);
+                }
+
+                _logger.LogDebug("Retrieved {VideoCount} videos from channel {ChannelName}",
+                    videos.Count, channelRequest.ChannelName);
+
+                return YouTubeApiResult<List<VideoInfo>>.Success(videos);
+            }
+            finally
+            {
+                _rateLimitSemaphore.Release();
+            }
+        }
+        catch (Google.GoogleApiException ex) when (ex.Error?.Code == 403)
+        {
+            _logger.LogWarning("YouTube API quota exceeded while getting videos for channel {ChannelName}: {Message}",
+                channelRequest.ChannelName, ex.Message);
+            return YouTubeApiResult<List<VideoInfo>>.Failure(
+                "YouTube API quota exceeded. Please try again later.",
+                isQuotaExceeded: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting videos for channel {ChannelName} ({ChannelId})",
+                channelRequest.ChannelName, channelRequest.YouTubeChannelId);
+            return YouTubeApiResult<List<VideoInfo>>.Failure(
+                $"Failed to get videos from channel {channelRequest.ChannelName}. Please try again.");
+        }
+    }
+
+    /// <summary>
+    /// Gets detailed statistics for multiple videos in batches.
+    /// Private helper method to efficiently retrieve video details.
+    /// </summary>
+    private async Task<List<VideoDetail>> GetVideoDetailsBatchAsync(List<string> videoIds)
+    {
+        if (!videoIds.Any()) return new List<VideoDetail>();
+
+        try
+        {
+            var allDetails = new List<VideoDetail>();
+            const int batchSize = 50; // YouTube API limit for videos.list
+
+            // Process videos in batches
+            for (int i = 0; i < videoIds.Count; i += batchSize)
+            {
+                var batch = videoIds.Skip(i).Take(batchSize).ToList();
+
+                try
+                {
+                    var videoRequest = _youTubeClient.Videos.List("statistics,contentDetails");
+                    videoRequest.Id = string.Join(",", batch);
+                    videoRequest.Fields = "items(id,statistics(viewCount,likeCount,commentCount),contentDetails/duration)";
+
+                    var videoResponse = await videoRequest.ExecuteAsync();
+                    await IncrementQuotaUsageAsync(1); // Video details cost
+
+                    if (videoResponse.Items?.Any() == true)
+                    {
+                        var batchDetails = videoResponse.Items.Select(video => new VideoDetail
+                        {
+                            VideoId = video.Id,
+                            ViewCount = ParseLongSafely(video.Statistics?.ViewCount),
+                            LikeCount = ParseLongSafely(video.Statistics?.LikeCount),
+                            CommentCount = ParseLongSafely(video.Statistics?.CommentCount),
+                            Duration = ParseIsoDuration(video.ContentDetails?.Duration)
+                        }).ToList();
+
+                        allDetails.AddRange(batchDetails);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get details for video batch starting at index {Index}", i);
+                    // Continue with other batches
+                }
+            }
+
+            return allDetails;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get video details for {VideoCount} videos", videoIds.Count);
+            return new List<VideoDetail>();
+        }
+    }
+
+    /// <summary>
+    /// Helper class for video detail information.
+    /// </summary>
+    private class VideoDetail
+    {
+        public string VideoId { get; set; } = string.Empty;
+        public int ViewCount { get; set; }
+        public int LikeCount { get; set; }
+        public int CommentCount { get; set; }
+        public int Duration { get; set; }
+    }
+
+    /// <summary>
+    /// Safely parses a ulong? value from YouTube API statistics.
+    /// </summary>
+    private static int ParseLongSafely(ulong? value)
+    {
+        if (!value.HasValue)
+            return 0;
+
+        // Clamp to int range to avoid overflow
+        return (int)Math.Min(value.Value, int.MaxValue);
+    }
+
+    /// <summary>
+    /// Parses ISO 8601 duration format (PT4M13S) to seconds.
+    /// </summary>
+    private static int ParseIsoDuration(string? duration)
+    {
+        if (string.IsNullOrWhiteSpace(duration))
+            return 0;
+
+        try
+        {
+            // YouTube uses ISO 8601 duration format: PT4M13S
+            var timeSpan = System.Xml.XmlConvert.ToTimeSpan(duration);
+            return (int)timeSpan.TotalSeconds;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     /// <summary>

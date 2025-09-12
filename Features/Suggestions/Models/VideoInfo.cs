@@ -107,10 +107,10 @@ public class VideoInfo
             return timeSince.TotalDays switch
             {
                 < 1 => "Today",
-                < 7 => $"{(int)timeSince.TotalDays} days ago",
-                < 30 => $"{(int)(timeSince.TotalDays / 7)} weeks ago",
-                < 365 => $"{(int)(timeSince.TotalDays / 30)} months ago",
-                _ => $"{(int)(timeSince.TotalDays / 365)} years ago"
+                < 7 => $"{(int)timeSince.TotalDays} days old",
+                < 30 => $"{(int)(timeSince.TotalDays / 7)} weeks old",
+                < 365 => $"{(int)(timeSince.TotalDays / 30)} months old",
+                _ => $"{(int)(timeSince.TotalDays / 365)} years old"
             };
         }
     }
