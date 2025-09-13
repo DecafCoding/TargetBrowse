@@ -354,6 +354,7 @@ public class VideoRepository : IVideoRepository
     /// <summary>
     /// Ensures a video entity exists in the database with complete metadata.
     /// Creates new video and channel entities if they don't exist.
+    /// UPDATED: Now properly saves thumbnail and description data.
     /// </summary>
     public async Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video)
     {
@@ -372,6 +373,8 @@ public class VideoRepository : IVideoRepository
                 existingVideo.LikeCount = video.LikeCount;
                 existingVideo.CommentCount = video.CommentCount;
                 existingVideo.Duration = video.Duration;
+                existingVideo.ThumbnailUrl = video.ThumbnailUrl; // ADDED: Save thumbnail URL
+                existingVideo.Description = video.Description;   // ADDED: Save description
                 existingVideo.LastModifiedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -392,6 +395,8 @@ public class VideoRepository : IVideoRepository
                 LikeCount = video.LikeCount,
                 CommentCount = video.CommentCount,
                 Duration = video.Duration,
+                ThumbnailUrl = video.ThumbnailUrl, // ADDED: Save thumbnail URL
+                Description = video.Description,   // ADDED: Save description
                 RawTranscript = string.Empty // Will be populated later if needed
             };
 
@@ -484,6 +489,20 @@ public class VideoRepository : IVideoRepository
                     hasChanges = true;
                 }
 
+                // ADDED: Update thumbnail URL if changed
+                if (existingVideo.ThumbnailUrl != video.ThumbnailUrl)
+                {
+                    existingVideo.ThumbnailUrl = video.ThumbnailUrl;
+                    hasChanges = true;
+                }
+
+                // ADDED: Update description if changed
+                if (existingVideo.Description != video.Description)
+                {
+                    existingVideo.Description = video.Description;
+                    hasChanges = true;
+                }
+
                 if (hasChanges)
                 {
                     existingVideo.LastModifiedAt = DateTime.UtcNow;
@@ -525,6 +544,8 @@ public class VideoRepository : IVideoRepository
                             LikeCount = video.LikeCount,
                             CommentCount = video.CommentCount,
                             Duration = video.Duration,
+                            ThumbnailUrl = video.ThumbnailUrl, // ADDED: Save thumbnail URL
+                            Description = video.Description,   // ADDED: Save description
                             RawTranscript = string.Empty // Will be populated later if needed
                         };
 
