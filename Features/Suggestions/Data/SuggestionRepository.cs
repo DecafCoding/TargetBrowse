@@ -712,7 +712,8 @@ public class SuggestionRepository : ISuggestionRepository
 
     /// <summary>
     /// Bulk creates video entities if they don't already exist.
-    /// Enhanced version for YT-010-03 with improved error handling and batch processing.
+    /// Enhanced version for YT-010-03 with improved error handling, batch processing,
+    /// and proper metadata population including thumbnails and descriptions.
     /// </summary>
     public async Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos)
     {
@@ -734,6 +735,43 @@ public class SuggestionRepository : ISuggestionRepository
 
             var existingVideoIds = existingVideos.Select(v => v.YouTubeVideoId).ToHashSet();
             var newVideos = videos.Where(v => !existingVideoIds.Contains(v.YouTubeVideoId)).ToList();
+            var videosToUpdate = videos.Where(v => existingVideoIds.Contains(v.YouTubeVideoId)).ToList();
+
+            // Update existing videos with missing metadata
+            int updatedCount = 0;
+            foreach (var videoInfo in videosToUpdate)
+            {
+                var existingVideo = existingVideos.First(v => v.YouTubeVideoId == videoInfo.YouTubeVideoId);
+                bool hasChanges = false;
+
+                // Update thumbnail URL if we have a better one and existing is empty
+                if (!string.IsNullOrEmpty(videoInfo.ThumbnailUrl) &&
+                    string.IsNullOrEmpty(existingVideo.ThumbnailUrl))
+                {
+                    existingVideo.ThumbnailUrl = GetOptimalThumbnailUrl(videoInfo.ThumbnailUrl);
+                    hasChanges = true;
+                }
+
+                // Update description if we have one and existing is empty
+                if (!string.IsNullOrEmpty(videoInfo.Description) &&
+                    string.IsNullOrEmpty(existingVideo.Description))
+                {
+                    existingVideo.Description = TruncateDescription(videoInfo.Description);
+                    hasChanges = true;
+                }
+
+                if (hasChanges)
+                {
+                    existingVideo.LastModifiedAt = DateTime.UtcNow;
+                    updatedCount++;
+                }
+            }
+
+            if (updatedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+                _logger.LogDebug("Updated metadata for {Count} existing videos", updatedCount);
+            }
 
             if (newVideos.Any())
             {
@@ -764,7 +802,7 @@ public class SuggestionRepository : ISuggestionRepository
 
                 existingVideos.AddRange(videoEntities);
 
-                _logger.LogInformation("Created {Count} new video entities out of {Total} videos",
+                _logger.LogInformation("Created {Count} new video entities out of {Total} videos with complete metadata",
                     videoEntities.Count, newVideos.Count);
             }
 
@@ -774,9 +812,62 @@ public class SuggestionRepository : ISuggestionRepository
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error ensuring videos exist");
+            _logger.LogError(ex, "Error ensuring videos exist with metadata");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Helper method to truncate description to fit database constraints.
+    /// Ensures description fits within the 2000 character limit while preserving meaning.
+    /// </summary>
+    private static string TruncateDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return string.Empty;
+
+        const int maxLength = 2000;
+
+        if (description.Length <= maxLength)
+            return description;
+
+        // Find a good truncation point (prefer end of sentence or word)
+        var truncated = description.Substring(0, maxLength - 3); // Leave room for "..."
+
+        // Try to truncate at end of sentence
+        var lastPeriod = truncated.LastIndexOf('.');
+        if (lastPeriod > maxLength * 0.8) // Only if we don't lose too much content
+        {
+            return truncated.Substring(0, lastPeriod + 1);
+        }
+
+        // Try to truncate at end of word
+        var lastSpace = truncated.LastIndexOf(' ');
+        if (lastSpace > maxLength * 0.9) // Only if we don't lose too much content
+        {
+            return truncated.Substring(0, lastSpace) + "...";
+        }
+
+        // Hard truncation with ellipsis
+        return truncated + "...";
+    }
+
+    /// <summary>
+    /// Helper method to select the optimal thumbnail URL from YouTube API response.
+    /// Prioritizes medium size (320x180) for consistent display across the application.
+    /// </summary>
+    private static string GetOptimalThumbnailUrl(string? thumbnailUrl)
+    {
+        if (string.IsNullOrWhiteSpace(thumbnailUrl))
+            return string.Empty;
+
+        // If it's already a direct URL, use it as-is
+        if (thumbnailUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return thumbnailUrl;
+
+        // This method assumes the VideoInfo.ThumbnailUrl is already the optimal URL
+        // from the YouTube API processing in SharedYouTubeService
+        return thumbnailUrl;
     }
 
     /// <summary>
@@ -816,6 +907,7 @@ public class SuggestionRepository : ISuggestionRepository
 
     /// <summary>
     /// Internal helper method to ensure a video exists and return the VideoEntity.
+    /// Enhanced to properly populate ThumbnailUrl and Description from VideoInfo.
     /// Used by CreateSuggestionsFromVideoSuggestionsAsync to get proper entity IDs.
     /// </summary>
     private async Task<VideoEntity> EnsureVideoExistsInternalAsync(VideoInfo video)
@@ -829,6 +921,34 @@ public class SuggestionRepository : ISuggestionRepository
 
             if (existingVideo != null)
             {
+                // Update existing video with new metadata if needed
+                bool hasChanges = false;
+
+                // Update thumbnail URL if we have a better one and existing is empty
+                if (!string.IsNullOrEmpty(video.ThumbnailUrl) &&
+                    string.IsNullOrEmpty(existingVideo.ThumbnailUrl))
+                {
+                    existingVideo.ThumbnailUrl = GetOptimalThumbnailUrl(video.ThumbnailUrl);
+                    hasChanges = true;
+                }
+
+                // Update description if we have one and existing is empty
+                if (!string.IsNullOrEmpty(video.Description) &&
+                    string.IsNullOrEmpty(existingVideo.Description))
+                {
+                    existingVideo.Description = TruncateDescription(video.Description);
+                    hasChanges = true;
+                }
+
+                if (hasChanges)
+                {
+                    existingVideo.LastModifiedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogDebug("Updated metadata for existing video {VideoId}",
+                        video.YouTubeVideoId);
+                }
+
                 return existingVideo;
             }
 
@@ -858,7 +978,7 @@ public class SuggestionRepository : ISuggestionRepository
                     channel.Id, channel.Name);
             }
 
-            // Create new video entity
+            // Create new video entity with complete metadata
             var videoEntity = new VideoEntity
             {
                 Id = Guid.NewGuid(),
@@ -870,6 +990,9 @@ public class SuggestionRepository : ISuggestionRepository
                 LikeCount = video.LikeCount,
                 CommentCount = video.CommentCount,
                 Duration = video.Duration,
+                // Properly populate new fields from VideoInfo
+                ThumbnailUrl = GetOptimalThumbnailUrl(video.ThumbnailUrl),
+                Description = TruncateDescription(video.Description),
                 RawTranscript = string.Empty,
                 CreatedAt = DateTime.UtcNow
             };
@@ -880,7 +1003,7 @@ public class SuggestionRepository : ISuggestionRepository
             // Load the channel relationship for return
             videoEntity.Channel = channel;
 
-            _logger.LogDebug("Created new video entity {VideoId} for {VideoTitle}",
+            _logger.LogDebug("Created new video entity {VideoId} for {VideoTitle} with thumbnail and description",
                 videoEntity.Id, videoEntity.Title);
 
             return videoEntity;

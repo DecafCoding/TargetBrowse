@@ -34,6 +34,20 @@ namespace TargetBrowse.Data.Entities
         public int Duration { get; set; }
 
         /// <summary>
+        /// Video thumbnail URL for display.
+        /// Stored to reduce API calls and improve performance.
+        /// </summary>
+        [StringLength(500)]
+        public string? ThumbnailUrl { get; set; }
+
+        /// <summary>
+        /// Video description from YouTube API.
+        /// Stored for search and display purposes.
+        /// </summary>
+        [StringLength(2000)]
+        public string Description { get; set; } = string.Empty;
+
+        /// <summary>
         /// Raw transcript text from Apify service
         /// </summary>
         public string RawTranscript { get; set; } = string.Empty;

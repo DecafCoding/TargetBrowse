@@ -776,6 +776,7 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Maps a video entity to VideoInfo for display purposes.
+    /// Enhanced to use stored video thumbnail URL when available.
     /// </summary>
     private VideoInfo MapVideoEntityToInfo(VideoEntity entity)
     {
@@ -790,7 +791,9 @@ public class SuggestionService : ISuggestionService
             LikeCount = entity.LikeCount,
             CommentCount = entity.CommentCount,
             Duration = entity.Duration,
-            ThumbnailUrl = entity.Channel.ThumbnailUrl ?? string.Empty
+            // Use stored thumbnail URL if available, otherwise empty string for fallback
+            ThumbnailUrl = entity.ThumbnailUrl ?? string.Empty,
+            Description = entity.Description ?? string.Empty
         };
     }
 
