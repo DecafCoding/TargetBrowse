@@ -49,6 +49,8 @@ public class VideoWithSource
         SuggestionSource.TrackedChannel => "📺 Channel Update",
         SuggestionSource.TopicSearch => "🔍 Topic Match",
         SuggestionSource.Both => "⭐ Channel + Topic",
+        SuggestionSource.NewChannel => "New Channel",
+        SuggestionSource.NewTopic => "New Topic",
         _ => "❓ Unknown"
     };
 
@@ -60,6 +62,8 @@ public class VideoWithSource
         SuggestionSource.TrackedChannel => "badge bg-primary",
         SuggestionSource.TopicSearch => "badge bg-info",
         SuggestionSource.Both => "badge bg-success",
+        SuggestionSource.NewTopic => "badge bg-success",
+        SuggestionSource.NewChannel => "badge bg-success",
         _ => "badge bg-secondary"
     };
 
@@ -73,6 +77,8 @@ public class VideoWithSource
             SuggestionSource.TrackedChannel => $"📺 New from {Video.ChannelName}",
             SuggestionSource.TopicSearch => $"🔍 Topics: {string.Join(", ", MatchedTopics)}",
             SuggestionSource.Both => $"⭐ {Video.ChannelName} + Topics: {string.Join(", ", MatchedTopics)}",
+            SuggestionSource.NewChannel => $"⭐ {Video.ChannelName}: Intial Add",
+            SuggestionSource.NewTopic => $"Initial Topic Add",
             _ => "Suggested video"
         };
     }

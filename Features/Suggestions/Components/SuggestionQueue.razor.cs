@@ -34,6 +34,9 @@ public partial class SuggestionQueue : ComponentBase
     private bool ShowBatchMode { get; set; } = false;
     private bool HasMoreSuggestions { get; set; } = false;
     private string? CurrentUserId { get; set; }
+    private int CurrentPage { get; set; } = 1;
+    private const int PageSize = 20; // Number of suggestions per page
+    private bool IsLoadingMore { get; set; } = false;
 
     #endregion
 
@@ -79,7 +82,8 @@ public partial class SuggestionQueue : ComponentBase
 
     #region Data Loading
 
-    private async Task LoadSuggestionsAsync()
+
+    private async Task LoadSuggestionsAsync(bool isLoadMore = false)
     {
         if (string.IsNullOrEmpty(CurrentUserId))
         {
@@ -89,17 +93,40 @@ public partial class SuggestionQueue : ComponentBase
 
         try
         {
-            QueueModel.IsLoading = true;
+            if (!isLoadMore)
+            {
+                QueueModel.IsLoading = true;
+                CurrentPage = 1; // Reset to first page for fresh load
+            }
+            else
+            {
+                IsLoadingMore = true;
+            }
+
             QueueModel.ErrorMessage = null;
             StateHasChanged();
 
-            var suggestions = await SuggestionService.GetPendingSuggestionsAsync(CurrentUserId);
-            QueueModel.Suggestions = suggestions.ToList();
+            // Use pageNumber and pageSize as expected by the service
+            var suggestions = await SuggestionService.GetPendingSuggestionsAsync(CurrentUserId, CurrentPage, PageSize);
+
+            if (!isLoadMore)
+            {
+                // Fresh load - replace all suggestions
+                QueueModel.Suggestions = suggestions.ToList();
+            }
+            else
+            {
+                // Load more - append to existing suggestions
+                QueueModel.Suggestions.AddRange(suggestions);
+            }
 
             // Determine if there are more suggestions available
-            HasMoreSuggestions = suggestions.Count >= 12;
+            HasMoreSuggestions = suggestions.Count == PageSize;
 
-            await OnSuggestionsChanged.InvokeAsync();
+            if (!isLoadMore)
+            {
+                await OnSuggestionsChanged.InvokeAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -110,6 +137,7 @@ public partial class SuggestionQueue : ComponentBase
         finally
         {
             QueueModel.IsLoading = false;
+            IsLoadingMore = false;
             StateHasChanged();
         }
     }
@@ -119,12 +147,13 @@ public partial class SuggestionQueue : ComponentBase
         await LoadSuggestionsAsync();
     }
 
-    private async Task LoadMoreSuggestions()
-    {
-        // Future implementation for pagination
-        // For MVP, this is a placeholder
-        HasMoreSuggestions = false;
-    }
+private async Task LoadMoreSuggestions()
+{
+    if (IsLoadingMore) return; // Prevent multiple concurrent loads
+    
+    CurrentPage++; // Move to next page
+    await LoadSuggestionsAsync(isLoadMore: true);
+}
 
     #endregion
 

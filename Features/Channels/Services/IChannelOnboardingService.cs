@@ -3,8 +3,9 @@
 namespace TargetBrowse.Features.Channels.Services;
 
 /// <summary>
-/// Service for handling channel onboarding workflows including initial video suggestions.
-/// Owns the complete "add channel and get initial content" user journey.
+/// Service interface for channel onboarding workflows.
+/// Handles adding new channels and creating initial video suggestions.
+/// Uses SharedYouTubeService to ensure consistent shorts exclusion across the application.
 /// </summary>
 public interface IChannelOnboardingService
 {

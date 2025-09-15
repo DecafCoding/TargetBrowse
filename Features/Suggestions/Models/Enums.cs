@@ -26,7 +26,13 @@ public enum SuggestionSource
     /// Video added as part of initial channel onboarding.
     /// Bypasses normal suggestion limits to provide immediate value to users.
     /// </summary>
-    NewChannel
+    NewChannel,
+
+    /// <summary>
+    /// Video added as part of initial topic onboarding.
+    /// Bypasses normal suggestion limits to provide immediate value when user creates new topic.
+    /// </summary>
+    NewTopic
 }
 
 /// <summary>

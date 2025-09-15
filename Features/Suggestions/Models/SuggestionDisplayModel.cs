@@ -109,6 +109,8 @@ public class SuggestionDisplayModel
     {
         if (Reason.Contains("🎯 New Channel:"))
             return SuggestionSource.NewChannel;
+        else if (Reason.Contains("🎯 New Topic:"))
+            return SuggestionSource.NewTopic;
         else if (Reason.Contains("⭐"))
             return SuggestionSource.Both;
         else if (Reason.Contains("📺"))

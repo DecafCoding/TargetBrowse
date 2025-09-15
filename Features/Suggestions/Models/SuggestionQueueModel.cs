@@ -218,6 +218,8 @@ public static class SuggestionDisplayModelExtensions
             SuggestionSource.Both => "Channel + Topic Match",
             SuggestionSource.TrackedChannel => "Channel Update",
             SuggestionSource.TopicSearch => "Topic Match",
+            SuggestionSource.NewChannel => "New Channel",
+            SuggestionSource.NewTopic => "New Topic",
             _ => "Unknown Source"
         };
     }
@@ -233,6 +235,7 @@ public static class SuggestionDisplayModelExtensions
             SuggestionSource.TrackedChannel => "badge bg-info",
             SuggestionSource.TopicSearch => "badge bg-success",
             SuggestionSource.NewChannel => "badge bg-success",
+            SuggestionSource.NewTopic => "badge bg-success",
             _ => "badge bg-secondary"
         };
     }
@@ -248,6 +251,7 @@ public static class SuggestionDisplayModelExtensions
             SuggestionSource.TrackedChannel => "📺",
             SuggestionSource.TopicSearch => "🔍",
             SuggestionSource.NewChannel => "🔍",
+            SuggestionSource.NewTopic => "🔍",
             _ => "❓"
         };
     }

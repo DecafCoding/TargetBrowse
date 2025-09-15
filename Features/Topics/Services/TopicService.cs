@@ -18,13 +18,17 @@ public class TopicService : ITopicService
 
     private const int MaxTopicsPerUser = 10;
 
+    private readonly ITopicOnboardingService _topicOnboardingService;
+
     public TopicService(
         ApplicationDbContext context,
         IMessageCenterService messageCenterService,
+        ITopicOnboardingService topicOnboardingService,  // ADD THIS
         ILogger<TopicService> logger)
     {
         _context = context;
         _messageCenterService = messageCenterService;
+        _topicOnboardingService = topicOnboardingService;  // ADD THIS
         _logger = logger;
     }
 
@@ -81,9 +85,35 @@ public class TopicService : ITopicService
             _context.Topics.Add(topicEntity);
             await _context.SaveChangesAsync();
 
-            await _messageCenterService.ShowSuccessAsync($"Topic '{topicName}' added successfully!");
+            // NEW: Trigger topic onboarding for immediate video suggestions
+            try
+            {
+                var onboardingResult = await _topicOnboardingService.OnboardTopicAsync(
+                    userId, topicName, topicEntity.Id);
 
-            _logger.LogInformation("User {UserId} added topic: {TopicName}", userId, topicName);
+                if (onboardingResult.InitialVideosAdded > 0)
+                {
+                    await _messageCenterService.ShowSuccessAsync(
+                        $"Topic '{topicName}' added with {onboardingResult.InitialVideosAdded} video suggestions!");
+                }
+                else if (onboardingResult.Warnings.Any())
+                {
+                    await _messageCenterService.ShowSuccessAsync(
+                        $"Topic '{topicName}' added successfully! Video suggestions will be available on your next suggestion request.");
+                }
+                else
+                {
+                    await _messageCenterService.ShowSuccessAsync($"Topic '{topicName}' added successfully!");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Topic onboarding failed for {TopicName}, but topic was created successfully", topicName);
+                await _messageCenterService.ShowSuccessAsync(
+                    $"Topic '{topicName}' added successfully! Video suggestions will be available on your next suggestion request.");
+            }
+
+            _logger.LogInformation("User {UserId} added topic: {TopicName} with onboarding", userId, topicName);
             return true;
         }
         catch (Exception ex)

@@ -544,6 +544,61 @@ public class VideoService : IVideoService
         };
     }
 
+    // Add this implementation to VideoService:
+    /// <summary>
+    /// Adds an existing video entity to the user's library.
+    /// Converts the entity to a display model and uses the existing repository method.
+    /// </summary>
+    public async Task<bool> AddExistingVideoToLibraryAsync(string userId, VideoEntity videoEntity)
+    {
+        try
+        {
+            // Convert VideoEntity to VideoDisplayModel
+            var videoDisplayModel = new VideoDisplayModel
+            {
+                Id = videoEntity.Id,
+                YouTubeVideoId = videoEntity.YouTubeVideoId,
+                Title = videoEntity.Title,
+                Description = videoEntity.Description ?? string.Empty,
+                ThumbnailUrl = videoEntity.ThumbnailUrl ?? string.Empty,
+                Duration = videoEntity.Duration > 0 ? videoEntity.Duration.ToString() : null,
+                ViewCount = videoEntity.ViewCount > 0 ? (ulong)videoEntity.ViewCount : null,
+                LikeCount = videoEntity.LikeCount > 0 ? (ulong)videoEntity.LikeCount : null,
+                CommentCount = videoEntity.CommentCount > 0 ? (ulong)videoEntity.CommentCount : null,
+                PublishedAt = videoEntity.PublishedAt,
+                ChannelId = videoEntity.Channel.YouTubeChannelId,
+                ChannelTitle = videoEntity.Channel.Name,
+                CategoryId = null,
+                Tags = new List<string>(),
+                DefaultLanguage = null,
+                IsInLibrary = true,
+                AddedToLibrary = DateTime.UtcNow
+            };
+
+            // Use existing repository method
+            var success = await _videoRepository.AddVideoAsync(userId, videoDisplayModel);
+
+            if (success)
+            {
+                _logger.LogInformation("Added existing video {VideoId} '{Title}' to library for user {UserId}",
+                    videoEntity.YouTubeVideoId, videoEntity.Title, userId);
+            }
+            else
+            {
+                _logger.LogInformation("Video {VideoId} already exists in library for user {UserId}",
+                    videoEntity.YouTubeVideoId, userId);
+            }
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding existing video {VideoId} to library for user {UserId}",
+                videoEntity.YouTubeVideoId, userId);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Converts a YouTube API response to a VideoInfo object for suggestion processing.
     /// </summary>

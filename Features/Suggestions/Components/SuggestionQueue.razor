@@ -283,9 +283,21 @@
             @if (filteredSuggestions.Count >= 12 && HasMoreSuggestions)
             {
                 <div class="text-center mt-4">
-                    <button class="btn btn-outline-primary" @onclick="LoadMoreSuggestions">
-                        <i class="bi bi-arrow-down-circle me-1"></i>
-                        Load More Suggestions
+                    <button class="btn btn-outline-primary"
+                            @onclick="LoadMoreSuggestions"
+                            disabled="@IsLoadingMore">
+                        @if (IsLoadingMore)
+                        {
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span>Loading...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-down-circle me-1"></i>
+                            <span>Load More Suggestions</span>
+                        }
                     </button>
                 </div>
             }

@@ -123,6 +123,17 @@ public interface IVideoService
     Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video);
 
     /// <summary>
+    /// Adds an existing video entity to the user's library.
+    /// Used when we already have a validated video entity (e.g., from suggestions).
+    /// Skips YouTube API validation since the video is already in our database.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <param name="videoEntity">Existing video entity</param>
+    /// <returns>True if added successfully, false if already exists or error occurred</returns>
+    Task<bool> AddExistingVideoToLibraryAsync(string userId, VideoEntity videoEntity);
+
+
+    /// <summary>
     /// Gets videos from a specific channel published since a given date.
     /// Delegates to YouTube service but provides consistent interface for suggestion generation.
     /// </summary>
