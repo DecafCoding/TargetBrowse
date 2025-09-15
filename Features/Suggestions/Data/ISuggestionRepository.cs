@@ -173,6 +173,22 @@ public interface ISuggestionRepository
     /// <param name="topicIds">List of topic IDs that matched this suggestion</param>
     /// <returns>Created suggestion entity</returns>
     Task<SuggestionEntity> CreateSuggestionWithTopicsAsync(string userId, Guid videoId, string reason, List<Guid> topicIds);
+
+    /// <summary>
+    /// Creates suggestion entities for topic onboarding with proper topic relationships.
+    /// Similar to channel onboarding but creates SuggestionTopic junction records.
+    /// Bypasses normal suggestion limits to provide immediate value for new topics.
+    /// </summary>
+    /// <param name="userId">User who created the topic</param>
+    /// <param name="videoEntities">Video entities to create suggestions for</param>
+    /// <param name="topicId">ID of the newly created topic</param>
+    /// <param name="topicName">Name of the topic for suggestion reasoning</param>
+    /// <returns>List of created suggestion entities with topic relationships</returns>
+    Task<List<SuggestionEntity>> CreateTopicOnboardingSuggestionsAsync(
+        string userId,
+        List<VideoEntity> videoEntities,
+        Guid topicId,
+        string topicName);
 }
 
 /// <summary>

@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
-using TargetBrowse.Features.Videos.Data;
 using TargetBrowse.Features.Suggestions.Data;
 using TargetBrowse.Features.Suggestions.Models;
-using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Videos.Data;
+using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -12,13 +13,14 @@ namespace TargetBrowse.Features.Channels.Services;
 /// <summary>
 /// Handles channel onboarding workflows including initial video suggestions.
 /// Owns the complete user journey for adding a new channel and getting immediate value.
+/// Now uses SharedYouTubeService to ensure consistent shorts exclusion with suggestion generation.
 /// </summary>
 public class ChannelOnboardingService : IChannelOnboardingService
 {
     private readonly IChannelRepository _channelRepository;
     private readonly IVideoRepository _videoRepository;
     private readonly ISuggestionRepository _suggestionRepository;
-    private readonly IChannelYouTubeService _youTubeService;
+    private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ILogger<ChannelOnboardingService> _logger;
 
     private const int InitialVideosLimit = 50;
@@ -28,13 +30,13 @@ public class ChannelOnboardingService : IChannelOnboardingService
         IChannelRepository channelRepository,
         IVideoRepository videoRepository,
         ISuggestionRepository suggestionRepository,
-        IChannelYouTubeService youTubeService,
+        ISharedYouTubeService sharedYouTubeService,
         ILogger<ChannelOnboardingService> logger)
     {
         _channelRepository = channelRepository;
         _videoRepository = videoRepository;
         _suggestionRepository = suggestionRepository;
-        _youTubeService = youTubeService;
+        _sharedYouTubeService = sharedYouTubeService;
         _logger = logger;
     }
 
@@ -169,33 +171,39 @@ public class ChannelOnboardingService : IChannelOnboardingService
     #region Private Helper Methods
 
     /// <summary>
-    /// Fetches recent videos from a YouTube channel.
+    /// Fetches recent videos from a YouTube channel, excluding shorts.
+    /// Now uses SharedYouTubeService to ensure consistent filtering with suggestion generation.
     /// </summary>
     private async Task<YouTubeApiResult<List<VideoInfo>>> FetchChannelVideosAsync(string youTubeChannelId, string channelName)
     {
         try
         {
-            // Create a channel update request to get recent videos
-            var channelRequest = new ChannelUpdateRequest
-            {
-                YouTubeChannelId = youTubeChannelId,
-                ChannelName = channelName,
-                LastCheckDate = DateTime.UtcNow.AddDays(-LookbackDays), // Look back far for initial videos
-                MaxResults = InitialVideosLimit,
-                UserRating = null // No rating yet for new channel
-            };
+            _logger.LogInformation("Fetching initial videos for channel {ChannelName} ({ChannelId}) - excluding shorts",
+                channelName, youTubeChannelId);
 
-            // Use the existing bulk channel updates method
-            var apiResult = await _youTubeService.GetBulkChannelUpdatesAsync(new List<ChannelUpdateRequest> { channelRequest });
+            // Use SharedYouTubeService directly to get videos since lookback date
+            // This ensures we use the same shorts-exclusion logic as suggestion generation
+            var lookbackDate = DateTime.UtcNow.AddDays(-LookbackDays);
+
+            var apiResult = await _sharedYouTubeService.GetChannelVideosSinceAsync(
+                youTubeChannelId,
+                lookbackDate,
+                InitialVideosLimit);
 
             if (apiResult.IsSuccess && apiResult.Data?.Any() == true)
             {
+                _logger.LogInformation("Successfully fetched {VideoCount} videos for channel {ChannelName} (shorts excluded)",
+                    apiResult.Data.Count, channelName);
+
                 return YouTubeApiResult<List<VideoInfo>>.Success(apiResult.Data);
             }
             else
             {
-                return YouTubeApiResult<List<VideoInfo>>.Failure(
-                    apiResult.ErrorMessage ?? "No videos found for channel");
+                var errorMessage = apiResult.ErrorMessage ?? "No videos found for channel";
+                _logger.LogWarning("Failed to fetch videos for channel {ChannelName}: {Error}",
+                    channelName, errorMessage);
+
+                return YouTubeApiResult<List<VideoInfo>>.Failure(errorMessage, apiResult.IsQuotaExceeded);
             }
         }
         catch (Exception ex)

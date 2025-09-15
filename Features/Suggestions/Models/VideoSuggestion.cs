@@ -49,6 +49,8 @@ public class VideoSuggestion
         SuggestionSource.TrackedChannel => "📺 Channel Update",
         SuggestionSource.TopicSearch => "🔍 Topic Match",
         SuggestionSource.Both => "⭐ Channel + Topic",
+        SuggestionSource.NewChannel => "New Channel",
+        SuggestionSource.NewTopic => "New Topic",
         _ => "❓ Unknown"
     };
 

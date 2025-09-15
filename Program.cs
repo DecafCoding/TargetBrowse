@@ -2,17 +2,16 @@ using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.Options;
 using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
-using TargetBrowse.Services;
-using TargetBrowse.Services.YouTube.Models;
-using TargetBrowse.Services.YouTube;
-
 // Enhanced YouTube API Service imports
 using TargetBrowse.Features.Suggestions.BackgroundServices;
-using Microsoft.Extensions.Options;
+using TargetBrowse.Features.Topics.Services;
+using TargetBrowse.Services;
+using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse;
 
@@ -80,7 +79,8 @@ public class Program
         #region Feature Services
 
         // Topic Feature Services
-        builder.Services.AddScoped<Features.Topics.Services.ITopicService, Features.Topics.Services.TopicService>();
+        builder.Services.AddScoped<ITopicService, TopicService>();
+        builder.Services.AddScoped<ITopicOnboardingService, TopicOnboardingService>();
 
         // Channels Feature Services
         builder.Services.AddScoped<Features.Channels.Services.IChannelService, Features.Channels.Services.ChannelService>();

@@ -301,6 +301,8 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Approves a suggestion, adding the video to the user's library.
+    /// FIXED: Now directly adds the video to library using existing video entity data
+    /// instead of making unnecessary YouTube API calls.
     /// </summary>
     public async Task<bool> ApproveSuggestionAsync(string userId, Guid suggestionId)
     {
@@ -313,26 +315,39 @@ public class SuggestionService : ISuggestionService
                 return false;
             }
 
-            // Approve the suggestion
+            // Check if video is already in user's library to avoid duplicates
+            var isAlreadyInLibrary = await _videoService.IsVideoInLibraryAsync(userId, suggestion.Video.YouTubeVideoId);
+            if (isAlreadyInLibrary)
+            {
+                // Still approve the suggestion since that's what the user requested
+                await _suggestionRepository.ApproveSuggestionsAsync(new List<Guid> { suggestionId }, userId);
+
+                await _messageCenterService.ShowSuccessAsync($"Suggestion approved! Video '{suggestion.Video.Title}' was already in your library.");
+                _logger.LogInformation("User {UserId} approved suggestion {SuggestionId} - video already in library", userId, suggestionId);
+                return true;
+            }
+
+            // Approve the suggestion first
             await _suggestionRepository.ApproveSuggestionsAsync(new List<Guid> { suggestionId }, userId);
 
-            // Add video to user's library (if not already there)
-            var videoInfo = MapVideoEntityToInfo(suggestion.Video);
-            var addVideoModel = new Features.Videos.Models.AddVideoModel
+            // Add video to user's library using VideoService
+            // Uses the optimized method for existing video entities
+            var success = await _videoService.AddExistingVideoToLibraryAsync(userId, suggestion.Video);
+
+            if (success)
             {
-                VideoUrl = $"https://www.youtube.com/watch?v={videoInfo.YouTubeVideoId}",
-                Notes = $"Added from suggestion: {suggestion.Reason}"
-            };
+                await _messageCenterService.ShowSuccessAsync($"Video '{suggestion.Video.Title}' approved and added to your library!");
+                _logger.LogInformation("User {UserId} approved suggestion {SuggestionId} and added video {VideoId} to library",
+                    userId, suggestionId, suggestion.Video.YouTubeVideoId);
+            }
+            else
+            {
+                await _messageCenterService.ShowErrorAsync("Video was approved but failed to add to library. It may already exist.");
+                _logger.LogWarning("Failed to add video {VideoId} to library after approving suggestion {SuggestionId} for user {UserId}",
+                    suggestion.Video.YouTubeVideoId, suggestionId, userId);
+            }
 
-            // Validate the video URL
-            addVideoModel.ValidateAndExtractVideoId();
-
-            await _videoService.AddVideoToLibraryAsync(userId, addVideoModel);
-
-            await _messageCenterService.ShowSuccessAsync($"Video '{suggestion.Video.Title}' approved and added to your library!");
-
-            _logger.LogInformation("User {UserId} approved suggestion {SuggestionId}", userId, suggestionId);
-            return true;
+            return true; // Return true since the suggestion was approved, even if library add failed
         }
         catch (Exception ex)
         {

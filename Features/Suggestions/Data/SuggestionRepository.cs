@@ -903,6 +903,78 @@ public class SuggestionRepository : ISuggestionRepository
         return suggestion;
     }
 
+    /// <summary>
+    /// Creates suggestion entities for topic onboarding with proper topic relationships.
+    /// Creates both SuggestionEntity and SuggestionTopicEntity records for proper data modeling.
+    /// </summary>
+    public async Task<List<SuggestionEntity>> CreateTopicOnboardingSuggestionsAsync(
+        string userId,
+        List<VideoEntity> videoEntities,
+        Guid topicId,
+        string topicName)
+    {
+        var suggestions = new List<SuggestionEntity>();
+
+        try
+        {
+            foreach (var videoEntity in videoEntities)
+            {
+                // Double-check for existing suggestions to avoid duplicates
+                var hasExisting = await HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
+                if (hasExisting)
+                {
+                    _logger.LogDebug("Skipping video {VideoId} - suggestion already exists for user {UserId}",
+                        videoEntity.YouTubeVideoId, userId);
+                    continue;
+                }
+
+                var suggestion = new SuggestionEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    VideoId = videoEntity.Id,
+                    Reason = $"🎯 New Topic: {topicName}",
+                    IsApproved = false,
+                    IsDenied = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Suggestions.Add(suggestion);
+                suggestions.Add(suggestion);
+            }
+
+            // Save suggestions first
+            await _context.SaveChangesAsync();
+
+            // Create topic relationships
+            foreach (var suggestion in suggestions)
+            {
+                var suggestionTopic = new SuggestionTopicEntity
+                {
+                    Id = Guid.NewGuid(),
+                    SuggestionId = suggestion.Id,
+                    TopicId = topicId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.SuggestionTopics.Add(suggestionTopic);
+            }
+
+            // Save topic relationships
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created {SuggestionCount} topic onboarding suggestions with relationships for topic {TopicId}",
+                suggestions.Count, topicId);
+
+            return suggestions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating topic onboarding suggestions for topic {TopicId} and user {UserId}",
+                topicId, userId);
+            throw;
+        }
+    }
+
     #region Private Helper Methods
 
     /// <summary>

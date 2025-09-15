@@ -43,6 +43,7 @@
             SuggestionSource.TrackedChannel => "Channel Update",
             SuggestionSource.TopicSearch => "Topic Match",
             SuggestionSource.NewChannel => "New Channel",
+            SuggestionSource.NewTopic => "New Topic",
             _ => "Unknown"
         };
     }
@@ -54,7 +55,8 @@
             SuggestionSource.Both => "Found through both tracked channels AND topic searches",
             SuggestionSource.TrackedChannel => "New video from your tracked channels",
             SuggestionSource.TopicSearch => "Topic-based search matching your interests",
-            SuggestionSource.NewChannel => "Initial Videos from new channel",
+            SuggestionSource.NewChannel => "Initial Videos from a new channel",
+            SuggestionSource.NewTopic => "Initial Videos from a new topic",
             _ => "Unknown suggestion source"
         };
     }
