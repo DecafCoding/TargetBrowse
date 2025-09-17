@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 using TargetBrowse.Features.Suggestions.Services;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Suggestions.Components;
 

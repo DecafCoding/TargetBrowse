@@ -1,4 +1,5 @@
-﻿using TargetBrowse.Services.Models;
+﻿using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Services
 {

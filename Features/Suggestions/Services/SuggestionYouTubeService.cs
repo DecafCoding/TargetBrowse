@@ -1,6 +1,5 @@
 using TargetBrowse.Features.Suggestions.Models;
-using TargetBrowse.Services;
-using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Suggestions.Services;

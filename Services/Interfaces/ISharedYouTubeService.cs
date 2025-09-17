@@ -1,7 +1,7 @@
 ﻿using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.YouTube.Models;
 
-namespace TargetBrowse.Services.YouTube;
+namespace TargetBrowse.Services.Interfaces;
 
 /// <summary>
 /// Shared YouTube API service interface for common functionality across multiple features.

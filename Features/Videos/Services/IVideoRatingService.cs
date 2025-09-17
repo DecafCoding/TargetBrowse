@@ -19,6 +19,7 @@ public interface IVideoRatingService
 
     /// <summary>
     /// Gets a user's rating for a specific video by YouTube video ID.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="youTubeVideoId">YouTube video ID</param>
@@ -61,6 +62,7 @@ public interface IVideoRatingService
 
     /// <summary>
     /// Gets rating statistics for a user.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <returns>User's rating statistics</returns>
@@ -69,6 +71,7 @@ public interface IVideoRatingService
     /// <summary>
     /// Gets all ratings for a specific video (across all users).
     /// Used for displaying video popularity and average ratings.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videoId">Video identifier</param>
     /// <returns>List of ratings for the video</returns>
@@ -76,6 +79,7 @@ public interface IVideoRatingService
 
     /// <summary>
     /// Gets average rating and rating count for a video.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videoId">Video identifier</param>
     /// <returns>Average rating information</returns>
@@ -83,6 +87,7 @@ public interface IVideoRatingService
 
     /// <summary>
     /// Searches user's ratings by notes content.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="searchQuery">Search term</param>
@@ -102,6 +107,7 @@ public interface IVideoRatingService
 
     /// <summary>
     /// Gets videos that are highly rated by the user (4+ stars) for recommendation purposes.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="limit">Maximum number of results</param>

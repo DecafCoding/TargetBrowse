@@ -33,6 +33,7 @@ public interface IChannelVideosRepository
 
     /// <summary>
     /// Gets channel information by the internal channel entity ID.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="channelId">Internal channel entity ID</param>
     /// <returns>Channel information or null if not found</returns>
@@ -41,6 +42,7 @@ public interface IChannelVideosRepository
     /// <summary>
     /// Gets multiple channel information records by YouTube channel IDs.
     /// Used for batch operations and validation.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="youTubeChannelIds">List of YouTube channel IDs</param>
     /// <returns>Dictionary mapping YouTube channel ID to channel info</returns>

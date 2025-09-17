@@ -1,7 +1,7 @@
 using TargetBrowse.Services.YouTube.Models;
 using TargetBrowse.Features.Videos.Models;
 
-namespace TargetBrowse.Services.YouTube;
+namespace TargetBrowse.Services.Interfaces;
 
 /// <summary>
 /// Service interface for YouTube Data API v3 integration.

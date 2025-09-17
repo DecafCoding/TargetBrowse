@@ -9,7 +9,10 @@ using TargetBrowse.Data;
 // Enhanced YouTube API Service imports
 using TargetBrowse.Features.Suggestions.BackgroundServices;
 using TargetBrowse.Features.Topics.Services;
+using TargetBrowse.Features.TopicVideos.Services;
 using TargetBrowse.Services;
+using TargetBrowse.Services.DataServices;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.YouTube.Models;
 
@@ -68,6 +71,14 @@ public class Program
 
         builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+        #region Shared Data Services
+
+        // Add this line to your Program.cs if not already present
+        builder.Services.AddScoped<ITopicDataService, TopicDataService>();
+        builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
+
+        #endregion
+
         #region Core Application Services
 
         // YouTube Video Tracker Core Services
@@ -102,7 +113,7 @@ public class Program
         builder.Services.AddScoped<Features.ChannelVideos.Services.IChannelVideosService, Features.ChannelVideos.Services.ChannelVideosService>();
         builder.Services.AddScoped<Features.ChannelVideos.Data.IChannelVideosRepository, Features.ChannelVideos.Data.ChannelVideosRepository>();
 
-        builder.Services.AddScoped<Features.TopicVideos.Services.ITopicVideosService, Features.TopicVideos.Services.TopicVideosService>();
+        builder.Services.AddScoped<ITopicVideosService, TopicVideosService>();
 
         #endregion
 

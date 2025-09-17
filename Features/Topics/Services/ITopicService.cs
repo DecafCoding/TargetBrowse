@@ -25,36 +25,4 @@ public interface ITopicService
     /// <param name="topicId">ID of the topic to delete</param>
     /// <returns>True if successful, false if validation failed or topic not found</returns>
     Task<bool> DeleteTopicAsync(string userId, Guid topicId);
-
-    /// <summary>
-    /// Gets all topics for the specified user ordered by creation date (newest first).
-    /// Returns display models suitable for UI presentation.
-    /// </summary>
-    /// <param name="userId">User ID to get topics for</param>
-    /// <returns>List of topics for display, empty list if none found</returns>
-    Task<List<TopicDisplayModel>> GetUserTopicsAsync(string userId);
-
-    /// <summary>
-    /// Gets the current count of topics for a user.
-    /// Used for validation and UI display.
-    /// </summary>
-    /// <param name="userId">User ID to count topics for</param>
-    /// <returns>Number of topics the user currently has</returns>
-    Task<int> GetTopicCountAsync(string userId);
-
-    /// <summary>
-    /// Checks if a topic name already exists for the user (case-insensitive).
-    /// </summary>
-    /// <param name="userId">User ID to check for</param>
-    /// <param name="topicName">Topic name to check</param>
-    /// <returns>True if topic already exists, false otherwise</returns>
-    Task<bool> TopicExistsAsync(string userId, string topicName);
-
-    /// <summary>
-    /// Gets all topic names for the specified user as simple strings.
-    /// Used by suggestion service for YouTube search queries.
-    /// </summary>
-    /// <param name="userId">User ID to get topic names for</param>
-    /// <returns>List of topic names as strings, empty list if none found</returns>
-    Task<List<string>> GetUserTopicNamesAsync(string userId);
 }

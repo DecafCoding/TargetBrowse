@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Services.YouTube;
@@ -563,7 +564,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                             ViewCount = int.TryParse(item.Statistics?.ViewCount, out var views) ? views : 0,
                             LikeCount = int.TryParse(item.Statistics?.LikeCount, out var likes) ? likes : 0,
                             CommentCount = int.TryParse(item.Statistics?.CommentCount, out var comments) ? comments : 0,
-                            Duration = ParseDuration(item.ContentDetails?.Duration ?? string.Empty)
+                            Duration = DurationParser.ParseToSeconds(item.ContentDetails?.Duration ?? string.Empty)
                         };
 
                         videos.Add(video);
@@ -620,23 +621,24 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
     /// <summary>
     /// Parses YouTube duration format (PT4M13S) to seconds.
+    /// Moved to DurationParser.cs
     /// </summary>
-    private int ParseDuration(string duration)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(duration) || !duration.StartsWith("PT"))
-                return 0;
+    //private int ParseDuration(string duration)
+    //{
+    //    try
+    //    {
+    //        if (string.IsNullOrEmpty(duration) || !duration.StartsWith("PT"))
+    //            return 0;
 
-            var timeSpan = System.Xml.XmlConvert.ToTimeSpan(duration);
-            return (int)timeSpan.TotalSeconds;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug("Failed to parse duration '{Duration}': {Error}", duration, ex.Message);
-            return 0;
-        }
-    }
+    //        var timeSpan = System.Xml.XmlConvert.ToTimeSpan(duration);
+    //        return (int)timeSpan.TotalSeconds;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogDebug("Failed to parse duration '{Duration}': {Error}", duration, ex.Message);
+    //        return 0;
+    //    }
+    //}
 
     /// <summary>
     /// Tries to get cached search results.

@@ -38,6 +38,7 @@ public interface IVideoYouTubeService
     /// <summary>
     /// Gets detailed information about multiple YouTube videos by their IDs.
     /// More efficient than calling GetVideoByIdAsync multiple times.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videoIds">List of YouTube video IDs (up to 50)</param>
     /// <returns>List of video information, may be fewer than requested if some videos don't exist</returns>
@@ -45,12 +46,14 @@ public interface IVideoYouTubeService
 
     /// <summary>
     /// Checks if the YouTube API is currently available and within quota limits.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <returns>True if API is available, false if quota exceeded or service unavailable</returns>
     Task<bool> IsApiAvailableAsync();
 
     /// <summary>
     /// Gets the estimated remaining API quota for today.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <returns>Estimated remaining quota units</returns>
     Task<int> GetEstimatedRemainingQuotaAsync();

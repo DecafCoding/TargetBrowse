@@ -2,17 +2,19 @@
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Topics.Models;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Topics.Services;
 
 /// <summary>
 /// Implementation of topic management service.
 /// Handles business logic for user topics including validation and persistence.
+/// Updated to use TopicDataService for consistent data access patterns.
 /// </summary>
 public class TopicService : ITopicService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITopicDataService _topicDataService;
     private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<TopicService> _logger;
 
@@ -22,13 +24,15 @@ public class TopicService : ITopicService
 
     public TopicService(
         ApplicationDbContext context,
+        ITopicDataService topicDataService,
         IMessageCenterService messageCenterService,
-        ITopicOnboardingService topicOnboardingService,  // ADD THIS
+        ITopicOnboardingService topicOnboardingService,
         ILogger<TopicService> logger)
     {
         _context = context;
+        _topicDataService = topicDataService;
         _messageCenterService = messageCenterService;
-        _topicOnboardingService = topicOnboardingService;  // ADD THIS
+        _topicOnboardingService = topicOnboardingService;
         _logger = logger;
     }
 
@@ -60,16 +64,16 @@ public class TopicService : ITopicService
                 return false;
             }
 
-            // Check topic limit
-            var currentCount = await GetTopicCountAsync(userId);
+            // Check topic limit directly using TopicDataService
+            var currentCount = await _topicDataService.GetUserTopicCountAsync(userId);
             if (currentCount >= MaxTopicsPerUser)
             {
                 await _messageCenterService.ShowWarningAsync($"You have reached the maximum limit of {MaxTopicsPerUser} topics. Remove unused topics before adding new ones.");
                 return false;
             }
 
-            // Check for duplicate (case-insensitive)
-            if (await TopicExistsAsync(userId, topicName))
+            // Check for duplicate directly using TopicDataService
+            if (await _topicDataService.UserHasTopicAsync(userId, topicName))
             {
                 await _messageCenterService.ShowWarningAsync($"Topic '{topicName}' already exists in your list.");
                 return false;
@@ -85,7 +89,7 @@ public class TopicService : ITopicService
             _context.Topics.Add(topicEntity);
             await _context.SaveChangesAsync();
 
-            // NEW: Trigger topic onboarding for immediate video suggestions
+            // Trigger topic onboarding for immediate video suggestions
             try
             {
                 var onboardingResult = await _topicOnboardingService.OnboardTopicAsync(
@@ -144,12 +148,10 @@ public class TopicService : ITopicService
                 return false;
             }
 
-            // Find the topic and ensure user owns it
-            var topic = await _context.Topics
-                .Where(t => t.Id == topicId && t.UserId == userId && !t.IsDeleted)
-                .FirstOrDefaultAsync();
+            // Use TopicDataService to find the topic
+            var topic = await _topicDataService.GetTopicByIdAsync(topicId, userId);
 
-            if (topic == null)
+            if (topic == null || topic.IsDeleted)
             {
                 await _messageCenterService.ShowWarningAsync("Topic not found or you don't have permission to delete it.");
                 return false;
@@ -173,107 +175,70 @@ public class TopicService : ITopicService
     }
 
     /// <summary>
-    /// Gets all topics for the specified user ordered by creation date (newest first).
-    /// </summary>
-    public async Task<List<TopicDisplayModel>> GetUserTopicsAsync(string userId)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                _logger.LogWarning("GetUserTopicsAsync called with null or empty userId");
-                return new List<TopicDisplayModel>();
-            }
-
-            var topics = await _context.Topics
-                .Where(t => t.UserId == userId && !t.IsDeleted)
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new TopicDisplayModel
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    CreatedAt = t.CreatedAt
-                })
-                .ToListAsync();
-
-            _logger.LogDebug("Retrieved {TopicCount} topics for user {UserId}", topics.Count, userId);
-            return topics;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving topics for user {UserId}", userId);
-            await _messageCenterService.ShowErrorAsync("Unable to load your topics. Please refresh the page and try again.");
-            return new List<TopicDisplayModel>();
-        }
-    }
-
-    /// <summary>
     /// Gets the current count of topics for a user.
+    /// Lightweight wrapper around TopicDataService for external callers.
     /// </summary>
-    public async Task<int> GetTopicCountAsync(string userId)
-    {
-        try
-        {
-            return await _context.Topics
-                .Where(t => t.UserId == userId && !t.IsDeleted)
-                .CountAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting topic count for user {UserId}", userId);
-            return 0;
-        }
-    }
+    //public async Task<int> GetTopicCountAsync(string userId)
+    //{
+    //    try
+    //    {
+    //        return await _topicDataService.GetUserTopicCountAsync(userId);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error getting topic count for user {UserId}", userId);
+    //        return 0; // Don't show error message for read operations used by UI
+    //    }
+    //}
 
     /// <summary>
     /// Checks if a topic name already exists for the user (case-insensitive).
+    /// Lightweight wrapper around TopicDataService for external callers.
     /// </summary>
-    public async Task<bool> TopicExistsAsync(string userId, string topicName)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(topicName))
-                return false;
+    //public async Task<bool> TopicExistsAsync(string userId, string topicName)
+    //{
+    //    try
+    //    {
+    //        if (string.IsNullOrWhiteSpace(topicName))
+    //            return false;
 
-            return await _context.Topics
-                .Where(t => t.UserId == userId && !t.IsDeleted)
-                .AnyAsync(t => t.Name.ToLower() == topicName.ToLower());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking topic existence for user {UserId}, topic {TopicName}", userId, topicName);
-            return false;
-        }
-    }
+    //        return await _topicDataService.UserHasTopicAsync(userId, topicName);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error checking topic existence for user {UserId}, topic {TopicName}", userId, topicName);
+    //        return false; // Don't show error message for read operations used by UI
+    //    }
+    //}
 
     /// <summary>
     /// Gets all topic names for the specified user as simple strings.
     /// Used by suggestion service for YouTube search queries.
+    /// Now uses TopicDataService for consistent data access.
     /// </summary>
     /// <param name="userId">User ID to get topic names for</param>
     /// <returns>List of topic names as strings, empty list if none found</returns>
-    public async Task<List<string>> GetUserTopicNamesAsync(string userId)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                _logger.LogWarning("GetUserTopicNamesAsync called with null or empty userId");
-                return new List<string>();
-            }
+    //public async Task<List<string>> GetUserTopicNamesAsync(string userId)
+    //{
+    //    try
+    //    {
+    //        if (string.IsNullOrWhiteSpace(userId))
+    //        {
+    //            _logger.LogWarning("GetUserTopicNamesAsync called with null or empty userId");
+    //            return new List<string>();
+    //        }
 
-            var topicNames = await _context.Topics
-                .Where(t => t.UserId == userId && !t.IsDeleted)
-                .Select(t => t.Name)
-                .ToListAsync();
+    //        // Use TopicDataService to get topic entities, then extract names
+    //        var topics = await _topicDataService.GetUserTopicsAsync(userId);
+    //        var topicNames = topics.Select(t => t.Name).ToList();
 
-            _logger.LogDebug("Retrieved {TopicCount} topic names for user {UserId}", topicNames.Count, userId);
-            return topicNames;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving topic names for user {UserId}", userId);
-            return new List<string>();
-        }
-    }
+    //        _logger.LogDebug("Retrieved {TopicCount} topic names for user {UserId}", topicNames.Count, userId);
+    //        return topicNames;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error retrieving topic names for user {UserId}", userId);
+    //        return new List<string>();
+    //    }
+    //}
 }

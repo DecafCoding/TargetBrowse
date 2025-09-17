@@ -1,20 +1,19 @@
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.Videos.Services;
-using TargetBrowse.Services;
-using TargetBrowse.Services.YouTube; // Updated to use shared service
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.TopicVideos.Services;
 
 /// <summary>
 /// Service implementation for topic-based video discovery.
-/// Now uses shared YouTube service instead of Suggestions-specific service.
+/// Updated to use shared TopicDataService for improved performance and consistency.
 /// </summary>
 public class TopicVideosService : ITopicVideosService
 {
-    private readonly ISharedYouTubeService _youTubeService; // Updated to use shared service
-    private readonly ITopicService _topicService;
+    private readonly ISharedYouTubeService _youTubeService;
+    private readonly ITopicDataService _topicDataService; // Use data service instead of business service
     private readonly IVideoService _videoService;
     private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<TopicVideosService> _logger;
@@ -24,14 +23,14 @@ public class TopicVideosService : ITopicVideosService
     private const int LOOKBACK_YEARS = 1;
 
     public TopicVideosService(
-        ISharedYouTubeService youTubeService, // Updated to use shared service
-        ITopicService topicService,
+        ISharedYouTubeService youTubeService,
+        ITopicDataService topicDataService, // Inject data service
         IVideoService videoService,
         IMessageCenterService messageCenterService,
         ILogger<TopicVideosService> logger)
     {
         _youTubeService = youTubeService;
-        _topicService = topicService;
+        _topicDataService = topicDataService; // Use data service
         _videoService = videoService;
         _messageCenterService = messageCenterService;
         _logger = logger;
@@ -39,6 +38,7 @@ public class TopicVideosService : ITopicVideosService
 
     /// <summary>
     /// Gets recent videos from YouTube for a specific topic.
+    /// Now uses TopicDataService for more efficient topic retrieval.
     /// </summary>
     public async Task<List<TopicVideoDisplayModel>> GetRecentVideosAsync(Guid topicId, string currentUserId, int maxResults = DEFAULT_MAX_RESULTS)
     {
@@ -47,14 +47,13 @@ public class TopicVideosService : ITopicVideosService
             _logger.LogInformation("Getting recent videos for topic {TopicId} with max results {MaxResults}",
                 topicId, maxResults);
 
-            // Get topic information first
-            var userTopics = await _topicService.GetUserTopicsAsync(currentUserId);
-            var topic = userTopics.FirstOrDefault(t => t.Id == topicId);
+            // Get specific topic using data service for better performance
+            var topic = await _topicDataService.GetTopicByIdAsync(topicId, currentUserId);
 
             if (topic == null)
             {
-                _logger.LogWarning("Topic {TopicId} not found", topicId);
-                await _messageCenterService.ShowErrorAsync("Topic not found. It may have been deleted.");
+                _logger.LogWarning("Topic {TopicId} not found for user {UserId}", topicId, currentUserId);
+                await _messageCenterService.ShowErrorAsync("Topic not found. It may have been deleted or you don't have access to it.");
                 return new List<TopicVideoDisplayModel>();
             }
 
@@ -104,7 +103,7 @@ public class TopicVideosService : ITopicVideosService
                 return new List<TopicVideoDisplayModel>();
             }
 
-            var videos = youTubeResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
+            var videos = youTubeResult.Data ?? new List<Suggestions.Models.VideoInfo>();
 
             if (!videos.Any())
             {
@@ -282,6 +281,7 @@ public class TopicVideosService : ITopicVideosService
 
     /// <summary>
     /// Checks if the topic exists and the user has access to it.
+    /// Updated to use TopicDataService for direct database access.
     /// </summary>
     public async Task<bool> ValidateTopicAccess(string userId, Guid topicId)
     {
@@ -292,8 +292,9 @@ public class TopicVideosService : ITopicVideosService
                 return false;
             }
 
-            var userTopics = await _topicService.GetUserTopicsAsync(userId);
-            return userTopics.Any(t => t.Id == topicId);
+            // Use data service for efficient single topic lookup
+            var topic = await _topicDataService.GetTopicByIdAsync(topicId, userId);
+            return topic != null;
         }
         catch (Exception ex)
         {
@@ -305,8 +306,9 @@ public class TopicVideosService : ITopicVideosService
 
     /// <summary>
     /// Gets topic information for display purposes.
+    /// Updated to use TopicDataService and convert to display model.
     /// </summary>
-    public async Task<Features.Topics.Models.TopicDisplayModel?> GetTopicAsync(string userId, Guid topicId)
+    public async Task<Topics.Models.TopicDisplayModel?> GetTopicAsync(string userId, Guid topicId)
     {
         try
         {
@@ -315,8 +317,21 @@ public class TopicVideosService : ITopicVideosService
                 return null;
             }
 
-            var userTopics = await _topicService.GetUserTopicsAsync(userId);
-            return userTopics.FirstOrDefault(t => t.Id == topicId);
+            // Get topic using data service
+            var topicEntity = await _topicDataService.GetTopicByIdAsync(topicId, userId);
+            
+            if (topicEntity == null)
+            {
+                return null;
+            }
+
+            // Convert entity to display model
+            return new Topics.Models.TopicDisplayModel
+            {
+                Id = topicEntity.Id,
+                Name = topicEntity.Name,
+                CreatedAt = topicEntity.CreatedAt
+            };
         }
         catch (Exception ex)
         {

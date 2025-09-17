@@ -63,6 +63,7 @@ public interface IVideoService
 
     /// <summary>
     /// Searches videos within the user's library.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="searchQuery">Search term</param>
@@ -71,6 +72,7 @@ public interface IVideoService
 
     /// <summary>
     /// Gets library statistics for the user.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <returns>Library statistics</returns>
@@ -87,6 +89,7 @@ public interface IVideoService
     /// <summary>
     /// Validates a video URL and extracts video information.
     /// Does not add to library, just validates and fetches metadata.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videoUrl">YouTube video URL</param>
     /// <returns>Video information if valid, null if invalid</returns>
@@ -95,18 +98,18 @@ public interface IVideoService
     /// <summary>
     /// Gets videos from the user's tracked channels that aren't in their library.
     /// Useful for suggesting new videos from followed channels.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="maxResults">Maximum number of suggestions</param>
     /// <returns>List of suggested videos</returns>
     Task<List<VideoDisplayModel>> GetSuggestedVideosFromChannelsAsync(string userId, int maxResults = 20);
 
-    // NEW METHODS FOR YT-010-03: Enhanced Suggestion Generation
-
     /// <summary>
     /// Saves all discovered videos to the database for historical browsing.
     /// Handles duplicate prevention and ensures video metadata is stored.
     /// Used by suggestion generation to persist all found videos regardless of approval status.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videos">List of videos discovered during suggestion generation</param>
     /// <param name="userId">User identifier for logging context</param>

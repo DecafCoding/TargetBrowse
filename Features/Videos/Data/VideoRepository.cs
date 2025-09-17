@@ -1,9 +1,10 @@
-using TargetBrowse.Features.Videos.Models;
+using Google.Apis.YouTube.v3.Data;
+using Microsoft.EntityFrameworkCore;
+using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Suggestions.Models;
-using TargetBrowse.Data;
-using Microsoft.EntityFrameworkCore;
-using Google.Apis.YouTube.v3.Data;
+using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse.Features.Videos.Data;
 
@@ -189,7 +190,7 @@ public class VideoRepository : IVideoRepository
                 ChannelId = video.ChannelId,
                 ChannelName = video.ChannelTitle,
                 PublishedAt = video.PublishedAt,
-                Duration = !string.IsNullOrEmpty(video.Duration) ? int.Parse(video.Duration) : 0,
+                Duration = DurationParser.ParseToSeconds(video.Duration),
                 ViewCount = (int)(video.ViewCount ?? 0),        
                 LikeCount = (int)(video.LikeCount ?? 0),        
                 CommentCount = (int)(video.CommentCount ?? 0),  
@@ -423,176 +424,177 @@ public class VideoRepository : IVideoRepository
     /// Bulk ensures multiple video entities exist in the database.
     /// Optimized for channel onboarding and suggestion generation when processing many videos at once.
     /// Uses efficient batch processing to minimize database round trips.
+    /// MOVED TO SUGGESTION DATA SERVICE - 9/16/2025
     /// </summary>
-    public async Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos)
-    {
-        try
-        {
-            if (!videos.Any())
-            {
-                return new List<VideoEntity>();
-            }
+    //public async Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos)
+    //{
+    //    try
+    //    {
+    //        if (!videos.Any())
+    //        {
+    //            return new List<VideoEntity>();
+    //        }
 
-            _logger.LogDebug("Ensuring {VideoCount} videos exist in database", videos.Count);
+    //        _logger.LogDebug("Ensuring {VideoCount} videos exist in database", videos.Count);
 
-            // 1. Get all YouTube video IDs to check
-            var youTubeVideoIds = videos.Select(v => v.YouTubeVideoId).Distinct().ToList();
+    //        // 1. Get all YouTube video IDs to check
+    //        var youTubeVideoIds = videos.Select(v => v.YouTubeVideoId).Distinct().ToList();
 
-            // 2. Find existing videos in one query
-            var existingVideos = await _context.Videos
-                .Include(v => v.Channel)
-                .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
-                .ToListAsync();
+    //        // 2. Find existing videos in one query
+    //        var existingVideos = await _context.Videos
+    //            .Include(v => v.Channel)
+    //            .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
+    //            .ToListAsync();
 
-            var existingVideoDict = existingVideos.ToDictionary(v => v.YouTubeVideoId, v => v);
+    //        var existingVideoDict = existingVideos.ToDictionary(v => v.YouTubeVideoId, v => v);
 
-            // 3. Identify videos that need to be created
-            var videosToCreate = videos
-                .Where(v => !existingVideoDict.ContainsKey(v.YouTubeVideoId))
-                .ToList();
+    //        // 3. Identify videos that need to be created
+    //        var videosToCreate = videos
+    //            .Where(v => !existingVideoDict.ContainsKey(v.YouTubeVideoId))
+    //            .ToList();
 
-            // 4. Update metadata for existing videos (in case it changed)
-            foreach (var video in videos.Where(v => existingVideoDict.ContainsKey(v.YouTubeVideoId)))
-            {
-                var existingVideo = existingVideoDict[video.YouTubeVideoId];
+    //        // 4. Update metadata for existing videos (in case it changed)
+    //        foreach (var video in videos.Where(v => existingVideoDict.ContainsKey(v.YouTubeVideoId)))
+    //        {
+    //            var existingVideo = existingVideoDict[video.YouTubeVideoId];
 
-                // Update metadata if it has changed
-                bool hasChanges = false;
+    //            // Update metadata if it has changed
+    //            bool hasChanges = false;
 
-                if (existingVideo.Title != video.Title)
-                {
-                    existingVideo.Title = video.Title;
-                    hasChanges = true;
-                }
+    //            if (existingVideo.Title != video.Title)
+    //            {
+    //                existingVideo.Title = video.Title;
+    //                hasChanges = true;
+    //            }
 
-                if (existingVideo.ViewCount != video.ViewCount)
-                {
-                    existingVideo.ViewCount = video.ViewCount;
-                    hasChanges = true;
-                }
+    //            if (existingVideo.ViewCount != video.ViewCount)
+    //            {
+    //                existingVideo.ViewCount = video.ViewCount;
+    //                hasChanges = true;
+    //            }
 
-                if (existingVideo.LikeCount != video.LikeCount)
-                {
-                    existingVideo.LikeCount = video.LikeCount;
-                    hasChanges = true;
-                }
+    //            if (existingVideo.LikeCount != video.LikeCount)
+    //            {
+    //                existingVideo.LikeCount = video.LikeCount;
+    //                hasChanges = true;
+    //            }
 
-                if (existingVideo.CommentCount != video.CommentCount)
-                {
-                    existingVideo.CommentCount = video.CommentCount;
-                    hasChanges = true;
-                }
+    //            if (existingVideo.CommentCount != video.CommentCount)
+    //            {
+    //                existingVideo.CommentCount = video.CommentCount;
+    //                hasChanges = true;
+    //            }
 
-                if (existingVideo.Duration != video.Duration)
-                {
-                    existingVideo.Duration = video.Duration;
-                    hasChanges = true;
-                }
+    //            if (existingVideo.Duration != video.Duration)
+    //            {
+    //                existingVideo.Duration = video.Duration;
+    //                hasChanges = true;
+    //            }
 
-                // ADDED: Update thumbnail URL if changed
-                if (existingVideo.ThumbnailUrl != video.ThumbnailUrl)
-                {
-                    existingVideo.ThumbnailUrl = video.ThumbnailUrl;
-                    hasChanges = true;
-                }
+    //            // ADDED: Update thumbnail URL if changed
+    //            if (existingVideo.ThumbnailUrl != video.ThumbnailUrl)
+    //            {
+    //                existingVideo.ThumbnailUrl = video.ThumbnailUrl;
+    //                hasChanges = true;
+    //            }
 
-                // ADDED: Update description if changed
-                if (existingVideo.Description != video.Description)
-                {
-                    existingVideo.Description = video.Description;
-                    hasChanges = true;
-                }
+    //            // ADDED: Update description if changed
+    //            if (existingVideo.Description != video.Description)
+    //            {
+    //                existingVideo.Description = video.Description;
+    //                hasChanges = true;
+    //            }
 
-                if (hasChanges)
-                {
-                    existingVideo.LastModifiedAt = DateTime.UtcNow;
-                }
-            }
+    //            if (hasChanges)
+    //            {
+    //                existingVideo.LastModifiedAt = DateTime.UtcNow;
+    //            }
+    //        }
 
-            // 5. Create new videos if any are needed
-            if (videosToCreate.Any())
-            {
-                _logger.LogDebug("Creating {NewVideoCount} new videos", videosToCreate.Count);
+    //        // 5. Create new videos if any are needed
+    //        if (videosToCreate.Any())
+    //        {
+    //            _logger.LogDebug("Creating {NewVideoCount} new videos", videosToCreate.Count);
 
-                // Ensure all required channels exist first
-                var channelIds = videosToCreate.Select(v => v.ChannelId).Distinct().ToList();
-                var channelDict = new Dictionary<string, ChannelEntity>();
+    //            // Ensure all required channels exist first
+    //            var channelIds = videosToCreate.Select(v => v.ChannelId).Distinct().ToList();
+    //            var channelDict = new Dictionary<string, ChannelEntity>();
 
-                foreach (var channelId in channelIds)
-                {
-                    var video = videosToCreate.First(v => v.ChannelId == channelId);
-                    var channel = await EnsureChannelExistsAsync(channelId, video.ChannelName);
-                    channelDict[channelId] = channel;
-                }
+    //            foreach (var channelId in channelIds)
+    //            {
+    //                var video = videosToCreate.First(v => v.ChannelId == channelId);
+    //                var channel = await EnsureChannelExistsAsync(channelId, video.ChannelName);
+    //                channelDict[channelId] = channel;
+    //            }
 
-                // Create new video entities
-                var newVideoEntities = new List<VideoEntity>();
+    //            // Create new video entities
+    //            var newVideoEntities = new List<VideoEntity>();
 
-                foreach (var video in videosToCreate)
-                {
-                    try
-                    {
-                        var channel = channelDict[video.ChannelId];
+    //            foreach (var video in videosToCreate)
+    //            {
+    //                try
+    //                {
+    //                    var channel = channelDict[video.ChannelId];
 
-                        var videoEntity = new VideoEntity
-                        {
-                            YouTubeVideoId = video.YouTubeVideoId,
-                            Title = video.Title,
-                            ChannelId = channel.Id,
-                            PublishedAt = video.PublishedAt,
-                            ViewCount = video.ViewCount,
-                            LikeCount = video.LikeCount,
-                            CommentCount = video.CommentCount,
-                            Duration = video.Duration,
-                            ThumbnailUrl = video.ThumbnailUrl, // ADDED: Save thumbnail URL
-                            Description = video.Description,   // ADDED: Save description
-                            RawTranscript = string.Empty // Will be populated later if needed
-                        };
+    //                    var videoEntity = new VideoEntity
+    //                    {
+    //                        YouTubeVideoId = video.YouTubeVideoId,
+    //                        Title = video.Title,
+    //                        ChannelId = channel.Id,
+    //                        PublishedAt = video.PublishedAt,
+    //                        ViewCount = video.ViewCount,
+    //                        LikeCount = video.LikeCount,
+    //                        CommentCount = video.CommentCount,
+    //                        Duration = video.Duration,
+    //                        ThumbnailUrl = video.ThumbnailUrl, // ADDED: Save thumbnail URL
+    //                        Description = video.Description,   // ADDED: Save description
+    //                        RawTranscript = string.Empty // Will be populated later if needed
+    //                    };
 
-                        // Set the channel navigation property
-                        videoEntity.Channel = channel;
+    //                    // Set the channel navigation property
+    //                    videoEntity.Channel = channel;
 
-                        newVideoEntities.Add(videoEntity);
-                        existingVideoDict[video.YouTubeVideoId] = videoEntity;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to prepare video entity for {VideoId} in bulk operation",
-                            video.YouTubeVideoId);
-                        // Continue with other videos
-                    }
-                }
+    //                    newVideoEntities.Add(videoEntity);
+    //                    existingVideoDict[video.YouTubeVideoId] = videoEntity;
+    //                }
+    //                catch (Exception ex)
+    //                {
+    //                    _logger.LogWarning(ex, "Failed to prepare video entity for {VideoId} in bulk operation",
+    //                        video.YouTubeVideoId);
+    //                    // Continue with other videos
+    //                }
+    //            }
 
-                // Batch insert new videos
-                if (newVideoEntities.Any())
-                {
-                    _context.Videos.AddRange(newVideoEntities);
-                }
-            }
+    //            // Batch insert new videos
+    //            if (newVideoEntities.Any())
+    //            {
+    //                _context.Videos.AddRange(newVideoEntities);
+    //            }
+    //        }
 
-            // 6. Save all changes in one transaction
-            if (videosToCreate.Any() || existingVideos.Any(v => _context.Entry(v).State == EntityState.Modified))
-            {
-                await _context.SaveChangesAsync();
-            }
+    //        // 6. Save all changes in one transaction
+    //        if (videosToCreate.Any() || existingVideos.Any(v => _context.Entry(v).State == EntityState.Modified))
+    //        {
+    //            await _context.SaveChangesAsync();
+    //        }
 
-            // 7. Return all requested videos (existing + newly created)
-            var resultVideos = youTubeVideoIds
-                .Where(id => existingVideoDict.ContainsKey(id))
-                .Select(id => existingVideoDict[id])
-                .ToList();
+    //        // 7. Return all requested videos (existing + newly created)
+    //        var resultVideos = youTubeVideoIds
+    //            .Where(id => existingVideoDict.ContainsKey(id))
+    //            .Select(id => existingVideoDict[id])
+    //            .ToList();
 
-            _logger.LogInformation("Ensured {ResultCount} videos exist ({ExistingCount} existing, {NewCount} created)",
-                resultVideos.Count, existingVideos.Count, videosToCreate.Count);
+    //        _logger.LogInformation("Ensured {ResultCount} videos exist ({ExistingCount} existing, {NewCount} created)",
+    //            resultVideos.Count, existingVideos.Count, videosToCreate.Count);
 
-            return resultVideos;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error ensuring {VideoCount} videos exist", videos.Count);
-            throw;
-        }
-    }
+    //        return resultVideos;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Error ensuring {VideoCount} videos exist", videos.Count);
+    //        throw;
+    //    }
+    //}
 
     /// <summary>
     /// Ensures a channel entity exists in the database.

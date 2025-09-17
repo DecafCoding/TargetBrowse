@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Pages;
 

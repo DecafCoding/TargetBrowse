@@ -1,7 +1,6 @@
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
-using TargetBrowse.Services;
-using TargetBrowse.Services.YouTube; // Updated to use shared service
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.ChannelVideos.Services;
 

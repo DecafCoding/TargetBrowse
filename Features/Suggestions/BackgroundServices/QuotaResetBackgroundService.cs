@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
 using TargetBrowse.Services.YouTube.Models;
-using TargetBrowse.Services.YouTube;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Suggestions.BackgroundServices;
 
@@ -60,7 +59,7 @@ public class QuotaResetBackgroundService : BackgroundService
     private async Task PerformQuotaMaintenanceAsync()
     {
         using var scope = _serviceProvider.CreateScope();
-        var quotaManager = scope.ServiceProvider.GetRequiredService<TargetBrowse.Services.YouTube.IYouTubeQuotaManager>();
+        var quotaManager = scope.ServiceProvider.GetRequiredService<IYouTubeQuotaManager>();
         var messageCenter = scope.ServiceProvider.GetService<IMessageCenterService>();
 
         try
@@ -137,7 +136,7 @@ public class QuotaResetBackgroundService : BackgroundService
     /// <summary>
     /// Logs comprehensive quota analytics for monitoring purposes.
     /// </summary>
-    private async Task LogQuotaAnalyticsAsync(TargetBrowse.Services.YouTube.IYouTubeQuotaManager quotaManager)
+    private async Task LogQuotaAnalyticsAsync(IYouTubeQuotaManager quotaManager)
     {
         try
         {

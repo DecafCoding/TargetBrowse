@@ -21,19 +21,12 @@
         </p>
     </div>
     <div>
-        <div class="btn-group" role="group">
-            <a href="/video-search"
-               class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-search me-1"></i>
-                Search Videos
-            </a>
-            <button type="button"
-                    class="btn btn-outline-secondary btn-sm"
-                    @onclick="RefreshAsync">
-                <i class="bi bi-arrow-clockwise me-1"></i>
-                Refresh
-            </button>
-        </div>
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @onclick="RefreshAsync">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Refresh
+        </button>
     </div>
 </div>
 
@@ -178,25 +171,13 @@
                                 <li><button class="dropdown-item" @onclick="SortByRatingLowToHigh">Rating (Low to High)</button></li>
                             </ul>
                         </div>
-
-                        <!-- Video Count -->
-                        <div class="text-muted small text-nowrap">
-                            @if (FilteredVideos.Count != Videos.Count)
-                            {
-                                <span>Showing @FilteredVideos.Count of @Videos.Count videos</span>
-                            }
-                            else
-                            {
-                                <span>@Videos.Count videos in your library</span>
-                            }
-                        </div>
                     </div>
 
                     <!-- Video Grid using VideoCard Component -->
                     <div class="row">
                         @foreach (var video in FilteredVideos)
                         {
-                            <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                                 <VideoCard Video="@video"
                                            DisplayMode="VideoDisplayMode.Library"
                                            OnVideoRemoved="@HandleVideoRemoved"

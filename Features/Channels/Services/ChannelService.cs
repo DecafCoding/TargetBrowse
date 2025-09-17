@@ -2,7 +2,7 @@
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Utilities;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;

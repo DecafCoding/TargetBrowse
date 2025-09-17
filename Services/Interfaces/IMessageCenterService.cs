@@ -1,6 +1,6 @@
 ﻿using TargetBrowse.Services.Models;
 
-namespace TargetBrowse.Services
+namespace TargetBrowse.Services.Interfaces
 {
     /// <summary>
     /// Service for managing application-wide user feedback messages.

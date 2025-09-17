@@ -4,20 +4,23 @@ using TargetBrowse.Features.Suggestions.Data;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Features.Channels.Services;
-using TargetBrowse.Services;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Suggestions.Services;
 
 /// <summary>
 /// Core service implementation for intelligent video suggestion generation.
+/// Updated to use TopicDataService for improved performance and consistency.
+/// Refactored to use SuggestionDataService for shared data operations.
 /// Combines user topics, tracked channels, and ratings using unified scoring algorithm.
 /// </summary>
 public class SuggestionService : ISuggestionService
 {
     private readonly ISuggestionRepository _suggestionRepository;
+    private readonly ISuggestionDataService _suggestionDataService;
     private readonly ISuggestionYouTubeService _youTubeService;
-    private readonly ITopicService _topicService;
+    private readonly ITopicDataService _topicDataService; // Use data service instead of business service
     private readonly IVideoService _videoService;
     private readonly IChannelRatingService _channelRatingService;
     private readonly IVideoRatingService _videoRatingService;
@@ -38,8 +41,9 @@ public class SuggestionService : ISuggestionService
 
     public SuggestionService(
         ISuggestionRepository suggestionRepository,
+        ISuggestionDataService suggestionDataService,
         ISuggestionYouTubeService youTubeService,
-        ITopicService topicService,
+        ITopicDataService topicDataService, // Inject data service instead of business service
         IVideoService videoService,
         IChannelRatingService channelRatingService,
         IVideoRatingService videoRatingService,
@@ -47,8 +51,9 @@ public class SuggestionService : ISuggestionService
         ILogger<SuggestionService> logger)
     {
         _suggestionRepository = suggestionRepository;
+        _suggestionDataService = suggestionDataService;
         _youTubeService = youTubeService;
-        _topicService = topicService;
+        _topicDataService = topicDataService; // Use data service
         _videoService = videoService;
         _channelRatingService = channelRatingService;
         _videoRatingService = videoRatingService;
@@ -58,6 +63,7 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Generates video suggestions for a user based on their topics and tracked channels.
+    /// Updated to use TopicDataService and SuggestionDataService for better performance.
     /// </summary>
     public async Task<SuggestionResult> GenerateSuggestions(string userId, double scoreThreshold = 5.0)
     {
@@ -68,8 +74,8 @@ public class SuggestionService : ISuggestionService
             _logger.LogInformation("Starting suggestion generation for user {UserId} with threshold {Threshold}",
                 userId, scoreThreshold);
 
-            // Check if user can request suggestions
-            if (!await CanUserRequestSuggestions(userId))
+            // Check if user can request suggestions using shared service
+            if (!await _suggestionDataService.CanUserCreateSuggestionsAsync(userId))
             {
                 await _messageCenterService.ShowErrorAsync("You have reached the maximum number of pending suggestions. Please review existing suggestions first.");
                 return SuggestionResult.Failure("Maximum pending suggestions reached");
@@ -93,8 +99,8 @@ public class SuggestionService : ISuggestionService
             result.DuplicatesFound = (channelVideos.Count + topicVideos.Count) - consolidatedVideos.Count;
             result.AllDiscoveredVideos = consolidatedVideos.Select(v => v.Video).ToList();
 
-            // 3. Save all discovered videos to database for historical browsing
-            var videoEntities = await _suggestionRepository.EnsureVideosExistAsync(result.AllDiscoveredVideos);
+            // 3. Save all discovered videos to database for historical browsing using shared service
+            var videoEntities = await _suggestionDataService.EnsureVideosExistAsync(result.AllDiscoveredVideos);
 
             // 4. Preliminary scoring with unified approach
             var scoredSuggestions = await ScoreVideosWithSourceContext(consolidatedVideos, userId);
@@ -105,17 +111,17 @@ public class SuggestionService : ISuggestionService
                 result.ScoreDistribution = CalculateScoreDistribution(scoredSuggestions);
             }
 
-            // 5. Filter by threshold and exclude videos already suggested
+            // 5. Filter by threshold and exclude videos already suggested using shared service
             var qualifyingVideos = scoredSuggestions.Where(s => s.Score >= scoreThreshold).ToList();
 
-            // Remove videos that already have pending suggestions
+            // Remove videos that already have pending suggestions using shared service
             var filteredVideos = new List<VideoSuggestion>();
             foreach (var video in qualifyingVideos)
             {
                 var videoEntity = videoEntities.FirstOrDefault(v => v.YouTubeVideoId == video.Video.YouTubeVideoId);
                 if (videoEntity != null)
                 {
-                    var hasPending = await _suggestionRepository.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
+                    var hasPending = await _suggestionDataService.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
                     if (!hasPending)
                     {
                         filteredVideos.Add(video);
@@ -177,14 +183,13 @@ public class SuggestionService : ISuggestionService
     }
 
     /// <summary>
-    /// Checks if a user can request new suggestions.
+    /// Checks if a user can request new suggestions using shared service.
     /// </summary>
     public async Task<bool> CanUserRequestSuggestions(string userId)
     {
         try
         {
-            var pendingCount = await GetPendingSuggestionsCount(userId);
-            return pendingCount < MAX_PENDING_SUGGESTIONS;
+            return await _suggestionDataService.CanUserCreateSuggestionsAsync(userId);
         }
         catch (Exception ex)
         {
@@ -194,13 +199,13 @@ public class SuggestionService : ISuggestionService
     }
 
     /// <summary>
-    /// Gets the current count of pending suggestions for a user.
+    /// Gets the current count of pending suggestions for a user using shared service.
     /// </summary>
     public async Task<int> GetPendingSuggestionsCount(string userId)
     {
         try
         {
-            return await _suggestionRepository.GetPendingSuggestionsCountAsync(userId);
+            return await _suggestionDataService.GetPendingSuggestionsCountAsync(userId);
         }
         catch (Exception ex)
         {
@@ -234,14 +239,14 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Performs enhanced scoring for a video using transcript analysis.
-    /// Future implementation for transcript-based scoring.
+    /// Updated to use TopicDataService for better performance.
     /// </summary>
     public async Task<VideoScore> ScoreVideoEnhanced(VideoInfo video, string userId, string transcript)
     {
         try
         {
-            // Get user data for scoring
-            var userTopics = await _topicService.GetUserTopicsAsync(userId);
+            // Get user data for scoring using data service
+            var userTopicEntities = await _topicDataService.GetUserTopicsAsync(userId);
             var channelRatings = await _channelRatingService.GetUserRatingsAsync(userId);
 
             var score = new VideoScore
@@ -252,7 +257,7 @@ public class SuggestionService : ISuggestionService
 
             // For now, use preliminary scoring logic
             // Future: Implement transcript analysis here
-            var topicResult = CalculateTopicRelevanceFromTitle(video, userTopics.Select(t => t.Name).ToList());
+            var topicResult = CalculateTopicRelevanceFromTitle(video, userTopicEntities.Select(t => t.Name).ToList());
             var channelRating = channelRatings.FirstOrDefault(r => r.YouTubeChannelId == video.ChannelId);
 
             score.ChannelRatingScore = channelRating != null ? channelRating.Stars * 2 : 6.0;
@@ -301,8 +306,6 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Approves a suggestion, adding the video to the user's library.
-    /// FIXED: Now directly adds the video to library using existing video entity data
-    /// instead of making unnecessary YouTube API calls.
     /// </summary>
     public async Task<bool> ApproveSuggestionAsync(string userId, Guid suggestionId)
     {
@@ -331,7 +334,6 @@ public class SuggestionService : ISuggestionService
             await _suggestionRepository.ApproveSuggestionsAsync(new List<Guid> { suggestionId }, userId);
 
             // Add video to user's library using VideoService
-            // Uses the optimized method for existing video entities
             var success = await _videoService.AddExistingVideoToLibraryAsync(userId, suggestion.Video);
 
             if (success)
@@ -477,18 +479,20 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Gets videos from topic searches across all of YouTube.
+    /// Updated to use TopicDataService for better performance.
     /// </summary>
     private async Task<List<VideoInfo>> GetTopicSearchVideos(string userId)
     {
         try
         {
-            var userTopics = await _topicService.GetUserTopicsAsync(userId);
-            if (!userTopics.Any())
+            // Use TopicDataService for efficient topic retrieval
+            var userTopicEntities = await _topicDataService.GetUserTopicsAsync(userId);
+            if (!userTopicEntities.Any())
             {
                 return new List<VideoInfo>();
             }
 
-            var topicQueries = userTopics.Select(t => t.Name).ToList();
+            var topicQueries = userTopicEntities.Select(t => t.Name).ToList();
             var publishedAfter = DateTime.UtcNow.AddDays(-DEFAULT_DAYS_LOOKBACK);
 
             // Use bulk topic searches method
@@ -561,11 +565,14 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Scores videos with source-aware bonuses and unified algorithm.
+    /// Updated to use TopicDataService for better performance.
     /// </summary>
     private async Task<List<VideoSuggestion>> ScoreVideosWithSourceContext(List<VideoWithSource> videos, string userId)
     {
         var suggestions = new List<VideoSuggestion>();
-        var userTopics = await _topicService.GetUserTopicsAsync(userId);
+
+        // Use TopicDataService for efficient topic retrieval
+        var userTopicEntities = await _topicDataService.GetUserTopicsAsync(userId);
         var channelRatings = await _channelRatingService.GetUserRatingsAsync(userId);
 
         foreach (var videoSource in videos)
@@ -581,7 +588,7 @@ public class SuggestionService : ISuggestionService
             var channelRating = channelRatings.FirstOrDefault(r => r.YouTubeChannelId == videoSource.Video.ChannelId);
             var channelScore = channelRating != null ? channelRating.Stars * 2 : 6.0; // Convert 1-5 to 0-10 scale
             var recencyScore = CalculateRecencyScore(videoSource.Video.PublishedAt);
-            var topicResult = CalculateTopicRelevanceFromTitle(videoSource.Video, userTopics.Select(t => t.Name).ToList());
+            var topicResult = CalculateTopicRelevanceFromTitle(videoSource.Video, userTopicEntities.Select(t => t.Name).ToList());
 
             // Source-aware scoring with bonuses
             switch (videoSource.Source)
@@ -713,7 +720,7 @@ public class SuggestionService : ISuggestionService
 
     /// <summary>
     /// Creates suggestion entities and saves them to the database.
-    /// Enhanced to support topic relationships.
+    /// Enhanced to support topic relationships using TopicDataService.
     /// </summary>
     private async Task<List<SuggestionEntity>> CreateSuggestionEntities(
         List<VideoSuggestion> videoSuggestions, List<VideoEntity> videoEntities, string userId)
@@ -727,12 +734,12 @@ public class SuggestionService : ISuggestionService
             if (videoEntity == null)
                 continue;
 
-            // Get topic IDs if this suggestion has matched topics
+            // Get topic IDs if this suggestion has matched topics using TopicDataService
             var topicIds = new List<Guid>();
             if (videoSuggestion.MatchedTopics?.Any() == true)
             {
-                var userTopics = await _topicService.GetUserTopicsAsync(userId);
-                topicIds = userTopics
+                var userTopicEntities = await _topicDataService.GetUserTopicsAsync(userId);
+                topicIds = userTopicEntities
                     .Where(t => videoSuggestion.MatchedTopics.Contains(t.Name))
                     .Select(t => t.Id)
                     .ToList();

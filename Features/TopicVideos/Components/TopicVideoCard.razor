@@ -1,0 +1,196 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.TopicVideos.Models
+
+<div class="card topic-video-card h-100">
+    <!-- Video Thumbnail Container -->
+    <div class="position-relative video-thumbnail-container">
+        <img src="@GetThumbnailUrl()"
+             class="card-img-top video-thumbnail"
+             alt="@Video.Title"
+             loading="lazy"
+             onerror="handleTopicThumbnailError(this, '@Video.YouTubeVideoId')" />
+
+        <!-- Duration Badge -->
+        @if (!string.IsNullOrEmpty(Video.DurationDisplay))
+        {
+            <span class="badge bg-dark position-absolute duration-badge">
+                @Video.DurationDisplay
+            </span>
+        }
+
+        <!-- Relevance Indicator -->
+        <div class="@GetRelevanceIndicatorClass()" title="@GetRelevanceTitle()">
+            <i class="bi @Video.RelevanceIcon"></i>
+        </div>
+
+        <!-- Library Status Badge -->
+        @if (Video.IsInLibrary)
+        {
+            <span class="badge bg-success position-absolute library-status-badge">
+                <i class="bi bi-check-circle me-1"></i>
+                In Library
+            </span>
+        }
+    </div>
+
+    <!-- Video Details -->
+    <div class="card-body d-flex flex-column p-3">
+        <!-- Video Title -->
+        <h6 class="card-title video-title mb-2">
+            <a href="@Video.YouTubeUrl"
+               target="_blank"
+               class="text-decoration-none title-link"
+               title="@Video.Title">
+                @Video.Title
+            </a>
+        </h6>
+
+        <!-- Channel Info -->
+        <div class="video-channel mb-2">
+            <small class="text-muted">
+                <i class="bi bi-person-circle me-1"></i>
+                @Video.ChannelTitle
+            </small>
+        </div>
+
+        <!-- Topic Match Information -->
+        @if (Video.MatchedKeywords.Any())
+        {
+            <div class="topic-match-info mb-2">
+                <span class="badge bg-light text-dark border topic-match-badge">
+                    <i class="bi bi-tag me-1"></i>
+                    @Video.MatchReason
+                </span>
+            </div>
+        }
+
+        <!-- Video Metadata -->
+        <div class="video-metadata mb-2">
+            <small class="text-muted">
+                @if (!string.IsNullOrEmpty(Video.ViewCountDisplay))
+                {
+                    <span title="@(Video.ViewCount?.ToString("N0")) views">@Video.ViewCountDisplay views</span>
+                    <span class="mx-1">•</span>
+                }
+                <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">@Video.PublishedDisplay</span>
+            </small>
+        </div>
+
+        <!-- Relevance Score (for high relevance videos) -->
+        @if (Video.IsHighRelevance)
+        {
+            <div class="relevance-score mb-2">
+                <small class="@Video.RelevanceCssClass fw-semibold">
+                    <i class="bi bi-bullseye me-1"></i>
+                    High relevance match
+                </small>
+            </div>
+        }
+
+        <!-- Enhanced Metadata (when available) -->
+        @if (Video.HasDetailedInfo && (Video.LikeCount.HasValue || Video.CommentCount.HasValue))
+        {
+            <div class="video-stats mb-2">
+                <small class="text-muted d-flex flex-wrap gap-2">
+                    @if (!string.IsNullOrEmpty(Video.LikeCountDisplay))
+                    {
+                        <span title="@(Video.LikeCount?.ToString("N0")) likes">
+                            <i class="bi bi-hand-thumbs-up me-1"></i>
+                            @Video.LikeCountDisplay
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Video.CommentCountDisplay))
+                    {
+                        <span title="@(Video.CommentCount?.ToString("N0")) comments">
+                            <i class="bi bi-chat me-1"></i>
+                            @Video.CommentCountDisplay
+                        </span>
+                    }
+                </small>
+            </div>
+        }
+
+        <!-- Video Description -->
+        @if (!string.IsNullOrEmpty(Video.ShortDescription) && Video.ShortDescription != "No description available")
+        {
+            <p class="video-description text-muted small mb-3 flex-grow-1">
+                @Video.ShortDescription
+            </p>
+        }
+
+        <!-- Action Buttons -->
+        <div class="mt-auto">
+            <div class="d-grid gap-2">
+                @if (!Video.IsInLibrary)
+                {
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            @onclick="AddToLibrary"
+                            disabled="@IsAddingToLibrary">
+                        @if (IsAddingToLibrary)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-plus-circle me-1"></i>
+                        }
+                        Save to Library
+                    </button>
+                }
+                else
+                {
+                    <button type="button"
+                            class="btn btn-success btn-sm"
+                            disabled>
+                        <i class="bi bi-check-circle me-1"></i>
+                        In Library
+                    </button>
+                }
+
+                <a href="@Video.YouTubeUrl"
+                   target="_blank"
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-play-circle me-1"></i>
+                    Watch on YouTube
+                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function handleTopicThumbnailError(img, videoId) {
+        // Prevent infinite error loops
+        if (img.dataset.errorCount) {
+            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
+        } else {
+            img.dataset.errorCount = "1";
+        }
+
+        // Stop after 3 attempts to prevent infinite loops
+        if (parseInt(img.dataset.errorCount) > 3) {
+            return;
+        }
+
+        if (img.dataset.attempt === 'maxres') {
+            // Try hqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+            img.dataset.attempt = 'hq';
+        } else if (img.dataset.attempt === 'hq') {
+            // Try mqdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
+            img.dataset.attempt = 'mq';
+        } else if (img.dataset.attempt === 'mq') {
+            // Try default
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
+            img.dataset.attempt = 'default';
+        } else if (!img.dataset.attempt) {
+            // First error - try maxresdefault
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
+            img.dataset.attempt = 'maxres';
+        }
+    }
+</script>

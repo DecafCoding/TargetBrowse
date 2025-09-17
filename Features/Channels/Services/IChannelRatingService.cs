@@ -19,6 +19,7 @@ public interface IChannelRatingService
 
     /// <summary>
     /// Gets a user's rating for a specific channel by YouTube channel ID.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to get rating for</param>
     /// <param name="youTubeChannelId">YouTube channel ID to get rating for</param>
@@ -68,6 +69,7 @@ public interface IChannelRatingService
     /// <summary>
     /// Gets all ratings for a specific channel (across all users).
     /// Used for analytics and channel performance tracking.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="channelId">Channel ID to get ratings for</param>
     /// <returns>List of all ratings for the channel</returns>
@@ -75,6 +77,7 @@ public interface IChannelRatingService
 
     /// <summary>
     /// Gets channels that are highly rated by the user (4+ stars) for recommendation purposes.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to get highly rated channels for</param>
     /// <param name="limit">Maximum number of channels to return (default: 10)</param>
@@ -84,6 +87,7 @@ public interface IChannelRatingService
     /// <summary>
     /// Gets channels that are low rated (1 star) by the user.
     /// These channels should be excluded from suggestions.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to get low rated channels for</param>
     /// <returns>List of channel IDs that are rated 1 star</returns>
@@ -100,6 +104,7 @@ public interface IChannelRatingService
 
     /// <summary>
     /// Searches user's ratings by notes content and rating range.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to search ratings for</param>
     /// <param name="searchQuery">Search query to match against notes or channel names</param>
@@ -119,6 +124,7 @@ public interface IChannelRatingService
 
     /// <summary>
     /// Checks if a channel is rated 1-star by the user (should be excluded from suggestions).
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to check for</param>
     /// <param name="channelId">Channel ID to check</param>
@@ -129,6 +135,7 @@ public interface IChannelRatingService
     /// Gets channel ratings optimized for suggestion processing.
     /// Returns a dictionary keyed by channel ID for fast lookup during suggestion scoring.
     /// Excludes 1-star rated channels to prevent them from appearing in suggestions.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to get channel ratings for</param>
     /// <returns>Dictionary of channel ID to star rating (1-star channels excluded)</returns>
@@ -137,6 +144,7 @@ public interface IChannelRatingService
     /// <summary>
     /// Gets YouTube channel IDs for channels rated 1-star by the user.
     /// These channels should be completely excluded from suggestion processing.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to get low-rated channels for</param>
     /// <returns>List of YouTube channel IDs that are rated 1-star</returns>

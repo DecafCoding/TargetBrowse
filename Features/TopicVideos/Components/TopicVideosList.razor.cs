@@ -5,7 +5,7 @@ using TargetBrowse.Features.ChannelVideos.Services;
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.TopicVideos.Services;
 using TargetBrowse.Features.Videos.Models;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.TopicVideos.Components;
 

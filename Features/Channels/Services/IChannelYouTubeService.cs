@@ -48,6 +48,7 @@ public interface IChannelYouTubeService
     /// <summary>
     /// Gets recent videos from multiple channels for suggestion generation.
     /// Used by channel onboarding to fetch initial videos from newly added channels.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="channelRequests">List of channel update requests with parameters</param>
     /// <returns>Consolidated list of videos from all requested channels</returns>

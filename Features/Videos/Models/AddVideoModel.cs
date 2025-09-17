@@ -1,105 +1,92 @@
 using System.ComponentModel.DataAnnotations;
+using TargetBrowse.Features.Videos.Utilities;
 
 namespace TargetBrowse.Features.Videos.Models;
 
 /// <summary>
 /// Model for adding a video to the user's library.
 /// Used when a user wants to save a specific video.
+/// UPDATED: Now supports existing video data to avoid redundant API calls.
 /// </summary>
 public class AddVideoModel
 {
     /// <summary>
-    /// Video URL or search term to add to library.
+    /// YouTube video URL provided by the user.
     /// </summary>
-    [Required(ErrorMessage = "Please enter a YouTube video URL or search for a video")]
-    [StringLength(500, ErrorMessage = "Video URL cannot exceed 500 characters")]
     public string VideoUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// Optional notes about why this video was added to the library.
+    /// Optional notes about why the video was added.
     /// </summary>
-    [StringLength(1000, ErrorMessage = "Notes cannot exceed 1000 characters")]
-    public string? Notes { get; set; }
+    public string Notes { get; set; } = string.Empty;
 
     /// <summary>
-    /// Whether to mark this video as priority/important.
+    /// Extracted YouTube video ID (populated during validation).
     /// </summary>
-    public bool IsPriority { get; set; } = false;
+    public string? VideoId { get; private set; }
 
     /// <summary>
-    /// Tags to categorize this video (comma-separated).
+    /// Whether the provided URL is a valid YouTube video URL.
     /// </summary>
-    [StringLength(200, ErrorMessage = "Tags cannot exceed 200 characters")]
-    public string? Tags { get; set; }
+    public bool IsValidUrl { get; private set; }
 
     /// <summary>
-    /// Extracted YouTube video ID from the URL.
+    /// Whether this is a direct video URL vs a search query.
     /// </summary>
-    public string? VideoId { get; set; }
+    public bool IsDirectVideoUrl { get; private set; }
 
     /// <summary>
-    /// Whether the URL validation has passed.
+    /// ADDED: Existing video data to use instead of making API calls.
+    /// When provided, the service will use this data instead of calling YouTube API.
     /// </summary>
-    public bool IsValidUrl { get; set; }
-
-    /// <summary>
-    /// Error message if URL validation failed.
-    /// </summary>
-    public string? ValidationError { get; set; }
+    public VideoDisplayModel? ExistingVideoData { get; set; }
 
     /// <summary>
     /// Validates the video URL and extracts the video ID.
+    /// Sets IsValidUrl and VideoId properties.
     /// </summary>
     public void ValidateAndExtractVideoId()
     {
-        if (string.IsNullOrWhiteSpace(VideoUrl))
+        try
+        {
+            VideoId = YouTubeVideoParser.ExtractVideoId(VideoUrl);
+            IsValidUrl = !string.IsNullOrEmpty(VideoId);
+            IsDirectVideoUrl = IsValidUrl;
+        }
+        catch
         {
             IsValidUrl = false;
-            ValidationError = "Video URL is required";
             VideoId = null;
-            return;
-        }
-
-        VideoId = TargetBrowse.Features.Videos.Utilities.YouTubeVideoParser.ExtractVideoId(VideoUrl);
-        
-        if (string.IsNullOrEmpty(VideoId))
-        {
-            IsValidUrl = false;
-            ValidationError = "Please enter a valid YouTube video URL";
-        }
-        else
-        {
-            IsValidUrl = true;
-            ValidationError = null;
+            IsDirectVideoUrl = false;
         }
     }
 
     /// <summary>
-    /// Gets the parsed tags as a list.
+    /// Extracts just the video ID from the URL without validation.
     /// </summary>
-    public List<string> GetTagsList()
+    public string? ExtractVideoId()
     {
-        if (string.IsNullOrWhiteSpace(Tags))
-            return new List<string>();
-
-        return Tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                  .Select(tag => tag.Trim())
-                  .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                  .Take(10) // Limit to 10 tags
-                  .ToList();
+        return YouTubeVideoParser.ExtractVideoId(VideoUrl);
     }
 
     /// <summary>
-    /// Resets the model to default state.
+    /// Creates an AddVideoModel with existing video data.
+    /// This constructor is used when we already have video information
+    /// and want to avoid making redundant API calls.
     /// </summary>
-    public void Reset()
+    /// <param name="existingVideo">Video data from previous API call or search</param>
+    /// <param name="notes">Optional notes about adding the video</param>
+    /// <returns>Configured AddVideoModel ready for adding to library</returns>
+    public static AddVideoModel FromExistingVideo(VideoDisplayModel existingVideo, string notes = "")
     {
-        VideoUrl = string.Empty;
-        Notes = null;
-        IsPriority = false;
-        Tags = null;
-        VideoId = null;
-        IsValidUrl = false;
-        ValidationError = null;
+        return new AddVideoModel
+        {
+            VideoUrl = existingVideo.YouTubeUrl,
+            Notes = string.IsNullOrEmpty(notes) ? $"Added from search on {DateTime.Now:yyyy-MM-dd}" : notes,
+            ExistingVideoData = existingVideo,
+            VideoId = existingVideo.YouTubeVideoId,
+            IsValidUrl = true,
+            IsDirectVideoUrl = true
+        };
     }
 }
