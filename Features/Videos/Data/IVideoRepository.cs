@@ -60,6 +60,7 @@ public interface IVideoRepository
 
     /// <summary>
     /// Gets the count of videos in the user's library.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <returns>Number of videos in the library</returns>
@@ -75,6 +76,7 @@ public interface IVideoRepository
 
     /// <summary>
     /// Gets videos added to library within a date range.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="fromDate">Start date (inclusive)</param>
@@ -84,6 +86,7 @@ public interface IVideoRepository
 
     /// <summary>
     /// Gets videos from a specific channel that are in the user's library.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="channelId">YouTube channel ID</param>
@@ -92,14 +95,13 @@ public interface IVideoRepository
 
     /// <summary>
     /// Updates video information (for metadata refresh).
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="videoId">System video ID</param>
     /// <param name="updatedVideo">Updated video information</param>
     /// <returns>True if updated successfully</returns>
     Task<bool> UpdateVideoAsync(string userId, Guid videoId, VideoDisplayModel updatedVideo);
-
-    // NEW METHODS FOR YT-010-03: Enhanced Suggestion Generation
 
     /// <summary>
     /// Ensures a video entity exists in the database with complete metadata.
@@ -113,10 +115,11 @@ public interface IVideoRepository
     /// <summary>
     /// Bulk creates video entities if they don't already exist.
     /// Used by Channel onboarding to store initial videos.
+    /// MOVED TO ISuggestionDataService - 9/16/2025
     /// </summary>
     /// <param name="videos">List of video information</param>
     /// <returns>List of created/existing video entities</returns>
-    Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos);
+    //Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos);
 
     /// <summary>
     /// Ensures a channel entity exists in the database.
@@ -131,6 +134,7 @@ public interface IVideoRepository
     /// <summary>
     /// Gets video entities by their YouTube video IDs.
     /// Used for bulk operations and suggestion processing.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="youTubeVideoIds">List of YouTube video IDs</param>
     /// <returns>Dictionary mapping YouTube video IDs to video entities</returns>
@@ -140,6 +144,7 @@ public interface IVideoRepository
     /// Bulk creates video entities from VideoInfo objects.
     /// Optimized for suggestion generation when processing many videos at once.
     /// Handles duplicate prevention and maintains data integrity.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="videos">List of videos to create</param>
     /// <returns>List of created video entities</returns>

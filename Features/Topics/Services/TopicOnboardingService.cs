@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Data;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Topics.Models;
-using TargetBrowse.Features.Videos.Data;
-using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Topics.Services;
@@ -13,25 +11,23 @@ namespace TargetBrowse.Features.Topics.Services;
 /// Handles topic onboarding workflows including initial video suggestions.
 /// Mirrors ChannelOnboardingService pattern for consistency and maintainability.
 /// Provides immediate value to users by populating suggestions when they create new topics.
+/// Refactored to use ISuggestionDataService for better separation of concerns.
 /// </summary>
 public class TopicOnboardingService : ITopicOnboardingService
 {
-    private readonly IVideoRepository _videoRepository;
-    private readonly ISuggestionRepository _suggestionRepository;
+    private readonly ISuggestionDataService _suggestionDataService;
     private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ILogger<TopicOnboardingService> _logger;
 
     private const int InitialVideosLimit = 50;
-    private const int LookbackDays = 365; // Look back 30 days for initial topic videos (vs 365 for channels)
+    private const int LookbackDays = 365; // Look back 365 days for initial topic videos
 
     public TopicOnboardingService(
-        IVideoRepository videoRepository,
-        ISuggestionRepository suggestionRepository,
+        ISuggestionDataService suggestionDataService,
         ISharedYouTubeService sharedYouTubeService,
         ILogger<TopicOnboardingService> logger)
     {
-        _videoRepository = videoRepository;
-        _suggestionRepository = suggestionRepository;
+        _suggestionDataService = suggestionDataService;
         _sharedYouTubeService = sharedYouTubeService;
         _logger = logger;
     }
@@ -47,7 +43,14 @@ public class TopicOnboardingService : ITopicOnboardingService
             _logger.LogInformation("Adding initial videos for topic {TopicName} ({TopicId}) for user {UserId}",
                 topicName, topicId, userId);
 
-            // 1. Fetch videos from YouTube (already does dual medium+long search with deduplication)
+            // 1. Check if user can create more suggestions
+            if (!await _suggestionDataService.CanUserCreateSuggestionsAsync(userId))
+            {
+                _logger.LogWarning("User {UserId} cannot create more suggestions - at limit", userId);
+                return 0;
+            }
+
+            // 2. Fetch videos from YouTube (already does dual medium+long search with deduplication)
             var topicVideosResult = await FetchTopicVideosAsync(topicName);
 
             if (!topicVideosResult.IsSuccess || !topicVideosResult.Data?.Any() == true)
@@ -61,29 +64,43 @@ public class TopicOnboardingService : ITopicOnboardingService
             _logger.LogInformation("Found {VideoCount} total videos for topic {TopicName} before scoring",
                 allVideos.Count, topicName);
 
-            // 2. Apply relevance scoring to all videos
+            // 3. Apply relevance scoring to all videos
             var scoredVideos = ScoreVideosByRelevance(allVideos, topicName);
 
-            // 3. Apply prioritized selection algorithm
+            // 4. Apply prioritized selection algorithm
             var selectedVideos = ApplyPrioritizedSelection(scoredVideos, InitialVideosLimit);
 
             _logger.LogInformation("Selected {SelectedCount} videos for topic {TopicName} after prioritized selection (highly relevant: {HighlyRelevantCount})",
                 selectedVideos.Count, topicName, selectedVideos.Count(v => v.RelevanceScore >= 7.0));
 
-            // 4. Ensure all selected videos exist in the database
-            var videoEntities = await _videoRepository.EnsureVideosExistAsync(selectedVideos.Select(sv => sv.VideoInfo).ToList());
+            // 5. Ensure all selected videos exist in the database using shared service
+            var videoEntities = await _suggestionDataService.EnsureVideosExistAsync(selectedVideos.Select(sv => sv.VideoInfo).ToList());
 
-            // 5. Create suggestion entities for selected videos
-            var suggestions = await CreateInitialVideoSuggestions(userId, videoEntities, topicName, topicId);
-
-            // 6. Save suggestions to database (bypassing normal limits for onboarding)
-            if (suggestions.Any())
+            // 6. Filter out videos that already have pending suggestions
+            var filteredVideoEntities = new List<VideoEntity>();
+            foreach (var videoEntity in videoEntities)
             {
-                var createdSuggestions = await _suggestionRepository.CreateTopicOnboardingSuggestionsAsync(
-                    userId, videoEntities, topicId, topicName);
+                var hasPending = await _suggestionDataService.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
+                if (!hasPending)
+                {
+                    filteredVideoEntities.Add(videoEntity);
+                }
+                else
+                {
+                    _logger.LogDebug("Skipping video {VideoId} - already has pending suggestion for user {UserId}",
+                        videoEntity.YouTubeVideoId, userId);
+                }
+            }
+
+            // 7. Create suggestions using shared data service
+            if (filteredVideoEntities.Any())
+            {
+                var createdSuggestions = await _suggestionDataService.CreateTopicOnboardingSuggestionsAsync(
+                    userId, filteredVideoEntities, topicId, topicName);
 
                 _logger.LogInformation("Created {SuggestionCount} initial suggestions for topic {TopicName} (avg relevance: {AvgRelevance:F1})",
-                    createdSuggestions.Count, topicName, selectedVideos.Any() ? selectedVideos.Average(v => v.RelevanceScore) : 0);
+                    createdSuggestions.Count, topicName,
+                    selectedVideos.Any() ? selectedVideos.Where(v => filteredVideoEntities.Any(fv => fv.YouTubeVideoId == v.VideoInfo.YouTubeVideoId)).Average(v => v.RelevanceScore) : 0);
 
                 return createdSuggestions.Count;
             }
@@ -393,43 +410,6 @@ public class TopicOnboardingService : ITopicOnboardingService
             _logger.LogError(ex, "Error fetching videos for topic {TopicName}", topicName);
             return YouTubeApiResult<List<VideoInfo>>.Failure($"Failed to fetch topic videos: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Creates suggestion entities for initial videos from a new topic.
-    /// This method prepares the data but doesn't save - the repository method handles persistence.
-    /// </summary>
-    private async Task<List<SuggestionEntity>> CreateInitialVideoSuggestions(
-        string userId, List<VideoEntity> videoEntities, string topicName, Guid topicId)
-    {
-        var suggestions = new List<SuggestionEntity>();
-
-        foreach (var videoEntity in videoEntities)
-        {
-            // Check if suggestion already exists to avoid duplicates
-            var hasExisting = await _suggestionRepository.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
-            if (hasExisting)
-            {
-                _logger.LogDebug("Skipping video {VideoId} - suggestion already exists for user {UserId}",
-                    videoEntity.YouTubeVideoId, userId);
-                continue;
-            }
-
-            suggestions.Add(new SuggestionEntity
-            {
-                UserId = userId,
-                VideoId = videoEntity.Id,
-                Reason = $"🎯 New Topic: {topicName}",
-                IsApproved = false,
-                IsDenied = false
-                // Note: SuggestionSource.NewTopic will be handled by the display logic
-            });
-        }
-
-        _logger.LogDebug("Created {SuggestionCount} suggestion entities from {VideoCount} videos for topic {TopicName}",
-            suggestions.Count, videoEntities.Count, topicName);
-
-        return suggestions;
     }
 
     #endregion

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Services;
 

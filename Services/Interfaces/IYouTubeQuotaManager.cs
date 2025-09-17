@@ -1,6 +1,6 @@
 ﻿using TargetBrowse.Services.YouTube.Models;
 
-namespace TargetBrowse.Services.YouTube;
+namespace TargetBrowse.Services.Interfaces;
 
 /// <summary>
 /// Interface for managing YouTube Data API v3 quota tracking, rate limiting, and usage monitoring.

@@ -1,10 +1,11 @@
 
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
 @using TargetBrowse.Features.ChannelVideos.Models
 @using TargetBrowse.Features.ChannelVideos.Services
 @using TargetBrowse.Services
+@using TargetBrowse.Services.Interfaces
 @attribute [Authorize]
 @inject IChannelVideosService ChannelVideosService
 @inject IMessageCenterService MessageCenter

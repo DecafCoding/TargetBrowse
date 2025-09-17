@@ -4,7 +4,7 @@ using System.Security.Claims;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Components;
 
@@ -116,6 +116,7 @@ public partial class VideoCard : ComponentBase
 
     /// <summary>
     /// Adds the video to the user's library with full metadata.
+    /// OPTIMIZED: Uses existing video data to avoid redundant API calls.
     /// </summary>
     private async Task AddToLibrary()
     {
@@ -134,11 +135,10 @@ public partial class VideoCard : ComponentBase
 
         try
         {
-            var addModel = new AddVideoModel
-            {
-                VideoUrl = Video.YouTubeUrl,
-                Notes = $"Added from search on {DateTime.Now:yyyy-MM-dd}"
-            };
+            // OPTIMIZATION: Use existing video data instead of making redundant API call
+            var addModel = AddVideoModel.FromExistingVideo(
+                Video,
+                $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
 
             var success = await VideoService.AddVideoToLibraryAsync(CurrentUserId, addModel);
 
@@ -158,6 +158,8 @@ public partial class VideoCard : ComponentBase
         catch (Exception ex)
         {
             await MessageCenter.ShowErrorAsync($"Error adding video to library: {ex.Message}");
+            Logger.LogError(ex, "Error adding video {VideoId} to library for user {UserId}",
+                Video.YouTubeVideoId, CurrentUserId);
         }
         finally
         {

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using TargetBrowse.Services.YouTube.Models;
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Services.YouTube;
 

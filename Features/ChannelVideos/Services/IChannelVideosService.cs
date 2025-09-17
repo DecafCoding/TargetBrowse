@@ -18,6 +18,7 @@ public interface IChannelVideosService
 
     /// <summary>
     /// Gets channel information only (no videos).
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="youTubeChannelId">YouTube channel ID</param>
     /// <param name="userId">Current user ID for tracking status</param>
@@ -26,6 +27,7 @@ public interface IChannelVideosService
 
     /// <summary>
     /// Validates that a YouTube channel ID exists and is accessible.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="youTubeChannelId">YouTube channel ID to validate</param>
     /// <returns>True if channel exists and is accessible</returns>
@@ -33,6 +35,7 @@ public interface IChannelVideosService
 
     /// <summary>
     /// Gets the user's tracking status for a channel.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <param name="youTubeChannelId">YouTube channel ID</param>

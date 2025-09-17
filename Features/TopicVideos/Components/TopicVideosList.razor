@@ -107,39 +107,25 @@
                 </button>
             </div>
         </div>
-
-        <!-- Video Grid -->
         <div class="row">
-            @foreach (var video in Videos)
-            {
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <!-- Topic-specific relevance indicator -->
-                    <div class="position-relative">
-                        @if (video.IsHighRelevance)
-                        {
-                            <div class="relevance-indicator high-relevance" title="Highly relevant to @TopicName">
-                                <i class="bi @video.RelevanceIcon"></i>
-                            </div>
-                        }
-
-                        <!-- Standard VideoCard component -->
-                        <VideoCard Video="@video"
-                                   DisplayMode="VideoDisplayMode.Search"
-                                   OnVideoAdded="@HandleVideoAdded" />
-
-                        <!-- Topic match information overlay -->
-                        @if (video.MatchedKeywords.Any())
-                        {
-                            <div class="match-info">
-                                <small class="text-muted">
-                                    <i class="bi bi-tag me-1"></i>
-                                    @video.MatchReason
-                                </small>
-                            </div>
-                        }
+            <div class="col-lg-12">
+                <!-- My Video Library Section -->
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Video Grid -->
+                        <div class="row">
+                            @foreach (var video in Videos)
+                            {
+                                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                    <!-- Topic-specific VideoCard component -->
+                                    <TopicVideoCard Video="@video"
+                                                    OnVideoAdded="@HandleVideoAdded" />
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
-            }
+            </div>
         </div>
 
         <!-- Load More Button (if we want to implement pagination in the future) -->

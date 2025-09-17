@@ -1,12 +1,13 @@
+using Google.Apis.YouTube.v3.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Videos.Data;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Utilities;
+using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.YouTube.Models;
-using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Google.Apis.YouTube.v3.Data;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -146,6 +147,8 @@ public class VideoService : IVideoService
     /// <summary>
     /// Adds a video to the user's library.
     /// Ensures we get full video details including duration, views, and likes.
+    /// OPTIMIZED: Uses existing video data when available to avoid redundant API calls.
+    /// FIXED: Properly handles ISO 8601 duration format from YouTube API.
     /// </summary>
     public async Task<bool> AddVideoToLibraryAsync(string userId, AddVideoModel addVideoModel)
     {
@@ -168,23 +171,36 @@ public class VideoService : IVideoService
                 return false;
             }
 
-            // Get FULL video details from YouTube API (not just search results)
-            // This ensures we have duration, views, likes, and all metadata
-            var apiResult = await _youTubeService.GetVideoByIdAsync(addVideoModel.VideoId);
-            if (!apiResult.IsSuccess || apiResult.Data == null)
-            {
-                _logger.LogWarning("Failed to get video details for {VideoId}: {Error}",
-                    addVideoModel.VideoId, apiResult.ErrorMessage);
-                return false;
-            }
+            // OPTIMIZATION: Try to use existing video data first to avoid redundant API calls
+            VideoDisplayModel? video = null;
 
-            // Convert to display model with full metadata
-            var video = MapYouTubeVideoToDisplayModel(apiResult.Data);
+            // If we have existing video data (like from topic search), use it
+            if (addVideoModel.ExistingVideoData != null)
+            {
+                video = addVideoModel.ExistingVideoData;
+                _logger.LogInformation("Using existing video data for {VideoId} - avoiding redundant API call",
+                    addVideoModel.VideoId);
+            }
+            else
+            {
+                // Only make API call if we don't have existing data
+                var apiResult = await _youTubeService.GetVideoByIdAsync(addVideoModel.VideoId);
+                if (!apiResult.IsSuccess || apiResult.Data == null)
+                {
+                    _logger.LogWarning("Failed to get video details for {VideoId}: {Error}",
+                        addVideoModel.VideoId, apiResult.ErrorMessage);
+                    return false;
+                }
+
+                video = MapYouTubeVideoToDisplayModel(apiResult.Data);
+                _logger.LogInformation("Retrieved video data from API for {VideoId}", addVideoModel.VideoId);
+            }
 
             // Ensure we have the enhanced metadata fields
             if (!video.HasDetailedInfo)
             {
-                _logger.LogWarning("Video {VideoId} does not have detailed metadata (duration, views, likes)", addVideoModel.VideoId);
+                _logger.LogWarning("Video {VideoId} does not have detailed metadata (duration, views, likes)",
+                    addVideoModel.VideoId);
                 // Still allow adding, but log the warning
             }
 
@@ -601,6 +617,7 @@ public class VideoService : IVideoService
 
     /// <summary>
     /// Converts a YouTube API response to a VideoInfo object for suggestion processing.
+    /// UNUSED - 9/16/2025
     /// </summary>
     private static VideoInfo ConvertYouTubeResponseToVideoInfo(YouTubeVideoResponse youTubeVideo)
     {
@@ -611,7 +628,7 @@ public class VideoService : IVideoService
             ChannelId = youTubeVideo.ChannelId,
             ChannelName = youTubeVideo.ChannelTitle,
             PublishedAt = youTubeVideo.PublishedAt,
-            Duration = !string.IsNullOrEmpty(youTubeVideo.Duration) ? int.Parse(youTubeVideo.Duration) : 0,
+            Duration = DurationParser.ParseToSeconds(youTubeVideo.Duration),
             ViewCount = (int)(youTubeVideo.ViewCount ?? 0),
             LikeCount = (int)(youTubeVideo.LikeCount ?? 0),
             CommentCount = (int)(youTubeVideo.CommentCount ?? 0),

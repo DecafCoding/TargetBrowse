@@ -1,20 +1,23 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 using TargetBrowse.Features.Topics.Models;
 using TargetBrowse.Features.Topics.Services;
+using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Topics.Components;
 
 /// <summary>
 /// Base class for TopicList component handling topic display, deletion, and management.
-/// Provides topic listing with delete confirmation and progress tracking.
+/// Updated to use TopicDataService for improved performance on read operations.
 /// </summary>
 public partial class TopicList : ComponentBase
 {
     #region Injected Services
 
     [Inject] protected ITopicService TopicService { get; set; } = default!;
+    [Inject] protected ITopicDataService TopicDataService { get; set; } = default!; // Add data service
 
     #endregion
 
@@ -92,6 +95,7 @@ public partial class TopicList : ComponentBase
 
     /// <summary>
     /// Confirms the deletion and calls the service to delete the topic.
+    /// Uses TopicService for write operations (business logic).
     /// </summary>
     protected async Task ConfirmDelete()
     {
@@ -107,6 +111,7 @@ public partial class TopicList : ComponentBase
 
             if (!string.IsNullOrEmpty(userId))
             {
+                // Use TopicService for delete operation (business logic)
                 var success = await TopicService.DeleteTopicAsync(userId, _topicToDelete.Id);
 
                 if (success)
@@ -148,7 +153,8 @@ public partial class TopicList : ComponentBase
     #region Private Methods
 
     /// <summary>
-    /// Loads topics for the current user from the service.
+    /// Loads topics for the current user from the data service.
+    /// Updated to use TopicDataService for better performance.
     /// </summary>
     private async Task LoadTopicsAsync()
     {
@@ -162,7 +168,11 @@ public partial class TopicList : ComponentBase
 
             if (!string.IsNullOrEmpty(userId))
             {
-                Topics = await TopicService.GetUserTopicsAsync(userId);
+                // Use TopicDataService for read operations (better performance)
+                var topicEntities = await TopicDataService.GetUserTopicsAsync(userId);
+                
+                // Convert entities to display models
+                Topics = topicEntities.Select(ConvertToDisplayModel).ToList();
 
                 // Notify parent component of topic changes (for count updates)
                 if (OnTopicsChanged.HasDelegate)
@@ -176,6 +186,19 @@ public partial class TopicList : ComponentBase
             IsLoading = false;
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Converts TopicEntity to TopicDisplayModel for UI display.
+    /// </summary>
+    private static TopicDisplayModel ConvertToDisplayModel(TopicEntity entity)
+    {
+        return new TopicDisplayModel
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            CreatedAt = entity.CreatedAt
+        };
     }
 
     #endregion

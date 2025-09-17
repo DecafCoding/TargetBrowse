@@ -4,7 +4,7 @@ using System.Security.Claims;
 using TargetBrowse.Features.Topics.Models;
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.TopicVideos.Services;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.TopicVideos.Components;
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.JSInterop;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Services
 {

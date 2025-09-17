@@ -51,5 +51,5 @@ public interface ITopicVideosService
     /// <param name="userId">User identifier</param>
     /// <param name="topicId">Topic identifier</param>
     /// <returns>Topic display model or null if not found</returns>
-    Task<Features.Topics.Models.TopicDisplayModel?> GetTopicAsync(string userId, Guid topicId);
+    Task<Topics.Models.TopicDisplayModel?> GetTopicAsync(string userId, Guid topicId);
 }

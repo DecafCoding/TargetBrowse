@@ -1,4 +1,4 @@
-﻿namespace TargetBrowse.Services
+﻿namespace TargetBrowse.Services.Interfaces
 {
     public interface IThemeService
     {

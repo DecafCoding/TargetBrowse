@@ -2,10 +2,8 @@
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Channels.Models;
-using TargetBrowse.Features.Suggestions.Data;
 using TargetBrowse.Features.Suggestions.Models;
-using TargetBrowse.Features.Videos.Data;
-using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -13,13 +11,13 @@ namespace TargetBrowse.Features.Channels.Services;
 /// <summary>
 /// Handles channel onboarding workflows including initial video suggestions.
 /// Owns the complete user journey for adding a new channel and getting immediate value.
-/// Now uses SharedYouTubeService to ensure consistent shorts exclusion with suggestion generation.
+/// Refactored to use ISuggestionDataService for better separation of concerns.
+/// Uses SharedYouTubeService to ensure consistent shorts exclusion with suggestion generation.
 /// </summary>
 public class ChannelOnboardingService : IChannelOnboardingService
 {
     private readonly IChannelRepository _channelRepository;
-    private readonly IVideoRepository _videoRepository;
-    private readonly ISuggestionRepository _suggestionRepository;
+    private readonly ISuggestionDataService _suggestionDataService;
     private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ILogger<ChannelOnboardingService> _logger;
 
@@ -28,14 +26,12 @@ public class ChannelOnboardingService : IChannelOnboardingService
 
     public ChannelOnboardingService(
         IChannelRepository channelRepository,
-        IVideoRepository videoRepository,
-        ISuggestionRepository suggestionRepository,
+        ISuggestionDataService suggestionDataService,
         ISharedYouTubeService sharedYouTubeService,
         ILogger<ChannelOnboardingService> logger)
     {
         _channelRepository = channelRepository;
-        _videoRepository = videoRepository;
-        _suggestionRepository = suggestionRepository;
+        _suggestionDataService = suggestionDataService;
         _sharedYouTubeService = sharedYouTubeService;
         _logger = logger;
     }
@@ -50,7 +46,14 @@ public class ChannelOnboardingService : IChannelOnboardingService
             _logger.LogInformation("Adding initial videos for channel {ChannelName} ({ChannelId}) for user {UserId}",
                 channelName, youTubeChannelId, userId);
 
-            // 1. Fetch recent videos from the channel using our YouTube service
+            // 1. Check if user can create more suggestions
+            if (!await _suggestionDataService.CanUserCreateSuggestionsAsync(userId))
+            {
+                _logger.LogWarning("User {UserId} cannot create more suggestions - at limit", userId);
+                return 0;
+            }
+
+            // 2. Fetch recent videos from the channel using our YouTube service
             var channelVideosResult = await FetchChannelVideosAsync(youTubeChannelId, channelName);
 
             if (!channelVideosResult.IsSuccess || !channelVideosResult.Data?.Any() == true)
@@ -64,23 +67,38 @@ public class ChannelOnboardingService : IChannelOnboardingService
             _logger.LogInformation("Found {VideoCount} initial videos for channel {ChannelName}",
                 videos.Count, channelName);
 
-            // 2. Ensure all videos exist in the database (shared repository)
-            var videoEntities = await _videoRepository.EnsureVideosExistAsync(videos);
+            // 3. Ensure all videos exist in the database using shared service
+            var videoEntities = await _suggestionDataService.EnsureVideosExistAsync(videos);
 
-            // 3. Create suggestion entities for initial videos
-            var suggestions = await CreateInitialVideoSuggestions(userId, videoEntities, channelName);
-
-            // 4. Save suggestions to database (bypassing normal limits)
-            if (suggestions.Any())
+            // 4. Filter out videos that already have pending suggestions
+            var filteredVideoEntities = new List<VideoEntity>();
+            foreach (var videoEntity in videoEntities)
             {
-                var createdSuggestions = await _suggestionRepository.CreateSuggestionsAsync(suggestions);
-
-                _logger.LogInformation("Created {SuggestionCount} initial suggestions for channel {ChannelName}",
-                    createdSuggestions.Count(), channelName);
-
-                return createdSuggestions.Count();
+                var hasPending = await _suggestionDataService.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
+                if (!hasPending)
+                {
+                    filteredVideoEntities.Add(videoEntity);
+                }
+                else
+                {
+                    _logger.LogDebug("Skipping video {VideoId} - already has pending suggestion for user {UserId}",
+                        videoEntity.YouTubeVideoId, userId);
+                }
             }
 
+            // 5. Create suggestions using shared data service
+            if (filteredVideoEntities.Any())
+            {
+                var createdSuggestions = await _suggestionDataService.CreateChannelOnboardingSuggestionsAsync(
+                    userId, filteredVideoEntities, channelName);
+
+                _logger.LogInformation("Created {SuggestionCount} initial suggestions for channel {ChannelName} (filtered from {TotalCount} videos)",
+                    createdSuggestions.Count, channelName, videoEntities.Count);
+
+                return createdSuggestions.Count;
+            }
+
+            _logger.LogInformation("No new suggestions created for channel {ChannelName} - all videos already have pending suggestions", channelName);
             return 0;
         }
         catch (Exception ex)
@@ -172,7 +190,7 @@ public class ChannelOnboardingService : IChannelOnboardingService
 
     /// <summary>
     /// Fetches recent videos from a YouTube channel, excluding shorts.
-    /// Now uses SharedYouTubeService to ensure consistent filtering with suggestion generation.
+    /// Uses SharedYouTubeService to ensure consistent filtering with suggestion generation.
     /// </summary>
     private async Task<YouTubeApiResult<List<VideoInfo>>> FetchChannelVideosAsync(string youTubeChannelId, string channelName)
     {
@@ -211,42 +229,6 @@ public class ChannelOnboardingService : IChannelOnboardingService
             _logger.LogError(ex, "Error fetching videos for channel {ChannelId}", youTubeChannelId);
             return YouTubeApiResult<List<VideoInfo>>.Failure($"Failed to fetch channel videos: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Creates suggestion entities for initial videos from a new channel.
-    /// </summary>
-    private async Task<List<SuggestionEntity>> CreateInitialVideoSuggestions(
-        string userId, List<VideoEntity> videoEntities, string channelName)
-    {
-        var suggestions = new List<SuggestionEntity>();
-
-        foreach (var videoEntity in videoEntities)
-        {
-            // Check if suggestion already exists to avoid duplicates
-            var hasExisting = await _suggestionRepository.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
-            if (hasExisting)
-            {
-                _logger.LogDebug("Skipping video {VideoId} - suggestion already exists for user {UserId}",
-                    videoEntity.YouTubeVideoId, userId);
-                continue;
-            }
-
-            suggestions.Add(new SuggestionEntity
-            {
-                UserId = userId,
-                VideoId = videoEntity.Id,
-                Reason = $"🎯 New Channel: {channelName}",
-                IsApproved = false,
-                IsDenied = false
-                // Note: SuggestionSource.NewChannel will be handled by the display logic
-            });
-        }
-
-        _logger.LogDebug("Created {SuggestionCount} suggestion entities from {VideoCount} videos",
-            suggestions.Count, videoEntities.Count);
-
-        return suggestions;
     }
 
     #endregion

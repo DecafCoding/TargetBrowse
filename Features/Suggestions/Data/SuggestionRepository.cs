@@ -61,116 +61,6 @@ public class SuggestionRepository : ISuggestionRepository
     }
 
     /// <summary>
-    /// Creates suggestion entities from video suggestions with enhanced business logic.
-    /// Ensures proper user-video relationships and maintains business rules for YT-010-03.
-    /// </summary>
-    public async Task<List<SuggestionEntity>> CreateSuggestionsFromVideoSuggestionsAsync(List<VideoSuggestion> videoSuggestions, string userId)
-    {
-        if (!videoSuggestions.Any())
-        {
-            _logger.LogInformation("No video suggestions to create for user {UserId}", userId);
-            return new List<SuggestionEntity>();
-        }
-
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
-        {
-            // Check if user can request more suggestions
-            if (!await CanUserRequestSuggestionsAsync(userId))
-            {
-                _logger.LogWarning("User {UserId} cannot request more suggestions - at limit", userId);
-                throw new InvalidOperationException("Cannot create suggestions: user has reached maximum pending suggestions limit");
-            }
-
-            var createdSuggestions = new List<SuggestionEntity>();
-
-            // Process suggestions in batches to avoid overwhelming database
-            for (int i = 0; i < videoSuggestions.Count; i += BATCH_SIZE)
-            {
-                var batch = videoSuggestions.Skip(i).Take(BATCH_SIZE).ToList();
-                var batchEntities = new List<SuggestionEntity>();
-
-                foreach (var suggestion in batch)
-                {
-                    try
-                    {
-                        // First ensure the video exists in database to get the VideoEntity
-                        var videoEntity = await EnsureVideoExistsInternalAsync(suggestion.Video);
-
-                        // Check if this video has already been suggested to avoid duplicates
-                        if (await HasPendingSuggestionForVideoAsync(userId, videoEntity.Id))
-                        {
-                            _logger.LogDebug("Video {VideoId} already suggested to user {UserId}, skipping",
-                                suggestion.Video.YouTubeVideoId, userId);
-                            continue;
-                        }
-
-                        var suggestionEntity = new SuggestionEntity
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = userId,
-                            VideoId = videoEntity.Id,
-                            Reason = suggestion.Reason,
-                            IsApproved = false,
-                            IsDenied = false,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        _context.Suggestions.Add(suggestionEntity);
-                        batchEntities.Add(suggestionEntity);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to create suggestion for video {VideoId} for user {UserId}",
-                            suggestion.Video.YouTubeVideoId, userId);
-                        // Continue processing other suggestions
-                    }
-                }
-
-                if (batchEntities.Any())
-                {
-                    await _context.SaveChangesAsync();
-                    createdSuggestions.AddRange(batchEntities);
-
-                    _logger.LogDebug("Created batch of {Count} suggestions for user {UserId}",
-                        batchEntities.Count, userId);
-                }
-            }
-
-            await transaction.CommitAsync();
-
-            _logger.LogInformation("Created {CreatedCount} out of {TotalCount} suggestions for user {UserId}",
-                createdSuggestions.Count, videoSuggestions.Count, userId);
-
-            return createdSuggestions;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error creating suggestions from video suggestions for user {UserId}", userId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Checks if a user can request new suggestions based on business rules.
-    /// Validates against maximum pending suggestions limit for YT-010-03.
-    /// </summary>
-    public async Task<bool> CanUserRequestSuggestionsAsync(string userId)
-    {
-        try
-        {
-            var pendingCount = await GetPendingSuggestionsCountAsync(userId);
-            return pendingCount < MAX_PENDING_SUGGESTIONS;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking if user {UserId} can request suggestions", userId);
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Gets pending suggestions for a user with pagination.
     /// </summary>
     public async Task<List<SuggestionEntity>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20)
@@ -202,30 +92,6 @@ public class SuggestionRepository : ISuggestionRepository
     }
 
     /// <summary>
-    /// Gets the count of pending suggestions for a user.
-    /// </summary>
-    public async Task<int> GetPendingSuggestionsCountAsync(string userId)
-    {
-        try
-        {
-            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
-
-            return await _context.Suggestions
-                .Where(s => s.UserId == userId &&
-                           !s.IsApproved &&
-                           !s.IsDenied &&
-                           !s.IsDeleted &&
-                           s.CreatedAt > cutoffDate)
-                .CountAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting pending suggestions count for user {UserId}", userId);
-            return 0;
-        }
-    }
-
-    /// <summary>
     /// Gets a suggestion by ID with user ownership validation.
     /// </summary>
     public async Task<SuggestionEntity?> GetSuggestionByIdAsync(Guid suggestionId, string userId)
@@ -245,25 +111,6 @@ public class SuggestionRepository : ISuggestionRepository
         {
             _logger.LogError(ex, "Error getting suggestion {SuggestionId} for user {UserId}", suggestionId, userId);
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Updates a suggestion entity in the database.
-    /// </summary>
-    public async Task<SuggestionEntity> UpdateSuggestionAsync(SuggestionEntity suggestion)
-    {
-        try
-        {
-            suggestion.LastModifiedAt = DateTime.UtcNow;
-            _context.Suggestions.Update(suggestion);
-            await _context.SaveChangesAsync();
-            return suggestion;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating suggestion {SuggestionId}", suggestion.Id);
-            throw;
         }
     }
 
@@ -453,30 +300,6 @@ public class SuggestionRepository : ISuggestionRepository
     }
 
     /// <summary>
-    /// Checks if a video already has a pending suggestion for the user.
-    /// </summary>
-    public async Task<bool> HasPendingSuggestionForVideoAsync(string userId, Guid videoId)
-    {
-        try
-        {
-            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
-
-            return await _context.Suggestions
-                .AnyAsync(s => s.UserId == userId &&
-                              s.VideoId == videoId &&
-                              !s.IsApproved &&
-                              !s.IsDenied &&
-                              !s.IsDeleted &&
-                              s.CreatedAt > cutoffDate);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking pending suggestion for video {VideoId} and user {UserId}", videoId, userId);
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Gets suggestion analytics data for a user.
     /// </summary>
     public async Task<SuggestionAnalytics> GetSuggestionAnalyticsAsync(string userId)
@@ -510,50 +333,6 @@ public class SuggestionRepository : ISuggestionRepository
         {
             _logger.LogError(ex, "Error getting suggestion analytics for user {UserId}", userId);
             return new SuggestionAnalytics();
-        }
-    }
-
-    /// <summary>
-    /// Gets all suggestions for a user with optional filtering.
-    /// </summary>
-    public async Task<List<SuggestionEntity>> GetUserSuggestionsAsync(string userId, SuggestionStatus? status = null, int pageNumber = 1, int pageSize = 50)
-    {
-        try
-        {
-            var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
-
-            var query = _context.Suggestions
-                .Include(s => s.Video)
-                    .ThenInclude(v => v.Channel)
-                .Where(s => s.UserId == userId && !s.IsDeleted);
-
-            // Apply status filter
-            if (status.HasValue)
-            {
-                query = status.Value switch
-                {
-                    SuggestionStatus.Pending => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt > cutoffDate),
-                    SuggestionStatus.Approved => query.Where(s => s.IsApproved),
-                    SuggestionStatus.Denied => query.Where(s => s.IsDenied),
-                    SuggestionStatus.Expired => query.Where(s => !s.IsApproved && !s.IsDenied &&
-                                                                 s.CreatedAt <= cutoffDate),
-                    _ => query
-                };
-            }
-
-            var skip = (pageNumber - 1) * pageSize;
-            return await query
-                .OrderByDescending(s => s.CreatedAt)
-                .Skip(skip)
-                .Take(pageSize)
-                .AsSplitQuery()
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user suggestions for user {UserId}", userId);
-            return new List<SuggestionEntity>();
         }
     }
 
@@ -603,24 +382,6 @@ public class SuggestionRepository : ISuggestionRepository
         {
             _logger.LogError(ex, "Error searching suggestions for user {UserId} with query {SearchQuery}", userId, searchQuery);
             return new List<SuggestionEntity>();
-        }
-    }
-
-    /// <summary>
-    /// Gets the most recent suggestion generation date for a user.
-    /// </summary>
-    public async Task<DateTime?> GetLastSuggestionGenerationDateAsync(string userId)
-    {
-        try
-        {
-            return await _context.Suggestions
-                .Where(s => s.UserId == userId && !s.IsDeleted)
-                .MaxAsync(s => (DateTime?)s.CreatedAt);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting last suggestion generation date for user {UserId}", userId);
-            return null;
         }
     }
 
@@ -711,113 +472,6 @@ public class SuggestionRepository : ISuggestionRepository
     }
 
     /// <summary>
-    /// Bulk creates video entities if they don't already exist.
-    /// Enhanced version for YT-010-03 with improved error handling, batch processing,
-    /// and proper metadata population including thumbnails and descriptions.
-    /// </summary>
-    public async Task<List<VideoEntity>> EnsureVideosExistAsync(List<VideoInfo> videos)
-    {
-        if (!videos.Any())
-        {
-            return new List<VideoEntity>();
-        }
-
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
-        {
-            var youTubeVideoIds = videos.Select(v => v.YouTubeVideoId).Distinct().ToList();
-
-            // Get existing videos
-            var existingVideos = await _context.Videos
-                .Include(v => v.Channel)
-                .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
-                .ToListAsync();
-
-            var existingVideoIds = existingVideos.Select(v => v.YouTubeVideoId).ToHashSet();
-            var newVideos = videos.Where(v => !existingVideoIds.Contains(v.YouTubeVideoId)).ToList();
-            var videosToUpdate = videos.Where(v => existingVideoIds.Contains(v.YouTubeVideoId)).ToList();
-
-            // Update existing videos with missing metadata
-            int updatedCount = 0;
-            foreach (var videoInfo in videosToUpdate)
-            {
-                var existingVideo = existingVideos.First(v => v.YouTubeVideoId == videoInfo.YouTubeVideoId);
-                bool hasChanges = false;
-
-                // Update thumbnail URL if we have a better one and existing is empty
-                if (!string.IsNullOrEmpty(videoInfo.ThumbnailUrl) &&
-                    string.IsNullOrEmpty(existingVideo.ThumbnailUrl))
-                {
-                    existingVideo.ThumbnailUrl = GetOptimalThumbnailUrl(videoInfo.ThumbnailUrl);
-                    hasChanges = true;
-                }
-
-                // Update description if we have one and existing is empty
-                if (!string.IsNullOrEmpty(videoInfo.Description) &&
-                    string.IsNullOrEmpty(existingVideo.Description))
-                {
-                    existingVideo.Description = TruncateDescription(videoInfo.Description);
-                    hasChanges = true;
-                }
-
-                if (hasChanges)
-                {
-                    existingVideo.LastModifiedAt = DateTime.UtcNow;
-                    updatedCount++;
-                }
-            }
-
-            if (updatedCount > 0)
-            {
-                await _context.SaveChangesAsync();
-                _logger.LogDebug("Updated metadata for {Count} existing videos", updatedCount);
-            }
-
-            if (newVideos.Any())
-            {
-                var videoEntities = new List<VideoEntity>();
-
-                // Process in batches to avoid database timeout
-                for (int i = 0; i < newVideos.Count; i += BATCH_SIZE)
-                {
-                    var batch = newVideos.Skip(i).Take(BATCH_SIZE).ToList();
-
-                    foreach (var video in batch)
-                    {
-                        try
-                        {
-                            var videoEntity = await EnsureVideoExistsInternalAsync(video);
-                            videoEntities.Add(videoEntity);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to create video entity for {VideoId}", video.YouTubeVideoId);
-                            // Continue processing other videos
-                        }
-                    }
-
-                    _logger.LogDebug("Processed batch {BatchNumber} of {TotalBatches} for video creation",
-                        (i / BATCH_SIZE) + 1, (newVideos.Count + BATCH_SIZE - 1) / BATCH_SIZE);
-                }
-
-                existingVideos.AddRange(videoEntities);
-
-                _logger.LogInformation("Created {Count} new video entities out of {Total} videos with complete metadata",
-                    videoEntities.Count, newVideos.Count);
-            }
-
-            await transaction.CommitAsync();
-            return existingVideos;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error ensuring videos exist with metadata");
-            throw;
-        }
-    }
-
-    /// <summary>
     /// Helper method to truncate description to fit database constraints.
     /// Ensures description fits within the 2000 character limit while preserving meaning.
     /// </summary>
@@ -901,78 +555,6 @@ public class SuggestionRepository : ISuggestionRepository
         }
 
         return suggestion;
-    }
-
-    /// <summary>
-    /// Creates suggestion entities for topic onboarding with proper topic relationships.
-    /// Creates both SuggestionEntity and SuggestionTopicEntity records for proper data modeling.
-    /// </summary>
-    public async Task<List<SuggestionEntity>> CreateTopicOnboardingSuggestionsAsync(
-        string userId,
-        List<VideoEntity> videoEntities,
-        Guid topicId,
-        string topicName)
-    {
-        var suggestions = new List<SuggestionEntity>();
-
-        try
-        {
-            foreach (var videoEntity in videoEntities)
-            {
-                // Double-check for existing suggestions to avoid duplicates
-                var hasExisting = await HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
-                if (hasExisting)
-                {
-                    _logger.LogDebug("Skipping video {VideoId} - suggestion already exists for user {UserId}",
-                        videoEntity.YouTubeVideoId, userId);
-                    continue;
-                }
-
-                var suggestion = new SuggestionEntity
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    VideoId = videoEntity.Id,
-                    Reason = $"🎯 New Topic: {topicName}",
-                    IsApproved = false,
-                    IsDenied = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Suggestions.Add(suggestion);
-                suggestions.Add(suggestion);
-            }
-
-            // Save suggestions first
-            await _context.SaveChangesAsync();
-
-            // Create topic relationships
-            foreach (var suggestion in suggestions)
-            {
-                var suggestionTopic = new SuggestionTopicEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SuggestionId = suggestion.Id,
-                    TopicId = topicId,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.SuggestionTopics.Add(suggestionTopic);
-            }
-
-            // Save topic relationships
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Created {SuggestionCount} topic onboarding suggestions with relationships for topic {TopicId}",
-                suggestions.Count, topicId);
-
-            return suggestions;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating topic onboarding suggestions for topic {TopicId} and user {UserId}",
-                topicId, userId);
-            throw;
-        }
     }
 
     #region Private Helper Methods

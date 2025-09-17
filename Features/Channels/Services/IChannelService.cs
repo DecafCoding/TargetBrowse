@@ -45,6 +45,7 @@ public interface IChannelService
     /// <summary>
     /// Gets the current count of tracked channels for a user.
     /// Used for validation and UI display.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to count channels for</param>
     /// <returns>Number of channels the user currently tracks</returns>
@@ -52,6 +53,7 @@ public interface IChannelService
 
     /// <summary>
     /// Checks if a channel is already being tracked by the user.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="userId">User ID to check for</param>
     /// <param name="youTubeChannelId">YouTube channel ID to check</param>
@@ -61,6 +63,7 @@ public interface IChannelService
     /// <summary>
     /// Gets detailed information about a specific YouTube channel.
     /// Used for displaying channel details and metadata.
+    /// UNUSED - 9/16/2025
     /// </summary>
     /// <param name="youTubeChannelId">YouTube channel ID</param>
     /// <returns>Channel display model with full information, null if not found</returns>
