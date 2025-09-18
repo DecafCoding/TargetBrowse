@@ -1,7 +1,7 @@
-﻿@using TargetBrowse.Features.Suggestions.Models
+@using TargetBrowse.Features.Suggestions.Models
 @using TargetBrowse.Features.Suggestions.Components
 
-<div class="card suggestion-card h-100 @GetCardCssClass()">
+<div class="card video-card suggestion-card h-100 @GetCardCssClass()">
     <!-- Selection Checkbox (Batch Mode) -->
     @if (AllowSelection)
     {
@@ -23,7 +23,7 @@
              class="card-img-top video-thumbnail"
              alt="@Suggestion.Video.Title"
              loading="lazy"
-             onerror="handleThumbnailError(this, '@Suggestion.Video.YouTubeVideoId')" />
+             onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Suggestion.Video.YouTubeVideoId')" />
 
         <!-- Duration Badge -->
         @if (Suggestion.Video.Duration > 0)
@@ -32,11 +32,6 @@
                 @Suggestion.Video.FormattedDuration
             </span>
         }
-
-@*         <!-- Source Badge -->
-        <div class="position-absolute source-badge-container">
-            <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="false" Size="small" />
-        </div> *@
 
         <!-- Score Badge (if available) -->
         @if (Suggestion.Score.HasValue)
@@ -97,8 +92,6 @@
             </small>
         </div>
 
-
-
         <!-- Suggestion Metadata -->
         <div class="suggestion-metadata mb-3">
             <small class="text-muted d-flex justify-content-between">
@@ -130,37 +123,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    function handleThumbnailError(img, videoId) {
-        // Prevent infinite error loops
-        if (img.dataset.errorCount) {
-            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
-        } else {
-            img.dataset.errorCount = "1";
-        }
-
-        // Stop after 3 attempts to prevent infinite loops
-        if (parseInt(img.dataset.errorCount) > 3) {
-            return;
-        }
-
-        if (img.dataset.attempt === 'maxres') {
-            // Try hqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-            img.dataset.attempt = 'hq';
-        } else if (img.dataset.attempt === 'hq') {
-            // Try mqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
-            img.dataset.attempt = 'mq';
-        } else if (img.dataset.attempt === 'mq') {
-            // Try default
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
-            img.dataset.attempt = 'default';
-        } else if (!img.dataset.attempt) {
-            // First error - try maxresdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
-            img.dataset.attempt = 'maxres';
-        }
-    }
-</script>

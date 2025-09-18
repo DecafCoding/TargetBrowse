@@ -55,12 +55,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="row">
-        <div class="col-lg-9">
-            <!-- Suggestion Queue Component -->
-            <SuggestionQueue @ref="SuggestionQueueComponent" OnSuggestionsChanged="HandleSuggestionsChanged" />
-        </div>
-        
+    <div class="row">        
         <div class="col-lg-3">
             <!-- Help and Tips Sidebar -->
             <div class="sidebar-content">
@@ -131,6 +126,11 @@
                     </div>
                 }
             </div>
+        </div>
+
+        <div class="col-lg-9">
+            <!-- Suggestion Queue Component -->
+            <SuggestionQueue @ref="SuggestionQueueComponent" OnSuggestionsChanged="HandleSuggestionsChanged" />
         </div>
     </div>
 </div>

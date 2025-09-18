@@ -1,0 +1,95 @@
+@using TargetBrowse.Features.ChannelVideos.Models
+
+<div class="card video-card channel-video-card h-100">
+    <!-- Video Thumbnail Container -->
+    <div class="position-relative video-thumbnail-container">
+        <img src="@Video.GetThumbnailUrl()"
+             class="card-img-top video-thumbnail"
+             alt="@Video.Title"
+             loading="lazy"
+             onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Video.YouTubeVideoId')" />
+
+        <!-- Duration Badge -->
+        @if (!string.IsNullOrEmpty(Video.DurationDisplay))
+        {
+            <span class="badge bg-dark position-absolute duration-badge">
+                @Video.DurationDisplay
+            </span>
+        }
+    </div>
+
+    <!-- Video Details -->
+    <div class="card-body d-flex flex-column p-3">
+        <!-- Video Title -->
+        <h6 class="card-title video-title mb-2">
+            <a href="@Video.YouTubeUrl"
+               target="_blank"
+               class="text-decoration-none title-link"
+               title="@Video.Title">
+                @Video.Title
+            </a>
+        </h6>
+
+        <!-- Video Metadata -->
+        <div class="video-metadata mb-2">
+            <small class="text-muted">
+                @if (!string.IsNullOrEmpty(Video.ViewCountDisplay) && Video.ViewCountDisplay != "0")
+                {
+                    <span title="@Video.ViewCount.ToString("N0") views">@Video.ViewCountDisplay views</span>
+                    <span class="mx-1">•</span>
+                }
+                <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">@Video.PublishedDisplay</span>
+            </small>
+        </div>
+
+        <!-- Enhanced Metadata (when available) -->
+        @if (Video.LikeCount > 0 || Video.CommentCount > 0)
+        {
+            <div class="video-stats mb-2">
+                <small class="text-muted d-flex flex-wrap gap-2">
+                    @if (!string.IsNullOrEmpty(Video.LikeCountDisplay) && Video.LikeCountDisplay != "0")
+                    {
+                        <span title="@Video.LikeCount.ToString("N0") likes">
+                            <i class="bi bi-hand-thumbs-up me-1"></i>
+                            @Video.LikeCountDisplay
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Video.CommentCountDisplay) && Video.CommentCountDisplay != "0")
+                    {
+                        <span title="@Video.CommentCount.ToString("N0") comments">
+                            <i class="bi bi-chat me-1"></i>
+                            @Video.CommentCountDisplay
+                        </span>
+                    }
+                </small>
+            </div>
+        }
+
+        <!-- Video Description -->
+        @if (!string.IsNullOrEmpty(Video.ShortDescription) && Video.ShortDescription != "No description available")
+        {
+            <p class="video-description text-muted small mb-3 flex-grow-1">
+                @Video.ShortDescription
+            </p>
+        }
+
+        <!-- Action Button -->
+        <div class="mt-auto">
+            <a href="@Video.YouTubeUrl"
+               target="_blank"
+               class="btn btn-primary btn-sm w-100">
+                <i class="bi bi-play-circle me-1"></i>
+                Watch on YouTube
+                <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The video data to display in this card.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public ChannelVideoModel Video { get; set; } = default!;
+}

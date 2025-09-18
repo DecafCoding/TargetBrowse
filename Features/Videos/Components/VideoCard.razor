@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using TargetBrowse.Data.Entities
 @using TargetBrowse.Features.Videos.Models
@@ -12,7 +12,7 @@
              class="card-img-top video-thumbnail"
              alt="@Video.Title"
              loading="lazy"
-             onerror="handleThumbnailError(this, '@Video.YouTubeVideoId')" />
+             onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Video.YouTubeVideoId')" />
 
         <!-- Duration Badge -->
         @if (!string.IsNullOrEmpty(Video.DurationDisplay))
@@ -292,37 +292,3 @@
                   OnClose="@HideRatingModal"
                   OnSubmit="@HandleRatingSubmit"
                   OnDelete="@HandleRatingDelete" />
-
-<script>
-    function handleThumbnailError(img, videoId) {
-        // Prevent infinite error loops
-        if (img.dataset.errorCount) {
-            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
-        } else {
-            img.dataset.errorCount = "1";
-        }
-
-        // Stop after 3 attempts to prevent infinite loops
-        if (parseInt(img.dataset.errorCount) > 3) {
-            return;
-        }
-
-        if (img.dataset.attempt === 'maxres') {
-            // Try hqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-            img.dataset.attempt = 'hq';
-        } else if (img.dataset.attempt === 'hq') {
-            // Try mqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
-            img.dataset.attempt = 'mq';
-        } else if (img.dataset.attempt === 'mq') {
-            // Try default
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
-            img.dataset.attempt = 'default';
-        } else if (!img.dataset.attempt) {
-            // First error - try maxresdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
-            img.dataset.attempt = 'maxres';
-        }
-    }
-</script>
