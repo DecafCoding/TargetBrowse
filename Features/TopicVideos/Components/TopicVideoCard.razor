@@ -1,15 +1,15 @@
-﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using TargetBrowse.Features.TopicVideos.Models
 
-<div class="card topic-video-card h-100">
+<div class="card video-card topic-video-card h-100">
     <!-- Video Thumbnail Container -->
     <div class="position-relative video-thumbnail-container">
         <img src="@GetThumbnailUrl()"
              class="card-img-top video-thumbnail"
              alt="@Video.Title"
              loading="lazy"
-             onerror="handleTopicThumbnailError(this, '@Video.YouTubeVideoId')" />
+             onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Video.YouTubeVideoId')" />
 
         <!-- Duration Badge -->
         @if (!string.IsNullOrEmpty(Video.DurationDisplay))
@@ -160,37 +160,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    function handleTopicThumbnailError(img, videoId) {
-        // Prevent infinite error loops
-        if (img.dataset.errorCount) {
-            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
-        } else {
-            img.dataset.errorCount = "1";
-        }
-
-        // Stop after 3 attempts to prevent infinite loops
-        if (parseInt(img.dataset.errorCount) > 3) {
-            return;
-        }
-
-        if (img.dataset.attempt === 'maxres') {
-            // Try hqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-            img.dataset.attempt = 'hq';
-        } else if (img.dataset.attempt === 'hq') {
-            // Try mqdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
-            img.dataset.attempt = 'mq';
-        } else if (img.dataset.attempt === 'mq') {
-            // Try default
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
-            img.dataset.attempt = 'default';
-        } else if (!img.dataset.attempt) {
-            // First error - try maxresdefault
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
-            img.dataset.attempt = 'maxres';
-        }
-    }
-</script>

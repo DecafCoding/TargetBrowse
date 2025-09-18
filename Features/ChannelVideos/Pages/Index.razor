@@ -4,6 +4,7 @@
 @using System.Security.Claims
 @using TargetBrowse.Features.ChannelVideos.Models
 @using TargetBrowse.Features.ChannelVideos.Services
+@using TargetBrowse.Features.ChannelVideos.Components
 @using TargetBrowse.Services
 
 @attribute [Authorize]
@@ -137,131 +138,120 @@ else
         </div>
     </div>
 
-    <!-- Videos Section -->
-    <div class="videos-section">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">
-                <i class="bi bi-play-circle me-2"></i>
-                Recent Videos
-            </h2>
-            <span class="badge bg-secondary">@Model.VideoCountDisplay</span>
-        </div>
+    <div class="row">
 
-        <!-- Channel Video Grid -->
-        <div class="channel-video-grid">
-            @if (Model.Videos.Any())
-            {
-                <div class="row g-3">
-                    @foreach (var video in Model.Videos)
-                    {
-                        <div class="col-12 col-sm-6 col-lg-4">
-                            <!-- Channel Video Card -->
-                            <div class="card channel-video-card h-100">
-                                <!-- Video Thumbnail Container -->
-                                <div class="position-relative video-thumbnail-container">
-                                    <img src="@video.GetThumbnailUrl()"
-                                         class="card-img-top video-thumbnail"
-                                         alt="@video.Title"
-                                         loading="lazy"
-                                         onerror="handleThumbnailError(this, '@video.YouTubeVideoId')" />
-
-                                    <!-- Duration Badge -->
-                                    @if (!string.IsNullOrEmpty(video.DurationDisplay))
-                                    {
-                                        <span class="badge bg-dark position-absolute duration-badge">
-                                            @video.DurationDisplay
-                                        </span>
-                                    }
+        <div class="col-lg-3">
+            <!-- Help and Tips Sidebar -->
+            <div class="sidebar-content">
+                <!-- Quick Stats -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-question-circle me-2"></i>
+                            Quick Stats
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="how-it-works-steps">
+                            <div class="step mb-3">
+                                <div class="step-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">1</div>
+                                <div class="step-content d-inline-block">
+                                    <strong>Tracked Channels: 5</strong>
                                 </div>
-
-                                <!-- Video Details -->
-                                <div class="card-body d-flex flex-column p-3">
-                                    <!-- Video Title -->
-                                    <h6 class="card-title video-title mb-2">
-                                        <a href="@video.YouTubeUrl"
-                                           target="_blank"
-                                           class="text-decoration-none title-link"
-                                           title="@video.Title">
-                                            @video.Title
-                                        </a>
-                                    </h6>
-
-                                    <!-- Video Metadata -->
-                                    <div class="video-metadata mb-2">
-                                        <small class="text-muted">
-                                            @if (!string.IsNullOrEmpty(video.ViewCountDisplay) && video.ViewCountDisplay != "0")
-                                            {
-                                                <span title="@video.ViewCount.ToString("N0") views">@video.ViewCountDisplay views</span>
-                                                <span class="mx-1">•</span>
-                                            }
-                                            <span title="Published @video.PublishedAt.ToString("MMM d, yyyy")">@video.PublishedDisplay</span>
-                                        </small>
-                                    </div>
-
-                                    <!-- Enhanced Metadata (when available) -->
-                                    @if (video.LikeCount > 0 || video.CommentCount > 0)
-                                    {
-                                        <div class="video-stats mb-2">
-                                            <small class="text-muted d-flex flex-wrap gap-2">
-                                                @if (!string.IsNullOrEmpty(video.LikeCountDisplay) && video.LikeCountDisplay != "0")
-                                                {
-                                                    <span title="@video.LikeCount.ToString("N0") likes">
-                                                        <i class="bi bi-hand-thumbs-up me-1"></i>
-                                                        @video.LikeCountDisplay
-                                                    </span>
-                                                }
-                                                @if (!string.IsNullOrEmpty(video.CommentCountDisplay) && video.CommentCountDisplay != "0")
-                                                {
-                                                    <span title="@video.CommentCount.ToString("N0") comments">
-                                                        <i class="bi bi-chat me-1"></i>
-                                                        @video.CommentCountDisplay
-                                                    </span>
-                                                }
-                                            </small>
-                                        </div>
-                                    }
-
-                                    <!-- Video Description -->
-                                    @if (!string.IsNullOrEmpty(video.ShortDescription) && video.ShortDescription != "No description available")
-                                    {
-                                        <p class="video-description text-muted small mb-3 flex-grow-1">
-                                            @video.ShortDescription
-                                        </p>
-                                    }
-
-                                    <!-- Action Button -->
-                                    <div class="mt-auto">
-                                        <a href="@video.YouTubeUrl"
-                                           target="_blank"
-                                           class="btn btn-primary btn-sm w-100">
-                                            <i class="bi bi-play-circle me-1"></i>
-                                            Watch on YouTube
-                                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                                        </a>
-                                    </div>
+                            </div>
+                            <div class="step mb-3">
+                                <div class="step-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">2</div>
+                                <div class="step-content d-inline-block">
+                                    <strong>Learning Topics: 5</strong>
+                                </div>
+                            </div>
+                            <div class="step mb-0">
+                                <div class="step-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">3</div>
+                                <div class="step-content d-inline-block">
+                                    <strong>Pending Review: 5</strong>
+                                </div>
+                            </div>
+                            <div class="step mb-0">
+                                <div class="step-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">3</div>
+                                <div class="stat-value"">
+                                    5
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Generation History -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-clock-history me-2"></i>
+                                Recent Activity
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="generation-history">
+
+                                    <div class="generation-item d-flex justify-content-between align-items-center py-2 ">
+                                        <div>
+                                            <small class="fw-medium">10 suggestions</small><br>
+                                            <small class="text-muted">1</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-success">0</small>
+                                        </div>
+                                    </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <!-- Videos Section -->
+            <div class="videos-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">
+                        <i class="bi bi-play-circle me-2"></i>
+                        Recent Videos
+                    </h2>
+                    <span class="badge bg-secondary">@Model.VideoCountDisplay</span>
+                </div>
+
+                <!-- Channel Video Grid -->
+                <div class="channel-video-grid">
+                    @if (Model.Videos.Any())
+                    {
+                        <div class="row g-3">
+                            @foreach (var video in Model.Videos)
+                            {
+                                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                    <ChannelVideoCard Video="@video" />
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state text-center py-5">
+                            <div class="empty-state-icon mb-3">
+                                <i class="bi bi-play-circle display-1 text-muted"></i>
+                            </div>
+                            <h5 class="text-muted mb-2">No Recent Videos Found</h5>
+                            <p class="text-muted">
+                                This channel hasn't published any videos in the last year,
+                                or the videos may not be available.
+                            </p>
+                            <a href="@Model.Channel.ChannelUrl" target="_blank" class="btn btn-outline-primary">
+                                <i class="bi bi-youtube me-1"></i>
+                                Check Channel on YouTube
+                            </a>
+                        </div>
                     }
                 </div>
-            }
-            else
-            {
-                <div class="empty-state text-center py-5">
-                    <div class="empty-state-icon mb-3">
-                        <i class="bi bi-play-circle display-1 text-muted"></i>
-                    </div>
-                    <h5 class="text-muted mb-2">No Recent Videos Found</h5>
-                    <p class="text-muted">
-                        This channel hasn't published any videos in the last year,
-                        or the videos may not be available.
-                    </p>
-                    <a href="@Model.Channel.ChannelUrl" target="_blank" class="btn btn-outline-primary">
-                        <i class="bi bi-youtube me-1"></i>
-                        Check Channel on YouTube
-                    </a>
-                </div>
-            }
+            </div>
         </div>
     </div>
 
@@ -273,31 +263,3 @@ else
         </a>
     </div>
 }
-
-<script>
-    function handleThumbnailError(img, videoId) {
-        if (img.dataset.errorCount) {
-            img.dataset.errorCount = parseInt(img.dataset.errorCount) + 1;
-        } else {
-            img.dataset.errorCount = "1";
-        }
-
-        if (parseInt(img.dataset.errorCount) > 3) {
-            return;
-        }
-
-        if (img.dataset.attempt === 'maxres') {
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-            img.dataset.attempt = 'hq';
-        } else if (img.dataset.attempt === 'hq') {
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
-            img.dataset.attempt = 'mq';
-        } else if (img.dataset.attempt === 'mq') {
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/default.jpg';
-            img.dataset.attempt = 'default';
-        } else if (!img.dataset.attempt) {
-            img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
-            img.dataset.attempt = 'maxres';
-        }
-    }
-</script>
