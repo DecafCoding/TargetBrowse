@@ -57,6 +57,21 @@ public class ChannelDisplayModel
     public bool IsTracked { get; set; }
 
     /// <summary>
+    /// When the channel was last checked for new videos.
+    /// </summary>
+    public DateTime? LastCheckDate { get; set; }
+
+    /// <summary>
+    /// User-friendly display of when the channel was last checked.
+    /// </summary>
+    public string LastCheckedDisplay => FormatLastChecked();
+
+    /// <summary>
+    /// Gets the year the channel was started/published.
+    /// </summary>
+    public string PublishedYear => PublishedAt.Year.ToString();
+
+    /// <summary>
     /// The current user's rating for this channel (if any).
     /// </summary>
     public ChannelRatingModel? UserRating { get; set; }
@@ -124,7 +139,7 @@ public class ChannelDisplayModel
     };
 
     /// <summary>
-    /// Formats large numbers into human-readable format (K, M, B).
+    /// Formats large numbers into human-readable format (k, M, B).
     /// </summary>
     private static string FormatCount(ulong? count)
     {
@@ -135,9 +150,8 @@ public class ChannelDisplayModel
 
         return value switch
         {
-            >= 1_000_000_000 => $"{value / 1_000_000_000:F1}B",
             >= 1_000_000 => $"{value / 1_000_000:F1}M",
-            >= 1_000 => $"{value / 1_000:F1}K",
+            >= 1_000 => $"{(int)(value / 1_000)}k",
             _ => count.Value.ToString("N0")
         };
     }
@@ -175,5 +189,26 @@ public class ChannelDisplayModel
             return text;
 
         return text.Substring(0, maxLength).TrimEnd() + "...";
+    }
+
+    /// <summary>
+    /// Formats the last checked date for user-friendly display.
+    /// </summary>
+    private string FormatLastChecked()
+    {
+        if (!LastCheckDate.HasValue)
+            return "Never";
+
+        var now = DateTime.UtcNow;
+        var timeSpan = now - LastCheckDate.Value;
+
+        return timeSpan.TotalDays switch
+        {
+            < 1 when timeSpan.TotalHours < 1 => "Just now",
+            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
+            < 7 => $"{(int)timeSpan.TotalDays}d ago",
+            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
+            _ => LastCheckDate.Value.ToString("MMM d, yyyy")
+        };
     }
 }

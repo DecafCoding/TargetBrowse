@@ -3,13 +3,14 @@
 @using TargetBrowse.Features.Suggestions.Models
 @using TargetBrowse.Features.Suggestions.Services
 @using TargetBrowse.Services
+@using System.Net
 
 <div class="card video-card channel-video-card h-100">
     <!-- Video Thumbnail Container -->
     <div class="position-relative video-thumbnail-container">
         <img src="@Video.GetThumbnailUrl()"
              class="card-img-top video-thumbnail"
-             alt="@Video.Title"
+             alt="@((MarkupString)WebUtility.HtmlDecode(Video.Title))"
              loading="lazy"
              onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Video.YouTubeVideoId')" />
 
@@ -38,8 +39,8 @@
             <a href="@Video.YouTubeUrl"
                target="_blank"
                class="text-decoration-none title-link"
-               title="@Video.Title">
-                @Video.Title
+               title="@((MarkupString)WebUtility.HtmlDecode(Video.Title))">
+                @((MarkupString)WebUtility.HtmlDecode(Video.Title))
                 @if (Video.Title.Length < 50)
                 {
                     <i class="bi bi-box-arrow-up-right ms-1 small"></i>

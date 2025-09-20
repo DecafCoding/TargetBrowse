@@ -46,6 +46,7 @@ public class ChannelMappingService
             SubscriberCount = channelEntity.SubscriberCount,
             VideoCount = channelEntity.VideoCount,
             PublishedAt = channelEntity.PublishedAt,
+            LastCheckDate = channelEntity.LastCheckDate, // Add this line
             TrackedSince = trackedSince,
             IsTracked = isTracked
         };
@@ -66,6 +67,7 @@ public class ChannelMappingService
             SubscriberCount = channelEntity.SubscriberCount,
             VideoCount = channelEntity.VideoCount,
             PublishedAt = channelEntity.PublishedAt,
+            LastCheckDate = channelEntity.LastCheckDate, // Add this line
             TrackedSince = userChannel.TrackedSince,
             IsTracked = true
         };
