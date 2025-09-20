@@ -29,7 +29,7 @@ public class ChannelUpdateRequest
     /// <summary>
     /// Maximum number of results to retrieve for this specific channel.
     /// </summary>
-    public int MaxResults { get; set; } = 50;
+    public int MaxResults { get; set; } = 100;
 }
 
 /// <summary>

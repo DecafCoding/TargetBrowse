@@ -1,5 +1,6 @@
 @using TargetBrowse.Features.Suggestions.Models
 @using TargetBrowse.Features.Suggestions.Components
+@using System.Net
 
 <div class="card video-card suggestion-card h-100 @GetCardCssClass()">
     <!-- Selection Checkbox (Batch Mode) -->
@@ -21,7 +22,7 @@
     <div class="position-relative video-thumbnail-container">
         <img src="@GetThumbnailUrl()"
              class="card-img-top video-thumbnail"
-             alt="@Suggestion.Video.Title"
+             alt="@((MarkupString)WebUtility.HtmlDecode(Suggestion.Video.Title))"
              loading="lazy"
              onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Suggestion.Video.YouTubeVideoId')" />
 
@@ -58,8 +59,8 @@
             <a href="@GetYouTubeUrl(Suggestion.Video)"
                target="_blank"
                class="text-decoration-none title-link"
-               title="@Suggestion.Video.Title">
-                @Suggestion.Video.Title
+               title="@((MarkupString)WebUtility.HtmlDecode(Suggestion.Video.Title))">
+                @((MarkupString)WebUtility.HtmlDecode(Suggestion.Video.Title))
                 @if (Suggestion.Video.Title.Length < 50)
                 {
                     <i class="bi bi-box-arrow-up-right ms-1 small"></i>

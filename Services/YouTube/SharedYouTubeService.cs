@@ -59,14 +59,17 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
     /// <summary>
     /// Gets new videos from a channel since the specified date.
+    /// Currently returns a mix of medium and long duration videos for diversity.
+    /// Max results is clamped between 1-100. 50 from medium and 50 from long duration searches.
     /// </summary>
     public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId, DateTime since, int maxResults = 50)
+        string youTubeChannelId, DateTime since, int maxResults = 100)
     {
         if (string.IsNullOrWhiteSpace(youTubeChannelId))
             return YouTubeApiResult<List<VideoInfo>>.Failure("Channel ID is required");
 
-        maxResults = Math.Min(Math.Max(1, maxResults), 50); // Clamp between 1-50
+        // Clamp between 1-100
+        maxResults = Math.Min(Math.Max(1, maxResults), 100); 
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -194,14 +197,17 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
     /// <summary>
     /// Searches for videos across all of YouTube matching the specified topic.
+    /// Currently returns a mix of medium and long duration videos for diversity.
+    /// Max results is clamped between 1-100. 50 from medium and 50 from long duration searches.
     /// </summary>
     public async Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(
-        string topicQuery, DateTime? publishedAfter = null, int maxResults = 50)
+        string topicQuery, DateTime? publishedAfter = null, int maxResults = 100)
     {
         if (string.IsNullOrWhiteSpace(topicQuery))
             return YouTubeApiResult<List<VideoInfo>>.Success(new List<VideoInfo>());
 
-        maxResults = Math.Min(Math.Max(1, maxResults), 50);
+        // Clamping max results between 1 and 100
+        maxResults = Math.Min(Math.Max(1, maxResults), 100);
 
         var stopwatch = Stopwatch.StartNew();
 

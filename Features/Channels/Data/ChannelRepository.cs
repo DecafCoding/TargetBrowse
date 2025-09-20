@@ -280,4 +280,38 @@ public class ChannelRepository : IChannelRepository
             throw;
         }
     }
+
+    /// <summary>
+    /// Updates the LastCheckDate for a channel after successfully checking for videos
+    /// </summary>
+    public async Task<bool> UpdateLastCheckDateAsync(string youTubeChannelId, DateTime lastCheckDate)
+    {
+        try
+        {
+            var channel = await _context.Channels
+                .FirstOrDefaultAsync(c => c.YouTubeChannelId == youTubeChannelId);
+
+            if (channel == null)
+            {
+                _logger.LogWarning("Channel {ChannelId} not found for LastCheckDate update", youTubeChannelId);
+                return false;
+            }
+
+            channel.LastCheckDate = lastCheckDate;
+            channel.LastModifiedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogDebug("Updated LastCheckDate for channel {ChannelId} to {LastCheckDate}",
+                youTubeChannelId, lastCheckDate);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating LastCheckDate for channel {ChannelId}", youTubeChannelId);
+            return false;
+        }
+    }
+
 }

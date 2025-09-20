@@ -19,7 +19,7 @@ public class TopicOnboardingService : ITopicOnboardingService
     private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ILogger<TopicOnboardingService> _logger;
 
-    private const int InitialVideosLimit = 50;
+    private const int InitialVideosLimit = 100;
     private const int LookbackDays = 365; // Look back 365 days for initial topic videos
 
     public TopicOnboardingService(

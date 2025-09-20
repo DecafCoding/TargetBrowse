@@ -1,3 +1,4 @@
+using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
@@ -13,28 +14,21 @@ public class SuggestionYouTubeService : ISuggestionYouTubeService
     private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ISuggestionQuotaManager _quotaManager;
     private readonly IMessageCenterService _messageCenterService;
+    private readonly IChannelRepository _channelRepository;
     private readonly ILogger<SuggestionYouTubeService> _logger;
 
     public SuggestionYouTubeService(
         ISharedYouTubeService sharedYouTubeService,
         ISuggestionQuotaManager quotaManager,
         IMessageCenterService messageCenterService,
+        IChannelRepository channelRepository,
         ILogger<SuggestionYouTubeService> logger)
     {
         _sharedYouTubeService = sharedYouTubeService ?? throw new ArgumentNullException(nameof(sharedYouTubeService));
         _quotaManager = quotaManager ?? throw new ArgumentNullException(nameof(quotaManager));
         _messageCenterService = messageCenterService ?? throw new ArgumentNullException(nameof(messageCenterService));
+        _channelRepository = channelRepository ?? throw new ArgumentNullException(nameof(channelRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    /// <summary>
-    /// Gets new videos from a channel since the specified date.
-    /// Delegates to shared service for common functionality.
-    /// </summary>
-    public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId, DateTime since, int maxResults = 50)
-    {
-        return await _sharedYouTubeService.GetChannelVideosSinceAsync(youTubeChannelId, since, maxResults);
     }
 
     /// <summary>
@@ -91,6 +85,9 @@ public class SuggestionYouTubeService : ISuggestionYouTubeService
                 allVideos.AddRange(result.Data ?? new List<VideoInfo>());
                 _logger.LogDebug("Found {Count} videos from channel {ChannelName}",
                     result.Data?.Count ?? 0, request.ChannelName);
+
+                // Update LastCheckDate to now since we successfully checked the channel
+                await _channelRepository.UpdateLastCheckDateAsync(request.YouTubeChannelId, DateTime.UtcNow);
             }
             else
             {

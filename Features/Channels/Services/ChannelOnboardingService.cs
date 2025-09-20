@@ -21,7 +21,7 @@ public class ChannelOnboardingService : IChannelOnboardingService
     private readonly ISharedYouTubeService _sharedYouTubeService;
     private readonly ILogger<ChannelOnboardingService> _logger;
 
-    private const int InitialVideosLimit = 50;
+    private const int InitialVideosLimit = 100;
     private const int LookbackDays = 365; // Look back up to a year for initial videos
 
     public ChannelOnboardingService(
@@ -212,6 +212,9 @@ public class ChannelOnboardingService : IChannelOnboardingService
             {
                 _logger.LogInformation("Successfully fetched {VideoCount} videos for channel {ChannelName} (shorts excluded)",
                     apiResult.Data.Count, channelName);
+
+                // Update LastCheckDate to now since we successfully checked the channel
+                await _channelRepository.UpdateLastCheckDateAsync(youTubeChannelId, DateTime.UtcNow);
 
                 return YouTubeApiResult<List<VideoInfo>>.Success(apiResult.Data);
             }

@@ -98,4 +98,12 @@ public interface IChannelRepository
         ulong? subscriberCount = null,
         ulong? videoCount = null,
         DateTime? publishedAt = null);
+
+    /// <summary>
+    /// Updates the LastCheckDate for a channel after successfully checking for videos
+    /// </summary>
+    /// <param name="youTubeChannelId">YouTube channel ID</param>
+    /// <param name="lastCheckDate">When the channel was last checked</param>
+    /// <returns>Success status</returns>
+    Task<bool> UpdateLastCheckDateAsync(string youTubeChannelId, DateTime lastCheckDate);
 }

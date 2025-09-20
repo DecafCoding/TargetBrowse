@@ -15,12 +15,12 @@ public interface ISharedYouTubeService
     /// </summary>
     /// <param name="youTubeChannelId">YouTube channel identifier</param>
     /// <param name="since">Get videos published after this date</param>
-    /// <param name="maxResults">Maximum number of videos to return (1-50)</param>
+    /// <param name="maxResults">Maximum number of videos to return (1-100)</param>
     /// <returns>API result containing list of videos or error information</returns>
     Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
         string youTubeChannelId,
         DateTime since,
-        int maxResults = 50);
+        int maxResults = 100);
 
     /// <summary>
     /// Searches for videos across all of YouTube matching the specified topic.
@@ -28,12 +28,12 @@ public interface ISharedYouTubeService
     /// </summary>
     /// <param name="topicQuery">Topic or keyword to search for</param>
     /// <param name="publishedAfter">Only include videos published after this date (optional)</param>
-    /// <param name="maxResults">Maximum number of videos to return (1-50)</param>
+    /// <param name="maxResults">Maximum number of videos to return (1-100)</param>
     /// <returns>API result containing list of videos or error information</returns>
     Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(
         string topicQuery,
         DateTime? publishedAfter = null,
-        int maxResults = 50);
+        int maxResults = 100);
 
     /// <summary>
     /// Gets detailed information about multiple videos by their YouTube IDs.

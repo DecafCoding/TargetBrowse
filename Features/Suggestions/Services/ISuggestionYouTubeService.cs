@@ -10,19 +10,6 @@ namespace TargetBrowse.Features.Suggestions.Services;
 public interface ISuggestionYouTubeService
 {
     /// <summary>
-    /// Gets new videos from a channel since the specified date with comprehensive error handling.
-    /// Updates channel last-check timestamp automatically.
-    /// </summary>
-    /// <param name="youTubeChannelId">YouTube channel identifier</param>
-    /// <param name="since">Get videos published after this date</param>
-    /// <param name="maxResults">Maximum number of videos to return (1-50)</param>
-    /// <returns>API result containing list of videos or error information</returns>
-    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId,
-        DateTime since,
-        int maxResults = 50);
-
-    /// <summary>
     /// Searches for videos across all of YouTube matching the specified topic.
     /// Optimized for topic-based content discovery with intelligent filtering.
     /// </summary>

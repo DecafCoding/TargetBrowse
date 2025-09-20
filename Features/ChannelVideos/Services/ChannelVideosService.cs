@@ -1,3 +1,4 @@
+using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
 using TargetBrowse.Services.Interfaces;
@@ -11,19 +12,22 @@ namespace TargetBrowse.Features.ChannelVideos.Services;
 public class ChannelVideosService : IChannelVideosService
 {
     private readonly IChannelVideosRepository _repository;
-    private readonly ISharedYouTubeService _youTubeService; // Updated to use shared service
+    private readonly ISharedYouTubeService _youTubeService;
     private readonly IMessageCenterService _messageCenter;
+    private readonly IChannelRepository _channelRepository;
     private readonly ILogger<ChannelVideosService> _logger;
 
     public ChannelVideosService(
         IChannelVideosRepository repository,
-        ISharedYouTubeService youTubeService, // Updated to use shared service
+        ISharedYouTubeService youTubeService,
         IMessageCenterService messageCenter,
+        IChannelRepository channelRepository,
         ILogger<ChannelVideosService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _youTubeService = youTubeService ?? throw new ArgumentNullException(nameof(youTubeService));
         _messageCenter = messageCenter ?? throw new ArgumentNullException(nameof(messageCenter));
+        _channelRepository = channelRepository ?? throw new ArgumentNullException(nameof(channelRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -71,8 +75,7 @@ public class ChannelVideosService : IChannelVideosService
             var oneYearAgo = DateTime.UtcNow.AddYears(-1);
             var videosResult = await _youTubeService.GetChannelVideosSinceAsync(
                 youTubeChannelId,
-                oneYearAgo,
-                maxResults: 50); // Use default from service
+                oneYearAgo); // Use default from service
 
             if (!videosResult.IsSuccess)
             {
@@ -91,6 +94,9 @@ public class ChannelVideosService : IChannelVideosService
                 model.IsLoading = false;
                 return model;
             }
+
+            // Update LastCheckDate since we successfully checked the channel
+            await _channelRepository.UpdateLastCheckDateAsync(youTubeChannelId, DateTime.UtcNow);
 
             // Convert to channel video models
             var videos = videosResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();

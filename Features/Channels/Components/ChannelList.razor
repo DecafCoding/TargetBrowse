@@ -47,12 +47,14 @@
                             <th scope="col" class="border-0">Channel</th>
                             <th scope="col" class="border-0">Subs</th>
                             <th scope="col" class="border-0">Videos</th>
-                            <th scope="col" class="border-0">Age</th>
+                            <th scope="col" class="border-0">Last Checked</th>
+                            <th scope="col" class="border-0">Started</th>
                             <th scope="col" class="border-0 text-center">Rating</th>
                             <th scope="col" class="border-0 text-center">Actions</th>
                             <th scope="col" class="border-0 text-center" style="width: 80px;">Delete</th>
                         </tr>
                     </thead>
+                    <!-- Updated table body section in ChannelList.razor - replace the existing tbody content -->
                     <tbody>
                         @foreach (var channel in TrackedChannels)
                         {
@@ -91,9 +93,14 @@
                                     @channel.VideoCountDisplay
                                 </td>
 
-                                <!-- Tracked Since -->
+                                <!-- Last Checked Date -->
                                 <td class="text-muted">
-                                    @channel.TrackedSinceDisplay
+                                    @channel.LastCheckedDisplay
+                                </td>
+
+                                <!-- Channel Started Year -->
+                                <td class="text-muted">
+                                    @channel.PublishedYear
                                 </td>
 
                                 <!-- Rating -->
