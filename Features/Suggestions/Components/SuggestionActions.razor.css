@@ -14,19 +14,6 @@
         opacity: 0.6;
     }
 
-/* Danger button styling */
-.suggestion-actions .btn-outline-danger {
-    border-color: #fda1aa;
-    color: #fda1aa;
-}
-
-    .suggestion-actions .btn-outline-danger:hover:not(:disabled) {
-        background-color: #fda1aa;
-        border-color: #fda1aa;
-        color: white;
-        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
-    }
-
 /* Loading spinner styling */
 .suggestion-actions .spinner-border-sm {
     width: 0.875rem;

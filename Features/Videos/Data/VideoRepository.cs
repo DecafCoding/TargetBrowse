@@ -730,7 +730,7 @@ public class VideoRepository : IVideoRepository
     {
         var displayModel = new VideoDisplayModel
         {
-            Id = userVideo.Id,
+            Id = userVideo.Video.Id,
             YouTubeVideoId = userVideo.Video.YouTubeVideoId,
             Title = userVideo.Video.Title,
             Description = string.Empty, // Not stored in VideoEntity currently

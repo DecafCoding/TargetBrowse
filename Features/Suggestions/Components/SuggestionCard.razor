@@ -60,34 +60,36 @@
                class="text-decoration-none title-link"
                title="@Suggestion.Video.Title">
                 @Suggestion.Video.Title
+                @if (Suggestion.Video.Title.Length < 50)
+                {
+                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                }
             </a>
         </h6>
 
         <!-- Channel Info -->
         <div class="video-channel mb-2">
-            <a href="@GetChannelUrl(Suggestion.Video)"
-               target="_blank"
-               class="text-muted text-decoration-none channel-link">
-                <i class="bi bi-person-circle me-1"></i>
-                @Suggestion.Video.ChannelName
-            </a>
+            <small class="text-muted d-flex justify-content-between">
+                <a href="@GetChannelUrl(Suggestion.Video)"
+                   target="_blank"
+                   class="text-muted text-decoration-none channel-link">
+                    <i class="bi bi-person-circle me-1"></i>
+                    @Suggestion.Video.ChannelName
+                </a>
+                @if (!string.IsNullOrEmpty(Suggestion.Video.FormattedViewCount))
+                {
+                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.FormattedViewCount</span>
+                }
+            </small>
         </div>
 
         <!-- Video Metadata -->
         <div class="video-metadata mb-2">
             <small class="text-muted d-flex justify-content-between">
-                @if (!string.IsNullOrEmpty(Suggestion.Video.FormattedViewCount))
-                {
-                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.FormattedViewCount</span>
-                    <span class="mx-1">•</span>
-                }
                 <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.TimeSincePublished</span>
-                <span class="mx-1">•</span>
-                <span>
-                    <!-- Suggestion Reason -->
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="true" Size="small" />
-                    </div>
+                <span title="Expires in @Suggestion.DaysUntilExpiry days">
+                    <i class="bi bi-hourglass-split me-1"></i>
+                    @Suggestion.DaysUntilExpiry days left
                 </span>
             </small>
         </div>
@@ -95,13 +97,11 @@
         <!-- Suggestion Metadata -->
         <div class="suggestion-metadata mb-3">
             <small class="text-muted d-flex justify-content-between">
-                <span title="Suggested @Suggestion.CreatedAt.ToString("MMM d, yyyy h:mm tt")">
-                    <i class="bi bi-clock me-1"></i>
-                    @Suggestion.TimeSinceCreated
-                </span>
-                <span title="Expires in @Suggestion.DaysUntilExpiry days">
-                    <i class="bi bi-hourglass-split me-1"></i>
-                    @Suggestion.DaysUntilExpiry days left
+                <span>
+                    <!-- Suggestion Reason -->
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <SuggestionSourceBadge Suggestion="@Suggestion" ShowText="true" Size="small" />
+                    </div>
                 </span>
             </small>
         </div>
