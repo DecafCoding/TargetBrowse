@@ -68,6 +68,10 @@
                class="text-decoration-none title-link"
                title="@Video.Title">
                 @Video.Title
+                @if (Video.Title.Length < 50)
+                {
+                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                }
             </a>
         </h6>
 
@@ -106,22 +110,40 @@
             <div class="video-rating mb-2">
                 @if (Video.IsRatedByUser)
                 {
-                    <VideoRatingDisplay Rating="@Video.UserRating"
-                                        CssClass="compact"
-                                        ShowActions="true"
-                                        ShowTimestamp="false"
-                                        ShowNotes="false"
-                                        TruncateNotes="true"
-                                        MaxNotesLength="50"
-                                        OnEdit="@HandleEditRating" />
+                    <div class="video-rating-display compact">
+                        <div class="d-flex align-items-center">
+                            <div class="rating-stars me-2">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    var starClass = i <= Video.UserStars ? "bi-star-fill text-warning" : "bi-star text-muted";
+                                    <i class="bi @starClass rating-star"></i>
+                                }
+                            </div>
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none"
+                                    @onclick="() => ShowRatingModal()">
+                                <small>Edit Rating</small>
+                            </button>
+                        </div>
+                    </div>
                 }
                 else
                 {
-                    <VideoRatingDisplay Rating="null"
-                                        CssClass="compact"
-                                        ShowEmptyState="true"
-                                        ShowNotes="false"
-                                        ShowActions="false" />
+                    <div class="video-rating-display rating-empty compact">
+                        <div class="d-flex align-items-center text-muted">
+                            <div class="rating-stars me-2">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi bi-star text-muted rating-star"></i>
+                                }
+                            </div>
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none"
+                                    @onclick="() => ShowRatingModal()">
+                                <small>Rate Video</small>
+                            </button>
+                        </div>
+                    </div>
                 }
             </div>
         }
@@ -162,92 +184,88 @@
             @if (DisplayMode == VideoDisplayMode.Search)
             {
                 <!-- Search Mode Actions -->
-                @if (!Video.IsInLibrary)
-                {
-                    <button type="button"
-                            class="btn btn-primary btn-sm w-100 mb-2"
-                            @onclick="AddToLibrary"
-                            disabled="@IsAddingToLibrary">
-                        @if (IsAddingToLibrary)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-plus-circle me-1"></i>
-                        }
-                        Save to Library
-                    </button>
-                }
-                else
-                {
-                    <button type="button"
-                            class="btn btn-success btn-sm w-100 mb-2"
-                            disabled>
-                        <i class="bi bi-check-circle me-1"></i>
-                        In Library
-                    </button>
-                }
+                <div class="d-flex gap-2">
+                    @if (!Video.IsInLibrary)
+                    {
+                        <button type="button"
+                                class="btn btn-primary btn-sm flex-fill"
+                                @onclick="AddToLibrary"
+                                disabled="@IsAddingToLibrary">
+                            @if (IsAddingToLibrary)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-bookmark-plus me-1"></i>
+                            }
+                            Library
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="btn btn-success btn-sm flex-fill"
+                                disabled>
+                            <i class="bi bi-check-circle me-1"></i>
+                            In Library
+                        </button>
+                    }
 
-                <a href="@Video.YouTubeUrl"
-                   target="_blank"
-                   class="btn btn-outline-secondary btn-sm w-100">
-                    <i class="bi bi-play-circle me-1"></i>
-                    Watch on YouTube
-                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                </a>
+                    <a href="@Video.YouTubeUrl"
+                       target="_blank"
+                       class="btn btn-outline-secondary btn-sm flex-fill">
+                        <i class="bi bi-play-circle me-1"></i>
+                        Watch
+                        <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                    </a>
+                </div>
             }
             else if (DisplayMode == VideoDisplayMode.Library)
             {
                 <!-- Library Mode Actions -->
                 <div class="d-grid gap-2">
-                    <!-- Watch Status Row -->
-                    <div class="btn-group" role="group">
+                    <!-- Watch Status Row - Now separated with gap-2 spacing -->
+                    <div class="d-flex gap-2">
                         <button type="button"
-                                class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm"
+                                class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm flex-fill"
                                 @onclick="() => MarkAsWatched()"
                                 disabled="@IsUpdatingStatus"
                                 title="Mark as watched">
                             @if (IsUpdatingStatus && PendingStatus == WatchStatus.Watched)
                             {
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                             }
                             else
                             {
-                                <i class="bi bi-check-circle"></i>
+                                <i class="bi bi-check-circle me-1"></i>
                             }
+                            Watched
                         </button>
+
                         <button type="button"
-                                class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-secondary" : "btn-outline-secondary") btn-sm"
+                                class="btn @(Video.WatchStatus == WatchStatus.Skipped ? "btn-danger" : "btn-outline-danger") btn-sm flex-fill"
                                 @onclick="() => MarkAsSkipped()"
                                 disabled="@IsUpdatingStatus"
                                 title="Mark as skipped">
                             @if (IsUpdatingStatus && PendingStatus == WatchStatus.Skipped)
                             {
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                             }
                             else
                             {
-                                <i class="bi bi-skip-forward"></i>
+                                <i class="bi bi-hand-thumbs-down me-1"></i>
                             }
+                            Pass
                         </button>
+
                         <a href="@Video.YouTubeUrl"
                            target="_blank"
-                           class="btn btn-primary btn-sm flex-fill">
-                            <i class="bi bi-play-circle me-1"></i>
+                           class="btn btn-outline-secondary btn-sm flex-fill">
                             Watch
+                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
                         </a>
                     </div>
-
-                    <!-- Rating Action Row -->
-                    <button type="button"
-                            class="btn @(Video.IsRatedByUser ? "btn-warning" : "btn-outline-warning") btn-sm w-100"
-                            @onclick="() => ShowRatingModal()"
-                            disabled="@(!Video.CanBeRated)"
-                            title="@(Video.CanBeRated ? (Video.IsRatedByUser ? "Edit your rating" : "Rate this video") : Video.CannotRateReason)">
-                        <i class="bi @(Video.IsRatedByUser ? "bi-star-fill" : "bi-star") me-1"></i>
-                        @(Video.IsRatedByUser ? $"Edit Rating ({Video.UserStars} stars)" : "Rate Video")
-                    </button>
                 </div>
             }
         </div>

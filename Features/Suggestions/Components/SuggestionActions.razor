@@ -10,19 +10,19 @@
         <!-- Individual Suggestion Actions -->
         <div class="d-flex gap-2 w-100">
             <button type="button"
-                    class="btn btn-success btn-sm flex-fill"
+                    class="btn btn-primary btn-sm flex-fill"
                     @onclick="ApproveSuggestion"
                     disabled="@IsProcessing"
-                    title="Approve and add to library">
+                    title="Add to library">
                 @if (IsProcessing && PendingAction == "approve")
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                 }
                 else
                 {
-                    <i class="bi bi-check-circle me-1"></i>
+                    <i class="bi bi-bookmark-plus me-1"></i>
                 }
-                Approve
+                Library
             </button>
 
             <button type="button"
@@ -36,17 +36,10 @@
                 }
                 else
                 {
-                    <i class="bi bi-x-circle me-1"></i>
+                    <i class="bi bi-hand-thumbs-down me-1"></i>
                 }
                 Pass
             </button>
-
-            <a href="@GetYouTubeUrl(Suggestion.Video)"
-               target="_blank"
-               class="btn btn-outline-primary btn-sm"
-               title="Watch on YouTube">
-                <i class="bi bi-play-circle"></i>
-            </a>
         </div>
     }
     else if (Mode == ActionMode.Batch)
@@ -54,7 +47,7 @@
         <!-- Batch Actions -->
         <div class="d-flex gap-2 w-100">
             <button type="button"
-                    class="btn btn-success btn-sm flex-fill"
+                    class="btn btn-primary btn-sm flex-fill"
                     @onclick="ApproveSelected"
                     disabled="@(IsProcessing || !SelectedSuggestionIds.Any())"
                     title="Approve selected suggestions">
@@ -64,9 +57,9 @@
                 }
                 else
                 {
-                    <i class="bi bi-check-circle-fill me-1"></i>
+                    <i class="bi bi-bookmark-plus me-1"></i>
                 }
-                Approve (@SelectedSuggestionIds.Count)
+                Add to Library (@SelectedSuggestionIds.Count)
             </button>
 
             <button type="button"
@@ -80,9 +73,9 @@
                 }
                 else
                 {
-                    <i class="bi bi-x-circle-fill me-1"></i>
+                    <i class="bi bi-hand-thumbs-down me-1"></i>
                 }
-                Pass (@SelectedSuggestionIds.Count)
+                Pass and Hide (@SelectedSuggestionIds.Count)
             </button>
         </div>
     }

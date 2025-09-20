@@ -11,9 +11,9 @@
     background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem rgba(255, 255, 255, 0.1);
 }
 
-.navbar-toggler:checked {
-    background-color: rgba(255, 255, 255, 0.5);
-}
+    .navbar-toggler:checked {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
 
 .top-row {
     min-height: 3.5rem;
@@ -24,13 +24,131 @@
     font-size: 1.1rem;
 }
 
+/* Fix for navbar vertical centering */
+.navbar {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.navbar-nav {
+    align-items: center;
+}
+
+.nav-item {
+    font-size: 0.9rem;
+    /* Add small margin for spacing between menu items */
+    margin-right: 4px;
+}
+
+    .nav-item:first-of-type {
+        padding-top: 0;
+    }
+
+    .nav-item:last-of-type {
+        padding-bottom: 0;
+        margin-right: 0; /* Remove margin from last item */
+    }
+
+    .nav-item ::deep .nav-link {
+        color: #d7d7d7;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        /* Adjust height and ensure proper vertical centering */
+        height: auto;
+        min-height: 2.5rem;
+        display: flex;
+        align-items: center;
+        line-height: normal;
+        width: 100%;
+        padding: 0.5rem 1rem;
+        /* Remove hover transition effects */
+        transition: none;
+    }
+
+    /* Dropdown items in navbar */
+    .nav-item ::deep .dropdown-toggle {
+        padding: 0.5rem 1rem;
+        height: auto;
+        min-height: 2.5rem;
+        display: flex;
+        align-items: center;
+        line-height: normal;
+        /* Remove hover transition effects */
+        transition: none;
+    }
+
+    .nav-item ::deep a.active {
+        background-color: rgba(255,255,255,0.37);
+        color: white;
+    }
+
+    /* Keep subtle hover background, remove text motion */
+    .nav-item ::deep .nav-link:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+        /* Prevent any transform or positioning changes */
+        transform: none !important;
+        position: relative;
+        top: 0 !important;
+    }
+
+/* Dropdown menu styling - target more specifically */
+.navbar .dropdown-menu {
+    /* Add spacing between dropdown items */
+    padding: 4px 0 !important;
+}
+
+    .navbar .dropdown-menu .dropdown-item {
+        /* Add vertical spacing between dropdown items */
+        margin-bottom: 4px !important;
+        padding: 6px 16px !important;
+        /* Remove any transitions/animations */
+        transition: none !important;
+        /* Prevent text movement */
+        transform: none !important;
+        position: static !important;
+        top: auto !important;
+        /* Force line height to prevent text jumping */
+        line-height: normal !important;
+    }
+
+        .navbar .dropdown-menu .dropdown-item:last-child {
+            /* Remove margin from last dropdown item */
+            margin-bottom: 0 !important;
+        }
+
+        .navbar .dropdown-menu .dropdown-item:hover {
+            /* Keep Bootstrap's default hover background but prevent motion */
+            transform: none !important;
+            position: static !important;
+            top: auto !important;
+            line-height: normal !important;
+            /* Ensure no vertical shifting */
+            vertical-align: baseline !important;
+        }
+
+        /* Target NavLink components inside dropdown specifically */
+        .navbar .dropdown-menu .dropdown-item ::deep a {
+            transform: none !important;
+            position: static !important;
+            top: auto !important;
+            transition: none !important;
+        }
+
+        .navbar .dropdown-menu .dropdown-item:hover ::deep a {
+            transform: none !important;
+            position: static !important;
+            top: auto !important;
+        }
+
 .bi {
     display: inline-block;
     position: relative;
     width: 1.25rem;
     height: 1.25rem;
     margin-right: 0.75rem;
-    top: -1px;
+    top: 0; /* Remove the -1px offset that was causing misalignment */
     background-size: cover;
 }
 
@@ -66,41 +184,6 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-arrow-bar-left' viewBox='0 0 16 16'%3E%3Cpath d='M12.5 15a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5ZM10 8a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L3.707 7.5H9.5a.5.5 0 0 1 .5.5Z'/%3E%3C/svg%3E");
 }
 
-.nav-item {
-    font-size: 0.9rem;
-    padding-bottom: 0.5rem;
-}
-
-    .nav-item:first-of-type {
-        padding-top: 1rem;
-    }
-
-    .nav-item:last-of-type {
-        padding-bottom: 1rem;
-    }
-
-    .nav-item ::deep .nav-link {
-        color: #d7d7d7;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        line-height: 3rem;
-        width: 100%;
-    }
-
-.nav-item ::deep a.active {
-    background-color: rgba(255,255,255,0.37);
-    color: white;
-}
-
-.nav-item ::deep .nav-link:hover {
-    background-color: rgba(255,255,255,0.1);
-    color: white;
-}
-
 .nav-scrollable {
     display: none;
 }
@@ -117,7 +200,6 @@
     .nav-scrollable {
         /* Never collapse the sidebar for wide screens */
         display: block;
-
         /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
