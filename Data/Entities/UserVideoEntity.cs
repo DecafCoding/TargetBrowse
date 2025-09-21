@@ -29,6 +29,12 @@ namespace TargetBrowse.Data.Entities
         /// </summary>
         public DateTime? StatusChangedAt { get; set; }
 
+        /// <summary>
+        /// Optional notes about why the video was added to the library.
+        /// Includes context like topic relevance, channel source, or user-provided notes.
+        /// </summary>
+        public string? Notes { get; set; }
+
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;
         public virtual VideoEntity Video { get; set; } = null!;

@@ -22,7 +22,7 @@ public partial class ChannelVideoCard : ComponentBase
     public EventCallback<ChannelVideoModel> OnVideoAdded { get; set; }
 
     // Injected Services
-    [Inject] protected IVideoService VideoService { get; set; } = default!;
+    [Inject] protected IVideoDataService VideoDataService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<ChannelVideoCard> Logger { get; set; } = default!;
 
@@ -66,7 +66,7 @@ public partial class ChannelVideoCard : ComponentBase
 
         try
         {
-            IsInLibrary = await VideoService.IsVideoInLibraryAsync(CurrentUserId, Video.YouTubeVideoId);
+            IsInLibrary = await VideoDataService.IsVideoInLibraryAsync(CurrentUserId, Video.YouTubeVideoId);
             StateHasChanged();
         }
         catch (Exception ex)
@@ -95,25 +95,10 @@ public partial class ChannelVideoCard : ComponentBase
 
         try
         {
-            // TODO: Uncomment and implement AddVideoModel in the VideoService to enable adding videos.
-            // Create AddVideoModel from ChannelVideoModel
-            // var addModel = new AddVideoModel
-            // {
-            //     YouTubeVideoId = Video.YouTubeVideoId,
-            //     VideoUrl = Video.YouTubeUrl,
-            //     Title = Video.Title,
-            //     Description = Video.Description,
-            //     ThumbnailUrl = Video.ThumbnailUrl,
-            //     Duration = Video.Duration,
-            //     ViewCount = Video.ViewCount,
-            //     LikeCount = Video.LikeCount,
-            //     CommentCount = Video.CommentCount,
-            //     PublishedAt = Video.PublishedAt,
-            //     Notes = $"Added from channel videos on {DateTime.Now:yyyy-MM-dd}"
-            // };
-
-            // var success = await VideoService.AddVideoToLibraryAsync(CurrentUserId, addModel);
-            var success = false; // Placeholder until AddVideoModel is defined
+            var success = await VideoDataService.AddChannelVideoToLibraryAsync(
+                CurrentUserId,
+                Video, // ChannelVideoModel directly - no conversion needed!
+                $"Added from channel videos on {DateTime.Now:yyyy-MM-dd}");
 
             if (success)
             {

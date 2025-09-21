@@ -76,6 +76,7 @@ public class Program
         // Add this line to your Program.cs if not already present
         builder.Services.AddScoped<ITopicDataService, TopicDataService>();
         builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
+        builder.Services.AddScoped<IVideoDataService, VideoDataService>();
 
         #endregion
 
