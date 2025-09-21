@@ -15,13 +15,10 @@
              loading="lazy"
              onerror="window.VideoCardHelpers.handleThumbnailError(this, '@Video.YouTubeVideoId')" />
 
-        <!-- Duration Badge -->
-        @if (!string.IsNullOrEmpty(Video.DurationDisplay))
-        {
+        <!-- Duration Badge - Only show if we have a valid formatted duration -->
             <span class="badge bg-dark position-absolute duration-badge">
                 @Video.DurationDisplay
             </span>
-        }
 
         <!-- Status Badges -->
         @if (DisplayMode == VideoDisplayMode.Search && Video.IsInLibrary)
@@ -76,23 +73,41 @@
             </a>
         </h6>
 
-        <!-- Channel Info -->
+        <!-- Channel Name - Updated to show actual channel name -->
         <div class="video-channel mb-2">
-            <a href="/channel-videos/@Video.ChannelId"
-               class="text-muted text-decoration-none channel-link">
+            <small class="text-muted">
                 <i class="bi bi-person-circle me-1"></i>
-                View Recent Videos
-            </a>
+                @Video.ChannelTitle
+            </small>
         </div>
 
-        <!-- Video Metadata -->
+        <!-- Video Metadata - Reorganized with views first using eye icon -->
         <div class="video-metadata mb-2">
             <small class="text-muted">
                 @if (!string.IsNullOrEmpty(Video.ViewCountDisplay))
                 {
-                    <span title="@(Video.ViewCount?.ToString("N0")) views">@Video.ViewCountDisplay views</span>
+                    <span title="@(Video.ViewCount?.ToString("N0")) views">
+                        <i class="bi bi-eye me-1"></i>@Video.ViewCountDisplay
+                    </span>
                     <span class="mx-1">•</span>
                 }
+
+                @if (!string.IsNullOrEmpty(Video.LikeCountDisplay))
+                {
+                    <span title="@(Video.LikeCount?.ToString("N0")) likes">
+                        <i class="bi bi-hand-thumbs-up me-1"></i>@Video.LikeCountDisplay
+                    </span>
+                    <span class="mx-1">•</span>
+                }
+
+                @if (!string.IsNullOrEmpty(Video.CommentCountDisplay))
+                {
+                    <span title="@(Video.CommentCount?.ToString("N0")) comments">
+                        <i class="bi bi-chat me-1"></i>@Video.CommentCountDisplay
+                    </span>
+                    <span class="mx-1">•</span>
+                }
+
                 <span title="Published @Video.PublishedAt.ToString("MMM d, yyyy")">@Video.PublishedDisplay</span>
 
                 @if (DisplayMode == VideoDisplayMode.Library && Video.AddedToLibrary.HasValue)
@@ -146,29 +161,6 @@
                         </div>
                     </div>
                 }
-            </div>
-        }
-
-        <!-- Enhanced Metadata (when available) -->
-        @if (Video.HasDetailedInfo && (Video.LikeCount.HasValue || Video.CommentCount.HasValue))
-        {
-            <div class="video-stats mb-2">
-                <small class="text-muted d-flex flex-wrap gap-2">
-                    @if (!string.IsNullOrEmpty(Video.LikeCountDisplay))
-                    {
-                        <span title="@(Video.LikeCount?.ToString("N0")) likes">
-                            <i class="bi bi-hand-thumbs-up me-1"></i>
-                            @Video.LikeCountDisplay
-                        </span>
-                    }
-                    @if (!string.IsNullOrEmpty(Video.CommentCountDisplay))
-                    {
-                        <span title="@(Video.CommentCount?.ToString("N0")) comments">
-                            <i class="bi bi-chat me-1"></i>
-                            @Video.CommentCountDisplay
-                        </span>
-                    }
-                </small>
             </div>
         }
 

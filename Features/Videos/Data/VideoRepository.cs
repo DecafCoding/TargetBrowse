@@ -368,17 +368,19 @@ public class VideoRepository : IVideoRepository
 
             if (existingVideo != null)
             {
-                // Update metadata if video exists
-                existingVideo.Title = video.Title;
-                existingVideo.ViewCount = video.ViewCount;
-                existingVideo.LikeCount = video.LikeCount;
-                existingVideo.CommentCount = video.CommentCount;
-                existingVideo.Duration = video.Duration;
-                existingVideo.ThumbnailUrl = video.ThumbnailUrl; // ADDED: Save thumbnail URL
-                existingVideo.Description = video.Description;   // ADDED: Save description
-                existingVideo.LastModifiedAt = DateTime.UtcNow;
+                // If the video already exists, return it as is for now
 
-                await _context.SaveChangesAsync();
+                // Update metadata if video exists
+                //existingVideo.Title = video.Title;
+                //existingVideo.ViewCount = video.ViewCount;
+                //existingVideo.LikeCount = video.LikeCount;
+                //existingVideo.CommentCount = video.CommentCount;
+                //existingVideo.Duration = video.Duration;
+                //existingVideo.ThumbnailUrl = video.ThumbnailUrl; // ADDED: Save thumbnail URL
+                //existingVideo.Description = video.Description;   // ADDED: Save description
+                //existingVideo.LastModifiedAt = DateTime.UtcNow;
+
+                //await _context.SaveChangesAsync();
                 return existingVideo;
             }
 
@@ -724,7 +726,6 @@ public class VideoRepository : IVideoRepository
 
     /// <summary>
     /// Maps a UserVideoEntity to a VideoDisplayModel for presentation.
-    /// FIXED: Now properly includes rating information from the loaded data.
     /// </summary>
     private static VideoDisplayModel MapToDisplayModel(UserVideoEntity userVideo, string userId)
     {
@@ -733,9 +734,9 @@ public class VideoRepository : IVideoRepository
             Id = userVideo.Video.Id,
             YouTubeVideoId = userVideo.Video.YouTubeVideoId,
             Title = userVideo.Video.Title,
-            Description = string.Empty, // Not stored in VideoEntity currently
-            ThumbnailUrl = string.Empty, // Not stored in VideoEntity currently
-            Duration = userVideo.Video.Duration > 0 ? userVideo.Video.Duration.ToString() : null,
+            Description = userVideo.Video.Description ?? string.Empty, // UPDATED: Use actual description
+            ThumbnailUrl = userVideo.Video.ThumbnailUrl ?? string.Empty, // UPDATED: Use actual thumbnail
+            Duration = ConvertSecondsToIso8601(userVideo.Video.Duration), // FIXED: Convert seconds to ISO 8601
             ViewCount = userVideo.Video.ViewCount > 0 ? (ulong)userVideo.Video.ViewCount : null,
             LikeCount = userVideo.Video.LikeCount > 0 ? (ulong)userVideo.Video.LikeCount : null,
             CommentCount = userVideo.Video.CommentCount > 0 ? (ulong)userVideo.Video.CommentCount : null,
@@ -750,7 +751,6 @@ public class VideoRepository : IVideoRepository
             WatchStatus = userVideo.Status
         };
 
-        // FIXED: Map the rating information if it exists
         var userRating = userVideo.Video.Ratings?.FirstOrDefault(r => r.UserId == userId);
         if (userRating != null)
         {
@@ -769,5 +769,43 @@ public class VideoRepository : IVideoRepository
         }
 
         return displayModel;
+    }
+
+    /// <summary>
+    /// Converts duration in seconds to ISO 8601 format (PT4M13S).
+    /// This ensures compatibility with the existing VideoDisplayModel.FormatDuration() method.
+    /// </summary>
+    private static string? ConvertSecondsToIso8601(int durationInSeconds)
+    {
+        if (durationInSeconds <= 0)
+            return null;
+
+        var timeSpan = TimeSpan.FromSeconds(durationInSeconds);
+
+        // Build ISO 8601 duration format (PT4M13S)
+        var result = "PT";
+
+        if (timeSpan.TotalHours >= 1)
+        {
+            result += $"{(int)timeSpan.TotalHours}H";
+        }
+
+        if (timeSpan.Minutes > 0)
+        {
+            result += $"{timeSpan.Minutes}M";
+        }
+
+        if (timeSpan.Seconds > 0)
+        {
+            result += $"{timeSpan.Seconds}S";
+        }
+
+        // Handle edge case where duration is exactly on hour/minute boundaries
+        if (result == "PT")
+        {
+            result = "PT0S";
+        }
+
+        return result;
     }
 }
