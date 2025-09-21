@@ -23,6 +23,7 @@ public partial class ChannelVideoCard : ComponentBase
 
     // Injected Services
     [Inject] protected IVideoDataService VideoDataService { get; set; } = default!;
+    [Inject] protected ILibraryDataService LibraryDataService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<ChannelVideoCard> Logger { get; set; } = default!;
 
@@ -66,7 +67,7 @@ public partial class ChannelVideoCard : ComponentBase
 
         try
         {
-            IsInLibrary = await VideoDataService.IsVideoInLibraryAsync(CurrentUserId, Video.YouTubeVideoId);
+            IsInLibrary = await LibraryDataService.IsVideoInLibraryAsync(CurrentUserId, Video.YouTubeVideoId);
             StateHasChanged();
         }
         catch (Exception ex)
@@ -95,7 +96,7 @@ public partial class ChannelVideoCard : ComponentBase
 
         try
         {
-            var success = await VideoDataService.AddChannelVideoToLibraryAsync(
+            var success = await LibraryDataService.AddChannelVideoToLibraryAsync(
                 CurrentUserId,
                 Video, // ChannelVideoModel directly - no conversion needed!
                 $"Added from channel videos on {DateTime.Now:yyyy-MM-dd}");

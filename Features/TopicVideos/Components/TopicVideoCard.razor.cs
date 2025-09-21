@@ -12,6 +12,7 @@ public partial class TopicVideoCard : ComponentBase
 {
     //[Inject] protected IVideoService VideoService { get; set; } = default!;
     [Inject] protected IVideoDataService VideoDataService { get; set; } = default!;
+    [Inject] protected ILibraryDataService LibraryDataService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<TopicVideoCard> Logger { get; set; } = default!;
 
@@ -112,7 +113,7 @@ public partial class TopicVideoCard : ComponentBase
                 Video,
                 $"Added from topic search '{Video.TopicName}' on {DateTime.Now:yyyy-MM-dd}. Match reason: {Video.MatchReason}");
 
-            var success = await VideoDataService.AddTopicVideoToLibraryAsync(
+            var success = await LibraryDataService.AddTopicVideoToLibraryAsync(
                 CurrentUserId,
                 Video, // TopicVideoDisplayModel directly - no conversion needed!
                 $"Added from topic search '{Video.TopicName}' on {DateTime.Now:yyyy-MM-dd}. Match reason: {Video.MatchReason}");

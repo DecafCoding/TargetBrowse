@@ -11,6 +11,7 @@ namespace TargetBrowse.Features.Videos.Components;
 public partial class VideoCard : ComponentBase
 {
     [Inject] protected IVideoDataService VideoDataService { get; set; } = default!;
+    [Inject] protected ILibraryDataService LibraryDataService { get; set; } = default!;
     [Inject] protected IVideoRatingService VideoRatingService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<VideoCard> Logger { get; set; } = default!;
@@ -140,7 +141,7 @@ public partial class VideoCard : ComponentBase
                 Video,
                 $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
 
-            var success = await VideoDataService.AddVideoDisplayToLibraryAsync(
+            var success = await LibraryDataService.AddVideoDisplayToLibraryAsync(
                 CurrentUserId,
                 Video, // VideoDisplayModel directly - no conversion needed!
                 $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
@@ -209,7 +210,7 @@ public partial class VideoCard : ComponentBase
 
         try
         {
-            var success = await VideoDataService.RemoveVideoFromLibraryAsync(CurrentUserId, Video.Id);
+            var success = await LibraryDataService.RemoveVideoFromLibraryAsync(CurrentUserId, Video.Id);
 
             if (success)
             {
@@ -267,7 +268,7 @@ public partial class VideoCard : ComponentBase
 
         try
         {
-            var success = await VideoDataService.UpdateVideoWatchStatusAsync(CurrentUserId, Video.Id, newStatus);
+            var success = await LibraryDataService.UpdateVideoWatchStatusAsync(CurrentUserId, Video.Id, newStatus);
 
             if (success)
             {
