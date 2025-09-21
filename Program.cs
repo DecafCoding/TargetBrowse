@@ -77,6 +77,7 @@ public class Program
         builder.Services.AddScoped<ITopicDataService, TopicDataService>();
         builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
         builder.Services.AddScoped<IVideoDataService, VideoDataService>();
+        builder.Services.AddScoped<ILibraryDataService, LibraryDataService>();
 
         #endregion
 

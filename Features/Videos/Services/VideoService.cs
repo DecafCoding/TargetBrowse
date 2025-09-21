@@ -13,15 +13,18 @@ public class VideoService : IVideoService
 {
     private readonly IVideoYouTubeService _youTubeService;
     private readonly IVideoDataService _videoDataService;
+    private readonly ILibraryDataService _libraryDataService;
     private readonly ILogger<VideoService> _logger;
 
     public VideoService(
         IVideoYouTubeService youTubeService,
         IVideoDataService videoDataService,
+        ILibraryDataService libraryDataService,
         ILogger<VideoService> logger)
     {
         _youTubeService = youTubeService;
         _videoDataService = videoDataService;
+        _libraryDataService = libraryDataService;
         _logger = logger;
     }
 
@@ -79,10 +82,10 @@ public class VideoService : IVideoService
                 var video = MapYouTubeVideoToDisplayModel(youTubeVideo);
 
                 // Check if video is already in user's library using VideoDataService
-                video.IsInLibrary = await _videoDataService.IsVideoInLibraryAsync(userId, video.YouTubeVideoId);
+                video.IsInLibrary = await _libraryDataService.IsVideoInLibraryAsync(userId, video.YouTubeVideoId);
                 if (video.IsInLibrary)
                 {
-                    var libraryVideo = await _videoDataService.GetVideoByYouTubeIdAsync(userId, video.YouTubeVideoId);
+                    var libraryVideo = await _libraryDataService.GetVideoByYouTubeIdAsync(userId, video.YouTubeVideoId);
                     if (libraryVideo != null)
                     {
                         video.AddedToLibrary = libraryVideo.AddedToLibrary;
@@ -113,7 +116,7 @@ public class VideoService : IVideoService
         try
         {
             // First check if video is in user's library using VideoDataService
-            var libraryVideo = await _videoDataService.GetVideoByYouTubeIdAsync(userId, youTubeVideoId);
+            var libraryVideo = await _libraryDataService.GetVideoByYouTubeIdAsync(userId, youTubeVideoId);
             if (libraryVideo != null)
             {
                 return libraryVideo;
@@ -148,7 +151,7 @@ public class VideoService : IVideoService
     {
         try
         {
-            return await _videoDataService.GetUserVideosAsync(userId);
+            return await _libraryDataService.GetUserVideosAsync(userId);
         }
         catch (Exception ex)
         {
@@ -165,7 +168,7 @@ public class VideoService : IVideoService
     {
         try
         {
-            return await _videoDataService.IsVideoInLibraryAsync(userId, youTubeVideoId);
+            return await _libraryDataService.IsVideoInLibraryAsync(userId, youTubeVideoId);
         }
         catch (Exception ex)
         {
@@ -183,7 +186,7 @@ public class VideoService : IVideoService
     {
         try
         {
-            var success = await _videoDataService.AddExistingVideoToLibraryAsync(userId, videoEntity);
+            var success = await _libraryDataService.AddExistingVideoToLibraryAsync(userId, videoEntity);
 
             if (success)
             {
