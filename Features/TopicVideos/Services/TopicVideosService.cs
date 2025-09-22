@@ -81,10 +81,7 @@ public class TopicVideosService : ITopicVideosService
             var publishedAfter = DateTime.UtcNow.AddYears(-LOOKBACK_YEARS);
 
             // Search YouTube using the shared service
-            var youTubeResult = await _youTubeService.SearchVideosByTopicAsync(
-                topicName,
-                publishedAfter,
-                maxResults);
+            var youTubeResult = await _youTubeService.SearchVideosByTopicAsync(topicName, publishedAfter);
 
             if (!youTubeResult.IsSuccess)
             {

@@ -201,13 +201,13 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
     /// Max results is clamped between 1-100. 50 from medium and 50 from long duration searches.
     /// </summary>
     public async Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(
-        string topicQuery, DateTime? publishedAfter = null, int maxResults = 100)
+        string topicQuery, DateTime? publishedAfter = null)
     {
         if (string.IsNullOrWhiteSpace(topicQuery))
             return YouTubeApiResult<List<VideoInfo>>.Success(new List<VideoInfo>());
 
         // Clamping max results between 1 and 100
-        maxResults = Math.Min(Math.Max(1, maxResults), 100);
+        //maxResults = Math.Min(Math.Max(1, maxResults), 100);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -224,7 +224,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
             // Check cache
             var publishedAfterStr = publishedAfter?.ToString("yyyyMMddHHmm") ?? "all";
-            var cacheKey = $"topic_comprehensive_{topicQuery.GetHashCode()}_{publishedAfterStr}_{maxResults}";
+            var cacheKey = $"topic_comprehensive_{topicQuery.GetHashCode()}_{publishedAfterStr}_100";
             if (TryGetFromCache(cacheKey, out List<VideoInfo>? cachedVideos))
             {
                 _logger.LogDebug("Returning cached comprehensive results for topic '{Topic}'", topicQuery);
@@ -235,7 +235,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
             try
             {
-                var halfResults = Math.Max(1, maxResults / 2);
+                //var halfResults = Math.Max(1, maxResults / 2);
 
                 // Base URL for both searches
                 var baseUrl = $"{YOUTUBE_API_BASE}/search" +
@@ -254,7 +254,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                 var allVideos = new List<VideoInfo>();
 
                 // Search 1: Medium duration videos (4-20 minutes)
-                var mediumUrl = baseUrl + $"&videoDuration=medium&maxResults={halfResults}";
+                var mediumUrl = baseUrl + $"&videoDuration=medium&maxResults=50";
 
                 if (await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
                 {
@@ -278,7 +278,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                 }
 
                 // Search 2: Long duration videos (20+ minutes)
-                var longUrl = baseUrl + $"&videoDuration=long&maxResults={halfResults}";
+                var longUrl = baseUrl + $"&videoDuration=long&maxResults=50";
 
                 if (await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
                 {
@@ -305,7 +305,6 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                 var uniqueVideos = allVideos
                     .GroupBy(v => v.YouTubeVideoId)
                     .Select(g => g.OrderByDescending(v => v.DurationCategory == "Long" ? 1 : 0).First())
-                    .Take(maxResults)
                     .ToList();
 
                 stopwatch.Stop();

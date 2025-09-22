@@ -38,7 +38,7 @@ public class SuggestionYouTubeService : ISuggestionYouTubeService
     public async Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(
         string topicQuery, DateTime? publishedAfter = null, int maxResults = 50)
     {
-        return await _sharedYouTubeService.SearchVideosByTopicAsync(topicQuery, publishedAfter, maxResults);
+        return await _sharedYouTubeService.SearchVideosByTopicAsync(topicQuery, publishedAfter);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class SuggestionYouTubeService : ISuggestionYouTubeService
 
         foreach (var topic in validTopics)
         {
-            var result = await _sharedYouTubeService.SearchVideosByTopicAsync(topic, publishedAfter, maxResultsPerTopic);
+            var result = await _sharedYouTubeService.SearchVideosByTopicAsync(topic, publishedAfter);
 
             if (result.IsSuccess)
             {

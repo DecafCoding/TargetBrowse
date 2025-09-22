@@ -20,6 +20,7 @@ public class TopicOnboardingService : ITopicOnboardingService
     private readonly ILogger<TopicOnboardingService> _logger;
 
     private const int InitialVideosLimit = 100;
+    private const int RelevanceThreshold = 5;
     private const int LookbackDays = 365; // Look back 365 days for initial topic videos
 
     public TopicOnboardingService(
@@ -68,10 +69,17 @@ public class TopicOnboardingService : ITopicOnboardingService
             var scoredVideos = ScoreVideosByRelevance(allVideos, topicName);
 
             // 4. Apply prioritized selection algorithm
-            var selectedVideos = ApplyPrioritizedSelection(scoredVideos, InitialVideosLimit);
+            //var selectedVideos = ApplyPrioritizedSelection(scoredVideos, InitialVideosLimit);
 
-            _logger.LogInformation("Selected {SelectedCount} videos for topic {TopicName} after prioritized selection (highly relevant: {HighlyRelevantCount})",
-                selectedVideos.Count, topicName, selectedVideos.Count(v => v.RelevanceScore >= 7.0));
+            // 4. New simpler selection: take top any above a relevance threshhold
+            // Only include videos with at least moderate relevance
+            var selectedVideos = scoredVideos.Where(v => v.RelevanceScore >= RelevanceThreshold) 
+                .OrderByDescending(v => v.RelevanceScore)
+                .ThenByDescending(v => v.VideoInfo.PublishedAt)
+                .Take(InitialVideosLimit)
+                .ToList();
+
+            _logger.LogInformation($"Selected {selectedVideos.Count} videos for topic {topicName} after relevance score above: {RelevanceThreshold})");
 
             // 5. Ensure all selected videos exist in the database using shared service
             var videoEntities = await _suggestionDataService.EnsureVideosExistAsync(selectedVideos.Select(sv => sv.VideoInfo).ToList());
@@ -253,7 +261,7 @@ public class TopicOnboardingService : ITopicOnboardingService
                 .ToList();
 
             selectedVideos.AddRange(highlyRelevantMedium);
-            _logger.LogDebug("Phase 1: Added {Count} highly relevant medium videos", highlyRelevantMedium.Count);
+            _logger.LogDebug($"Phase 1: Added {highlyRelevantMedium.Count} highly relevant medium videos");
 
             // Phase 2: If under limit, add highly relevant long duration videos
             if (selectedVideos.Count < maxResults)
@@ -268,7 +276,7 @@ public class TopicOnboardingService : ITopicOnboardingService
                     .ToList();
 
                 selectedVideos.AddRange(highlyRelevantLong);
-                _logger.LogDebug("Phase 2: Added {Count} highly relevant long videos", highlyRelevantLong.Count);
+                _logger.LogDebug($"Phase 2: Added {highlyRelevantLong.Count} highly relevant long videos");
             }
 
             // Phase 3: If still under limit, add remaining medium duration videos
@@ -384,10 +392,7 @@ public class TopicOnboardingService : ITopicOnboardingService
             // Use SharedYouTubeService for topic search with lookback date
             var publishedAfter = DateTime.UtcNow.AddDays(-LookbackDays);
 
-            var apiResult = await _sharedYouTubeService.SearchVideosByTopicAsync(
-                topicName,
-                publishedAfter,
-                InitialVideosLimit);
+            var apiResult = await _sharedYouTubeService.SearchVideosByTopicAsync(topicName, publishedAfter);
 
             if (apiResult.IsSuccess && apiResult.Data?.Any() == true)
             {
