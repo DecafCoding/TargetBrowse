@@ -52,7 +52,45 @@ public class ChannelInfoModel
     /// </summary>
     public string VideoCountDisplay => FormatCount(VideoCount);
 
+    /// <summary>
+    /// Last time this channel was checked for new videos.
+    /// </summary>
+    public DateTime? LastCheckDate { get; set; }
 
+    /// <summary>
+    /// Formatted display text for the last check date.
+    /// </summary>
+    public string LastCheckDateDisplay
+    {
+        get
+        {
+            if (!LastCheckDate.HasValue)
+                return "Never checked";
+
+            var timeDiff = DateTime.UtcNow - LastCheckDate.Value;
+
+            return timeDiff.TotalDays switch
+            {
+                < 1 when timeDiff.TotalHours < 1 => $"{(int)timeDiff.TotalMinutes} minutes ago",
+                < 1 => $"{(int)timeDiff.TotalHours} hours ago",
+                < 7 => $"{(int)timeDiff.TotalDays} days ago",
+                < 30 => $"{(int)(timeDiff.TotalDays / 7)} weeks ago",
+                _ => LastCheckDate.Value.ToString("MMM d, yyyy")
+            };
+        }
+    }
+
+    /// <summary>
+    /// Number of videos from this channel that exist in our database.
+    /// </summary>
+    public int DatabaseVideoCount { get; set; } = 0;
+
+    // Add this new property after the existing VideoCountDisplay property (around line 65)
+
+    /// <summary>
+    /// Formatted display for database video count to show alongside YouTube count.
+    /// </summary>
+    public string DatabaseVideoCountDisplay => DatabaseVideoCount > 0 ? $"({DatabaseVideoCount} in database)" : string.Empty;
 
     /// <summary>
     /// Formats large numbers into human-readable format.

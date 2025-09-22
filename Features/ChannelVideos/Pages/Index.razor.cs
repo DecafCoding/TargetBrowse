@@ -103,6 +103,8 @@ public partial class Index : ComponentBase
     /// <summary>
     /// Loads channel videos data from the service. Handles validation,
     /// error states, and logging throughout the process.
+    /// TODO - This method should fist check LastCheckedDate and then deteremine
+    /// if it needs to call the service or just load from the Db.
     /// </summary>
     private async Task LoadChannelVideos()
     {

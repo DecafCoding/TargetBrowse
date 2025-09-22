@@ -62,8 +62,7 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
     /// Pulls up to 50 medium duration videos and up to 50 long duration videos with pagination.
     /// Orders by publish date and returns the latest 100 videos total.
     /// </summary>
-    public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId, DateTime? since = null)
+    public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosFromAPI(string youTubeChannelId)
     {
         if (string.IsNullOrWhiteSpace(youTubeChannelId))
             return YouTubeApiResult<List<VideoInfo>>.Failure("Channel ID is required");
@@ -82,8 +81,8 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
             }
 
             // Check cache first
-            var sinceStr = since?.ToString("yyyyMMddHHmm") ?? "all";
-            var cacheKey = $"channel_paginated_{youTubeChannelId}_{sinceStr}_100";
+            //var sinceStr = since?.ToString("yyyyMMddHHmm") ?? "all";
+            var cacheKey = $"channel_paginated_{youTubeChannelId}_100";
             if (TryGetFromCache(cacheKey, out List<VideoInfo>? cachedVideos))
             {
                 _logger.LogDebug("Returning cached paginated results for channel {ChannelId}", youTubeChannelId);
@@ -103,11 +102,11 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                               $"&key={_settings.ApiKey}";
 
                 // Add publishedAfter filter if since date is provided
-                if (since.HasValue)
-                {
-                    var publishedAfter = since.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    baseUrl += $"&publishedAfter={publishedAfter}";
-                }
+                //if (since.HasValue)
+                //{
+                //    var publishedAfter = since.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                //    baseUrl += $"&publishedAfter={publishedAfter}";
+                //}
 
                 var allVideos = new List<VideoInfo>();
 
@@ -147,10 +146,10 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during channel search for {ChannelId} since {Since}",
-                youTubeChannelId, since);
+            //_logger.LogError(ex, "Error during channel search for {ChannelId} since {Since}",
+            //    youTubeChannelId, since);
             return YouTubeApiResult<List<VideoInfo>>.Failure(
-                "An unexpected error occurred. Please try again later.");
+                $"An unexpected error occurred. Please try again later. {ex.Message}");
         }
     }
 
@@ -390,6 +389,125 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
             _logger.LogError(ex, "Error during topic search '{Topic}'", topicQuery);
             return YouTubeApiResult<List<VideoInfo>>.Failure(
                 "An unexpected error occurred during search. Please try again later.");
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest videos from a channel since the last check date.
+    /// Simplified method for suggestion updates that makes a single API call with maxResults=50.
+    /// Filters out videos with duration of 3 minutes or less.
+    /// Create for ongoing channel update and suggestion process
+    /// </summary>
+    public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelLatestVideosAsync(
+        string youTubeChannelId, DateTime? lastCheckDate = null)
+    {
+        if (string.IsNullOrWhiteSpace(youTubeChannelId))
+            return YouTubeApiResult<List<VideoInfo>>.Failure("Channel ID is required");
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            // Check quota availability for search operation (1 search + 1 video details call)
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.SearchVideos, 1) ||
+                !await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.GetVideoDetails, 1))
+            {
+                await _messageCenterService.ShowApiLimitAsync("YouTube Data API", DateTime.UtcNow.Date.AddDays(1));
+                return YouTubeApiResult<List<VideoInfo>>.Failure(
+                    "YouTube API quota exceeded for today. Please try again tomorrow.",
+                    isQuotaExceeded: true);
+            }
+
+            // Check cache first
+            var sinceStr = lastCheckDate?.ToString("yyyyMMddHHmm") ?? "all";
+            var cacheKey = $"channel_latest_{youTubeChannelId}_{sinceStr}_50";
+            if (TryGetFromCache(cacheKey, out List<VideoInfo>? cachedVideos))
+            {
+                _logger.LogDebug("Returning cached latest results for channel {ChannelId}", youTubeChannelId);
+                return YouTubeApiResult<List<VideoInfo>>.Success(cachedVideos);
+            }
+
+            await _rateLimitSemaphore.WaitAsync();
+
+            try
+            {
+                // Build search URL for latest videos
+                var url = $"{YOUTUBE_API_BASE}/search" +
+                          $"?channelId={Uri.EscapeDataString(youTubeChannelId)}" +
+                          $"&part=snippet" +
+                          $"&type=video" +
+                          $"&order=date" +
+                          $"&maxResults=50" +
+                          $"&key={_settings.ApiKey}";
+
+                // Add publishedAfter filter if lastCheckDate is provided
+                if (lastCheckDate.HasValue)
+                {
+                    var publishedAfter = lastCheckDate.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    url += $"&publishedAfter={publishedAfter}";
+                }
+
+                _logger.LogDebug("Searching for latest videos from channel {ChannelId} since {LastCheck}",
+                    youTubeChannelId, lastCheckDate);
+
+                // Check and consume quota for search operation
+                if (!await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
+                {
+                    _logger.LogWarning("Quota exhausted during channel latest videos search for {ChannelId}", youTubeChannelId);
+                    return YouTubeApiResult<List<VideoInfo>>.Failure(
+                        "YouTube API quota exceeded for today. Please try again tomorrow.",
+                        isQuotaExceeded: true);
+                }
+
+                var response = await _httpClient.GetAsync(url);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    stopwatch.Stop();
+                    return await HandleApiErrorResponse(response, "channel latest videos search", stopwatch.Elapsed);
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var searchResult = JsonSerializer.Deserialize<YouTubeSearchResponse>(content, JsonOptions);
+
+                if (searchResult?.Items == null || !searchResult.Items.Any())
+                {
+                    _logger.LogDebug("No new videos found for channel {ChannelId} since {LastCheck}",
+                        youTubeChannelId, lastCheckDate);
+                    return YouTubeApiResult<List<VideoInfo>>.Success(new List<VideoInfo>());
+                }
+
+                // Process search results and get detailed video information
+                var videos = await ProcessSearchResults(searchResult, "ChannelLatest");
+
+                // Filter out videos with duration of 3 minutes or less (180 seconds)
+                var filteredVideos = videos
+                    .Where(v => v.Duration > 180)
+                    .OrderByDescending(v => v.PublishedAt)
+                    .ToList();
+
+                stopwatch.Stop();
+
+                // Cache the results
+                CacheSearchResults(cacheKey, filteredVideos);
+
+                _logger.LogInformation("Channel latest search for {ChannelId}: {Total} videos found, {Filtered} after duration filtering (>3min)",
+                    youTubeChannelId, videos.Count, filteredVideos.Count);
+
+                return YouTubeApiResult<List<VideoInfo>>.Success(filteredVideos);
+            }
+            finally
+            {
+                _rateLimitSemaphore.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "Error during channel latest videos search for {ChannelId} since {LastCheck}",
+                youTubeChannelId, lastCheckDate);
+            return YouTubeApiResult<List<VideoInfo>>.Failure(
+                "An unexpected error occurred. Please try again later.");
         }
     }
 

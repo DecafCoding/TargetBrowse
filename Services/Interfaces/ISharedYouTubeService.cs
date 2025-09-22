@@ -17,7 +17,17 @@ public interface ISharedYouTubeService
     /// <param name="since">Get videos published after this date</param>
     /// <param name="maxResults">Maximum number of videos to return (1-100)</param>
     /// <returns>API result containing list of videos or error information</returns>
-    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(string youTubeChannelId, DateTime? since = null);
+    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosFromAPI(string youTubeChannelId);
+
+    /// <summary>
+    /// Gets the latest videos from a channel since the last check date.
+    /// Simplified method for suggestion updates that makes a single API call with maxResults=50.
+    /// Filters out videos with duration of 3 minutes or less.
+    /// </summary>
+    /// <param name="youTubeChannelId">YouTube channel identifier</param>
+    /// <param name="lastCheckDate">Get videos published after this date (optional)</param>
+    /// <returns>API result containing list of videos longer than 3 minutes or error information</returns>
+    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelLatestVideosAsync(string youTubeChannelId, DateTime? lastCheckDate = null);
 
     /// <summary>
     /// Searches for videos across all of YouTube matching the specified topic.

@@ -22,7 +22,6 @@ public class ChannelOnboardingService : IChannelOnboardingService
     private readonly ILogger<ChannelOnboardingService> _logger;
 
     private const int InitialVideosLimit = 100;
-    private const int LookbackDays = 365; // Look back up to a year for initial videos
 
     public ChannelOnboardingService(
         IChannelRepository channelRepository,
@@ -201,9 +200,9 @@ public class ChannelOnboardingService : IChannelOnboardingService
 
             // Use SharedYouTubeService directly to get videos since lookback date
             // This ensures we use the same shorts-exclusion logic as suggestion generation
-            var lookbackDate = DateTime.UtcNow.AddDays(-LookbackDays);
+            // var lookbackDate = DateTime.UtcNow.AddDays(-LookbackDays);
 
-            var apiResult = await _sharedYouTubeService.GetChannelVideosSinceAsync(youTubeChannelId, lookbackDate);
+            var apiResult = await _sharedYouTubeService.GetChannelVideosFromAPI(youTubeChannelId);
 
             if (apiResult.IsSuccess && apiResult.Data?.Any() == true)
             {

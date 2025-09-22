@@ -1,6 +1,7 @@
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
+using TargetBrowse.Features.Videos.Data;
 using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.ChannelVideos.Services;
@@ -14,6 +15,7 @@ public class ChannelVideosService : IChannelVideosService
     private readonly IChannelVideosRepository _repository;
     private readonly ISharedYouTubeService _youTubeService;
     private readonly IMessageCenterService _messageCenter;
+    private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly ILogger<ChannelVideosService> _logger;
 
@@ -22,18 +24,23 @@ public class ChannelVideosService : IChannelVideosService
         ISharedYouTubeService youTubeService,
         IMessageCenterService messageCenter,
         IChannelRepository channelRepository,
+        IVideoRepository videoRepository,
         ILogger<ChannelVideosService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _youTubeService = youTubeService ?? throw new ArgumentNullException(nameof(youTubeService));
         _messageCenter = messageCenter ?? throw new ArgumentNullException(nameof(messageCenter));
         _channelRepository = channelRepository ?? throw new ArgumentNullException(nameof(channelRepository));
+        _videoRepository = videoRepository ?? throw new ArgumentNullException(nameof(videoRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    // File: Features/ChannelVideos/Services/ChannelVideosService.cs
+    // Replace the entire GetChannelVideosAsync method with this implementation
+
     /// <summary>
     /// Gets recent videos from a channel along with channel information.
-    /// Uses shared YouTube service with 1 year lookback as specified.
+    /// Now checks database first and only calls YouTube API based on rating and LastCheckDate.
     /// </summary>
     public async Task<ChannelVideosModel> GetChannelVideosAsync(string youTubeChannelId, string userId)
     {
@@ -64,6 +71,9 @@ public class ChannelVideosService : IChannelVideosService
 
             model.Channel = channelInfo;
 
+            // Get the count of videos we have in the database for this channel
+            model.Channel.DatabaseVideoCount = await _repository.GetChannelVideosCountInDatabaseAsync(youTubeChannelId);
+
             // Get user tracking and rating status
             if (!string.IsNullOrWhiteSpace(userId))
             {
@@ -71,39 +81,59 @@ public class ChannelVideosService : IChannelVideosService
                 model.UserRating = await _repository.GetUserChannelRatingAsync(userId, youTubeChannelId);
             }
 
-            // Get recent videos from YouTube API (1 year lookback as specified)
-            var oneYearAgo = DateTime.UtcNow.AddYears(-1);
-            var videosResult = await _youTubeService.GetChannelVideosSinceAsync(
-                youTubeChannelId,
-                oneYearAgo); // Use default from service
+            // Check if we should update from YouTube API based on rating and LastCheckDate
+            bool shouldUpdateFromAPI = ShouldUpdateFromAPI(model.UserRating, model.Channel.LastCheckDate);
 
-            if (!videosResult.IsSuccess)
+            if (shouldUpdateFromAPI)
             {
-                _logger.LogWarning("Failed to get videos for channel {ChannelId}: {Error}",
-                    youTubeChannelId, videosResult.ErrorMessage);
+                _logger.LogInformation("Updating channel {ChannelId} from YouTube API (rating: {Rating}, last check: {LastCheck})",
+                    youTubeChannelId, model.UserRating?.ToString() ?? "none", model.Channel.LastCheckDate?.ToString() ?? "never");
 
-                if (videosResult.IsQuotaExceeded)
+                // Get recent videos from YouTube API
+                var videosResult = await _youTubeService.GetChannelVideosFromAPI(youTubeChannelId);
+
+                if (!videosResult.IsSuccess)
                 {
-                    model.ErrorMessage = "YouTube API quota exceeded. Please try again later.";
+                    _logger.LogWarning("Failed to get videos for channel {ChannelId}: {Error}",
+                        youTubeChannelId, videosResult.ErrorMessage);
+
+                    if (videosResult.IsQuotaExceeded)
+                    {
+                        // Fall back to database videos if API quota exceeded
+                        _logger.LogInformation("API quota exceeded, falling back to database videos for channel {ChannelId}", youTubeChannelId);
+                        model.Videos = await _repository.GetChannelVideosFromDatabaseAsync(youTubeChannelId);
+                    }
+                    else
+                    {
+                        model.ErrorMessage = "Unable to load recent videos. Please try again later.";
+                        model.IsLoading = false;
+                        return model;
+                    }
                 }
                 else
                 {
-                    model.ErrorMessage = "Unable to load recent videos. Please try again later.";
-                }
+                    // Update LastCheckDate since we successfully checked the channel
+                    await _channelRepository.UpdateLastCheckDateAsync(youTubeChannelId, DateTime.UtcNow);
 
-                model.IsLoading = false;
-                return model;
+                    // Store videos in database for future use
+                    var videos = videosResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
+                    await StoreVideosInDatabase(videos);
+
+                    // Get videos from database to ensure consistency
+                    model.Videos = await _repository.GetChannelVideosFromDatabaseAsync(youTubeChannelId);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Using cached videos for channel {ChannelId} (rating: {Rating}, last check: {LastCheck})",
+                    youTubeChannelId, model.UserRating?.ToString() ?? "none", model.Channel.LastCheckDate?.ToString() ?? "never");
+
+                // Get videos from database only
+                model.Videos = await _repository.GetChannelVideosFromDatabaseAsync(youTubeChannelId);
             }
 
-            // Update LastCheckDate since we successfully checked the channel
-            await _channelRepository.UpdateLastCheckDateAsync(youTubeChannelId, DateTime.UtcNow);
-
-            // Convert to channel video models
-            var videos = videosResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
-            model.Videos = videos.Select(MapToChannelVideoModel).ToList();
-
-            _logger.LogInformation("Successfully loaded {Count} recent videos for channel {ChannelName}",
-                model.Videos.Count, channelInfo.Name);
+            _logger.LogInformation("Successfully loaded {Count} videos for channel {ChannelName} (from {Source})",
+                model.Videos.Count, channelInfo.Name, shouldUpdateFromAPI ? "API" : "database");
 
             model.IsLoading = false;
             return model;
@@ -122,7 +152,71 @@ public class ChannelVideosService : IChannelVideosService
     }
 
     /// <summary>
-    /// Gets channel information only (no videos).
+    /// Determines if we should update from YouTube API based on channel rating and last check date.
+    /// Rating-based refresh intervals:
+    /// - 5 stars: 5 days
+    /// - 4 stars: 7 days  
+    /// - 3 stars: 10 days
+    /// - 2 stars: 14 days
+    /// - 1 star or no rating: Never update
+    /// </summary>
+    private bool ShouldUpdateFromAPI(int? userRating, DateTime? lastCheckDate)
+    {
+        // If never checked before, always update
+        if (!lastCheckDate.HasValue)
+            return true;
+
+        var daysSinceCheck = (DateTime.UtcNow - lastCheckDate.Value).TotalDays;
+
+        return userRating switch
+        {
+            5 => daysSinceCheck > 5,
+            4 => daysSinceCheck > 7,
+            3 => daysSinceCheck > 10,
+            2 => daysSinceCheck > 14,
+            1 => false, // Never update for 1-star channels
+            null => false, // Never update for unrated channels
+            _ => daysSinceCheck > 14 // Default for unexpected ratings
+        };
+    }
+
+    /// <summary>
+    /// Stores YouTube API video results in the database for future use.
+    /// Uses the video repository to ensure videos exist in the database.
+    /// </summary>
+    private async Task StoreVideosInDatabase(List<Features.Suggestions.Models.VideoInfo> videos)
+    {
+        try
+        {
+            if (!videos.Any()) return;
+
+            _logger.LogDebug("Storing {VideoCount} videos in database", videos.Count);
+
+            // Store each video in the database using the video repository
+            foreach (var video in videos)
+            {
+                try
+                {
+                    await _videoRepository.EnsureVideoExistsAsync(video);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to store video {VideoId} in database", video.YouTubeVideoId);
+                    // Continue with other videos - don't fail the entire operation
+                }
+            }
+
+            _logger.LogInformation("Successfully stored {VideoCount} videos in database", videos.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error storing videos in database");
+            // Don't fail the entire operation if storage fails - videos will still be returned from API
+        }
+    }
+
+    /// <summary>
+    /// Gets channel information only (no videos) including database video count.
     /// </summary>
     public async Task<ChannelInfoModel?> GetChannelInfoAsync(string youTubeChannelId, string userId)
     {
@@ -132,6 +226,12 @@ public class ChannelVideosService : IChannelVideosService
                 return null;
 
             var channelInfo = await _repository.GetChannelInfoAsync(youTubeChannelId);
+            if (channelInfo != null)
+            {
+                // Get the count of videos we have in the database for this channel
+                channelInfo.DatabaseVideoCount = await _repository.GetChannelVideosCountInDatabaseAsync(youTubeChannelId);
+            }
+
             return channelInfo;
         }
         catch (Exception ex)

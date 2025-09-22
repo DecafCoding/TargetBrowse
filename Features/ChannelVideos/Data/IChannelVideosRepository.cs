@@ -47,4 +47,19 @@ public interface IChannelVideosRepository
     /// <param name="youTubeChannelIds">List of YouTube channel IDs</param>
     /// <returns>Dictionary mapping YouTube channel ID to channel info</returns>
     Task<Dictionary<string, ChannelInfoModel>> GetMultipleChannelInfoAsync(List<string> youTubeChannelIds);
+
+    /// <summary>
+    /// Gets videos from a specific channel that exist in the database.
+    /// Returns videos ordered by published date (newest first).
+    /// </summary>
+    /// <param name="youTubeChannelId">YouTube channel ID</param>
+    /// <returns>List of videos from the specified channel in the database</returns>
+    Task<List<ChannelVideoModel>> GetChannelVideosFromDatabaseAsync(string youTubeChannelId);
+
+    /// <summary>
+    /// Gets the count of videos from a specific channel that exist in the database.
+    /// </summary>
+    /// <param name="youTubeChannelId">YouTube channel ID</param>
+    /// <returns>Number of videos from this channel in the database</returns>
+    Task<int> GetChannelVideosCountInDatabaseAsync(string youTubeChannelId);
 }
