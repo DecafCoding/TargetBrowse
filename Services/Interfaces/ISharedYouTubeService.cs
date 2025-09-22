@@ -17,10 +17,7 @@ public interface ISharedYouTubeService
     /// <param name="since">Get videos published after this date</param>
     /// <param name="maxResults">Maximum number of videos to return (1-100)</param>
     /// <returns>API result containing list of videos or error information</returns>
-    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId,
-        DateTime since,
-        int maxResults = 100);
+    Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(string youTubeChannelId, DateTime? since = null);
 
     /// <summary>
     /// Searches for videos across all of YouTube matching the specified topic.

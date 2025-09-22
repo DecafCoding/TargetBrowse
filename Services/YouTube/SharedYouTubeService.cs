@@ -59,24 +59,21 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
     /// <summary>
     /// Gets new videos from a channel since the specified date.
-    /// Currently returns a mix of medium and long duration videos for diversity.
-    /// Max results is clamped between 1-100. 50 from medium and 50 from long duration searches.
+    /// Pulls up to 50 medium duration videos and up to 50 long duration videos with pagination.
+    /// Orders by publish date and returns the latest 100 videos total.
     /// </summary>
     public async Task<YouTubeApiResult<List<VideoInfo>>> GetChannelVideosSinceAsync(
-        string youTubeChannelId, DateTime since, int maxResults = 100)
+        string youTubeChannelId, DateTime? since = null)
     {
         if (string.IsNullOrWhiteSpace(youTubeChannelId))
             return YouTubeApiResult<List<VideoInfo>>.Failure("Channel ID is required");
-
-        // Clamp between 1-100
-        maxResults = Math.Min(Math.Max(1, maxResults), 100); 
 
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            // Check quota availability for search operations (we'll do 2 searches)
-            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.SearchVideos, 2))
+            // Check quota availability for search operations (we may do up to 4 searches)
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.SearchVideos, 4))
             {
                 await _messageCenterService.ShowApiLimitAsync("YouTube Data API", DateTime.UtcNow.Date.AddDays(1));
                 return YouTubeApiResult<List<VideoInfo>>.Failure(
@@ -85,10 +82,11 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
             }
 
             // Check cache first
-            var cacheKey = $"channel_comprehensive_{youTubeChannelId}_{since:yyyyMMddHHmm}_{maxResults}";
+            var sinceStr = since?.ToString("yyyyMMddHHmm") ?? "all";
+            var cacheKey = $"channel_paginated_{youTubeChannelId}_{sinceStr}_100";
             if (TryGetFromCache(cacheKey, out List<VideoInfo>? cachedVideos))
             {
-                _logger.LogDebug("Returning cached comprehensive results for channel {ChannelId}", youTubeChannelId);
+                _logger.LogDebug("Returning cached paginated results for channel {ChannelId}", youTubeChannelId);
                 return YouTubeApiResult<List<VideoInfo>>.Success(cachedVideos);
             }
 
@@ -96,78 +94,37 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
 
             try
             {
-                var publishedAfter = since.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                var halfResults = Math.Max(1, maxResults / 2); // Split quota between calls
-
-                // Base URL for both searches
+                // Base URL for searches
                 var baseUrl = $"{YOUTUBE_API_BASE}/search" +
                               $"?channelId={Uri.EscapeDataString(youTubeChannelId)}" +
-                              $"&publishedAfter={publishedAfter}" +
                               $"&part=snippet" +
                               $"&type=video" +
                               $"&order=date" +
                               $"&key={_settings.ApiKey}";
 
+                // Add publishedAfter filter if since date is provided
+                if (since.HasValue)
+                {
+                    var publishedAfter = since.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    baseUrl += $"&publishedAfter={publishedAfter}";
+                }
+
                 var allVideos = new List<VideoInfo>();
 
-                // Search 1: Medium duration videos (4-20 minutes)
-                var mediumUrl = baseUrl + $"&videoDuration=medium&maxResults={halfResults}";
-                _logger.LogDebug("Searching medium duration videos for channel {ChannelId}", youTubeChannelId);
+                // Get medium duration videos (4-20 minutes) with pagination
+                var mediumVideos = await GetVideosByDurationWithPagination(baseUrl, "medium", "ChannelSearch-Medium");
+                allVideos.AddRange(mediumVideos);
 
-                // Consume quota for this operation
-                if (await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
-                {
-                    var mediumResponse = await _httpClient.GetAsync(mediumUrl);
+                // Get long duration videos (20+ minutes) with pagination  
+                var longVideos = await GetVideosByDurationWithPagination(baseUrl, "long", "ChannelSearch-Long");
+                allVideos.AddRange(longVideos);
 
-                    if (mediumResponse.IsSuccessStatusCode)
-                    {
-                        var mediumContent = await mediumResponse.Content.ReadAsStringAsync();
-                        var mediumResult = JsonSerializer.Deserialize<YouTubeSearchResponse>(mediumContent, JsonOptions);
-
-                        if (mediumResult != null)
-                        {
-                            var mediumVideos = await ProcessSearchResults(mediumResult, "ChannelSearch-Medium");
-                            foreach (var video in mediumVideos)
-                            {
-                                video.DurationCategory = "Medium";
-                            }
-                            allVideos.AddRange(mediumVideos);
-                        }
-                    }
-                }
-
-                // Search 2: Long duration videos (20+ minutes)
-                var longUrl = baseUrl + $"&videoDuration=long&maxResults={halfResults}";
-                _logger.LogDebug("Searching long duration videos for channel {ChannelId}", youTubeChannelId);
-
-                // Consume quota for this operation
-                if (await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
-                {
-                    var longResponse = await _httpClient.GetAsync(longUrl);
-
-                    if (longResponse.IsSuccessStatusCode)
-                    {
-                        var longContent = await longResponse.Content.ReadAsStringAsync();
-                        var longResult = JsonSerializer.Deserialize<YouTubeSearchResponse>(longContent, JsonOptions);
-
-                        if (longResult != null)
-                        {
-                            var longVideos = await ProcessSearchResults(longResult, "ChannelSearch-Long");
-                            foreach (var video in longVideos)
-                            {
-                                video.DurationCategory = "Long";
-                            }
-                            allVideos.AddRange(longVideos);
-                        }
-                    }
-                }
-
-                // Combine results and remove duplicates
+                // Combine results, remove duplicates, order by publish date, and take latest 100
                 var uniqueVideos = allVideos
                     .GroupBy(v => v.YouTubeVideoId)
                     .Select(g => g.OrderByDescending(v => v.DurationCategory == "Long" ? 1 : 0).First())
                     .OrderByDescending(v => v.PublishedAt)
-                    .Take(maxResults)
+                    .Take(100)
                     .ToList();
 
                 stopwatch.Stop();
@@ -175,8 +132,10 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
                 // Cache the results
                 CacheSearchResults(cacheKey, uniqueVideos);
 
-                _logger.LogInformation("Channel search for {ChannelId}: {Count} unique videos found",
-                    youTubeChannelId, uniqueVideos.Count);
+                _logger.LogInformation("Channel search for {ChannelId}: {Count} unique videos found (Medium: {Medium}, Long: {Long})",
+                    youTubeChannelId, uniqueVideos.Count,
+                    uniqueVideos.Count(v => v.DurationCategory == "Medium"),
+                    uniqueVideos.Count(v => v.DurationCategory == "Long"));
 
                 return YouTubeApiResult<List<VideoInfo>>.Success(uniqueVideos);
             }
@@ -193,6 +152,109 @@ public class SharedYouTubeService : ISharedYouTubeService, IDisposable
             return YouTubeApiResult<List<VideoInfo>>.Failure(
                 "An unexpected error occurred. Please try again later.");
         }
+    }
+
+    /// <summary>
+    /// Helper method to get videos by duration with pagination support.
+    /// Pulls first 50 videos, then if exactly 50 returned, pulls next 50.
+    /// </summary>
+    private async Task<List<VideoInfo>> GetVideosByDurationWithPagination(
+        string baseUrl, string duration, string operationType)
+    {
+        var allVideos = new List<VideoInfo>();
+        string? nextPageToken = null;
+        var maxPages = 2; // Maximum 2 pages (50 + 50 = 100 videos per duration)
+        var currentPage = 0;
+
+        do
+        {
+            currentPage++;
+
+            // Build URL for this request
+            var url = baseUrl + $"&videoDuration={duration}&maxResults=50";
+            if (!string.IsNullOrEmpty(nextPageToken))
+            {
+                url += $"&pageToken={nextPageToken}";
+            }
+
+            _logger.LogDebug("Searching {Duration} duration videos for page {Page}", duration, currentPage);
+
+            // Check and consume quota for this operation
+            if (!await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos))
+            {
+                _logger.LogWarning("Quota exhausted during {OperationType} pagination on page {Page}",
+                    operationType, currentPage);
+                break;
+            }
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("API error during {OperationType} on page {Page}: {StatusCode}",
+                    operationType, currentPage, response.StatusCode);
+                break;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var searchResult = JsonSerializer.Deserialize<YouTubeSearchResponse>(content, JsonOptions);
+
+            if (searchResult?.Items == null || !searchResult.Items.Any())
+            {
+                _logger.LogDebug("No results returned for {OperationType} on page {Page}", operationType, currentPage);
+                break;
+            }
+
+            // Process the results
+            var pageVideos = await ProcessSearchResults(searchResult, operationType);
+            foreach (var video in pageVideos)
+            {
+                video.DurationCategory = duration == "medium" ? "Medium" : "Long";
+            }
+            allVideos.AddRange(pageVideos);
+
+            // Check if we should continue pagination
+            var returnedCount = searchResult.Items.Count;
+            _logger.LogDebug("{OperationType} page {Page}: {Count} videos returned",
+                operationType, currentPage, returnedCount);
+
+            // Continue if we got exactly 50 results and haven't hit max pages
+            if (returnedCount == 50 && currentPage < maxPages)
+            {
+                // Look for nextPageToken in the response
+                // Note: YouTube API includes nextPageToken in the response when more results are available
+                nextPageToken = GetNextPageToken(searchResult);
+                if (string.IsNullOrEmpty(nextPageToken))
+                {
+                    _logger.LogDebug("No nextPageToken available for {OperationType}, stopping pagination", operationType);
+                    break;
+                }
+            }
+            else
+            {
+                // Stop pagination: either less than 50 results or hit max pages
+                if (returnedCount < 50)
+                {
+                    _logger.LogDebug("Received {Count} < 50 results for {OperationType}, stopping pagination",
+                        returnedCount, operationType);
+                }
+                break;
+            }
+
+        } while (currentPage < maxPages);
+
+        _logger.LogInformation("{OperationType}: {Total} total videos collected across {Pages} pages",
+            operationType, allVideos.Count, currentPage);
+
+        return allVideos;
+    }
+
+    /// <summary>
+    /// Extracts the nextPageToken from YouTube search response.
+    /// </summary>
+    private string? GetNextPageToken(YouTubeSearchResponse searchResult)
+    {
+        return searchResult?.NextPageToken;
     }
 
     /// <summary>
@@ -745,6 +807,10 @@ public class YouTubeSearchResponse
 
     [JsonPropertyName("pageInfo")]
     public YouTubePageInfo? PageInfo { get; set; }
+
+    // Add this property for pagination support
+    [JsonPropertyName("nextPageToken")]
+    public string? NextPageToken { get; set; }
 }
 
 public class YouTubePageInfo

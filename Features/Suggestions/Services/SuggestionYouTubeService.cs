@@ -75,10 +75,7 @@ public class SuggestionYouTubeService : ISuggestionYouTubeService
                 continue;
             }
 
-            var result = await _sharedYouTubeService.GetChannelVideosSinceAsync(
-                request.YouTubeChannelId,
-                request.LastCheckDate,
-                request.MaxResults);
+            var result = await _sharedYouTubeService.GetChannelVideosSinceAsync(request.YouTubeChannelId, request.LastCheckDate);
 
             if (result.IsSuccess)
             {
