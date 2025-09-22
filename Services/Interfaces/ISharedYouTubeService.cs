@@ -30,10 +30,7 @@ public interface ISharedYouTubeService
     /// <param name="publishedAfter">Only include videos published after this date (optional)</param>
     /// <param name="maxResults">Maximum number of videos to return (1-100)</param>
     /// <returns>API result containing list of videos or error information</returns>
-    Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(
-        string topicQuery,
-        DateTime? publishedAfter = null,
-        int maxResults = 100);
+    Task<YouTubeApiResult<List<VideoInfo>>> SearchVideosByTopicAsync(string topicQuery, DateTime? publishedAfter = null);
 
     /// <summary>
     /// Gets detailed information about multiple videos by their YouTube IDs.
