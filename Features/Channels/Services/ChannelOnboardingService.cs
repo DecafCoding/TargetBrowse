@@ -203,10 +203,7 @@ public class ChannelOnboardingService : IChannelOnboardingService
             // This ensures we use the same shorts-exclusion logic as suggestion generation
             var lookbackDate = DateTime.UtcNow.AddDays(-LookbackDays);
 
-            var apiResult = await _sharedYouTubeService.GetChannelVideosSinceAsync(
-                youTubeChannelId,
-                lookbackDate,
-                InitialVideosLimit);
+            var apiResult = await _sharedYouTubeService.GetChannelVideosSinceAsync(youTubeChannelId, lookbackDate);
 
             if (apiResult.IsSuccess && apiResult.Data?.Any() == true)
             {
