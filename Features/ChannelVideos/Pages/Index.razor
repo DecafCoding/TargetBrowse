@@ -11,28 +11,6 @@
 
 <PageTitle>@GetPageTitle()</PageTitle>
 
-<!-- Breadcrumb Navigation -->
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-            <a href="/video-library" class="text-decoration-none">
-                <i class="bi bi-collection-play me-1"></i>
-                Library
-            </a>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">
-            @if (!Model.IsLoading && !string.IsNullOrEmpty(Model.Channel.Name))
-            {
-                @Model.Channel.Name
-            }
-            else
-            {
-                <span>Loading...</span>
-            }
-        </li>
-    </ol>
-</nav>
-
 <!-- Loading State -->
 @if (Model.IsLoading)
 {
@@ -86,7 +64,16 @@ else
 
                     <!-- Channel Details -->
                     <div class="channel-info">
-                        <h1 class="channel-name h4 mb-1">@Model.Channel.Name</h1>
+                        <h1 class="channel-name h4 mb-1">
+                            @Model.Channel.Name
+                            @if (Model.UserRating.HasValue)
+                            {
+                                <span class="badge bg-warning text-dark ms-2">
+                                    <i class="bi bi-star-fill me-1"></i>
+                                    @Model.UserRating.Value stars
+                                </span>
+                            }
+                        </h1>
 
                         <div class="channel-stats text-muted">
                             @if (!string.IsNullOrEmpty(Model.Channel.SubscriberCountDisplay) && Model.Channel.SubscriberCountDisplay != "N/A")
@@ -102,22 +89,24 @@ else
                                 <span class="me-3">
                                     <i class="bi bi-play-circle me-1"></i>
                                     @Model.Channel.VideoCountDisplay videos
+                                    @if (!string.IsNullOrEmpty(Model.Channel.DatabaseVideoCountDisplay))
+                                    {
+                                        <span class="text-muted"> @Model.Channel.DatabaseVideoCountDisplay</span>
+                                    }
                                 </span>
                             }
+
+                            <!-- Add LastCheckDate display -->
+                            <span class="me-3">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Last checked: @Model.Channel.LastCheckDateDisplay
+                            </span>
 
                             @if (Model.IsTrackedByUser)
                             {
                                 <span class="badge bg-success">
                                     <i class="bi bi-check-circle me-1"></i>
                                     Tracking
-                                </span>
-                            }
-
-                            @if (Model.UserRating.HasValue)
-                            {
-                                <span class="badge bg-warning ms-2">
-                                    <i class="bi bi-star-fill me-1"></i>
-                                    @Model.UserRating.Value stars
                                 </span>
                             }
                         </div>
@@ -140,76 +129,11 @@ else
 
     <div class="row">
 
-        <div class="col-lg-3">
+        @* <div class="col-lg-3">
             <!-- Help and Tips Sidebar -->
-            <div class="sidebar-content">
-                <!-- Quick Stats -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-question-circle me-2"></i>
-                            Quick Stats
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="how-it-works-steps">
-                            <div class="step mb-3">
-                                <div class="step-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">1</div>
-                                <div class="step-content d-inline-block">
-                                    <strong>Tracked Channels: 5</strong>
-                                </div>
-                            </div>
-                            <div class="step mb-3">
-                                <div class="step-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">2</div>
-                                <div class="step-content d-inline-block">
-                                    <strong>Learning Topics: 5</strong>
-                                </div>
-                            </div>
-                            <div class="step mb-0">
-                                <div class="step-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">3</div>
-                                <div class="step-content d-inline-block">
-                                    <strong>Pending Review: 5</strong>
-                                </div>
-                            </div>
-                            <div class="step mb-0">
-                                <div class="step-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">3</div>
-                                <div class="stat-value"">
-                                    5
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        </div> *@
 
-                <!-- Generation History -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-clock-history me-2"></i>
-                                Recent Activity
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="generation-history">
-
-                                    <div class="generation-item d-flex justify-content-between align-items-center py-2 ">
-                                        <div>
-                                            <small class="fw-medium">10 suggestions</small><br>
-                                            <small class="text-muted">1</small>
-                                        </div>
-                                        <div class="text-end">
-                                            <small class="text-success">0</small>
-                                        </div>
-                                    </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-            </div>
-        </div>
-
-        <div class="col-lg-9">
+        <div class="col-lg-12">
             <!-- Videos Section -->
             <div class="videos-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -227,7 +151,7 @@ else
                         <div class="row g-2">
                             @foreach (var video in Model.Videos)
                             {
-                                <div class="col-lg-3 col-md-4 col-sm-6 mb-1">
+                                <div class="col-lg-2 col-md-3 col-sm-6 mb-1">
                                     <ChannelVideoCard Video="@video" />
                                 </div>
                             }

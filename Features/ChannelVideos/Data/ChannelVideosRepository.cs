@@ -40,7 +40,8 @@ public class ChannelVideosRepository : IChannelVideosRepository
                     ThumbnailUrl = c.ThumbnailUrl,
                     SubscriberCount = c.SubscriberCount,
                     VideoCount = c.VideoCount,
-                    CreatedAt = c.PublishedAt
+                    CreatedAt = c.PublishedAt,
+                    LastCheckDate = c.LastCheckDate  // Added this line
                 })
                 .FirstOrDefaultAsync();
 
@@ -123,7 +124,8 @@ public class ChannelVideosRepository : IChannelVideosRepository
                     ThumbnailUrl = c.ThumbnailUrl,
                     SubscriberCount = c.SubscriberCount,
                     VideoCount = c.VideoCount,
-                    CreatedAt = c.PublishedAt
+                    CreatedAt = c.PublishedAt,
+                    LastCheckDate = c.LastCheckDate  // Added this line
                 })
                 .FirstOrDefaultAsync();
 
@@ -163,7 +165,8 @@ public class ChannelVideosRepository : IChannelVideosRepository
                     ThumbnailUrl = c.ThumbnailUrl,
                     SubscriberCount = c.SubscriberCount,
                     VideoCount = c.VideoCount,
-                    CreatedAt = c.PublishedAt
+                    CreatedAt = c.PublishedAt,
+                    LastCheckDate = c.LastCheckDate  // Added this line
                 })
                 .ToListAsync();
 
@@ -171,9 +174,69 @@ public class ChannelVideosRepository : IChannelVideosRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting multiple channel info for {Count} channel IDs", 
+            _logger.LogError(ex, "Error getting multiple channel info for {Count} channel IDs",
                 youTubeChannelIds?.Count ?? 0);
             return new Dictionary<string, ChannelInfoModel>();
+        }
+    }
+
+    /// <summary>
+    /// Gets videos from a specific channel that exist in the database.
+    /// Returns videos ordered by published date (newest first).
+    /// </summary>
+    public async Task<List<ChannelVideoModel>> GetChannelVideosFromDatabaseAsync(string youTubeChannelId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(youTubeChannelId))
+                return new List<ChannelVideoModel>();
+
+            var videos = await _context.Videos
+                .Where(v => v.Channel.YouTubeChannelId == youTubeChannelId)
+                .OrderByDescending(v => v.PublishedAt)
+                .Select(v => new ChannelVideoModel
+                {
+                    YouTubeVideoId = v.YouTubeVideoId,
+                    Title = v.Title,
+                    Description = v.Description ?? string.Empty,
+                    ThumbnailUrl = v.ThumbnailUrl ?? string.Empty,
+                    Duration = v.Duration,
+                    ViewCount = v.ViewCount > 0 ? v.ViewCount : 0,
+                    LikeCount = v.LikeCount > 0 ? v.LikeCount : 0,
+                    CommentCount = v.CommentCount > 0 ? v.CommentCount : 0,
+                    PublishedAt = v.PublishedAt
+                })
+                .ToListAsync();
+
+            return videos;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting videos from database for channel {ChannelId}", youTubeChannelId);
+            return new List<ChannelVideoModel>();
+        }
+    }
+
+    /// <summary>
+    /// Gets the count of videos from a specific channel that exist in the database.
+    /// </summary>
+    public async Task<int> GetChannelVideosCountInDatabaseAsync(string youTubeChannelId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(youTubeChannelId))
+                return 0;
+
+            var count = await _context.Videos
+                .Where(v => v.Channel.YouTubeChannelId == youTubeChannelId)
+                .CountAsync();
+
+            return count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting video count from database for channel {ChannelId}", youTubeChannelId);
+            return 0;
         }
     }
 }

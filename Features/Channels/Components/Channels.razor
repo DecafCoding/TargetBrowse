@@ -16,16 +16,6 @@
 </div>
 
 <div class="row">
-    <div class="col-lg-8">
-        <!-- Channel List Component (moved to top) -->
-        <div class="mb-4">
-            <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
-        </div>
-
-        <!-- Channel Search Component (moved below list) -->
-        <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
-    </div>
-
     <div class="col-lg-4">
         <!-- Help and Tips -->
         <div class="card">
@@ -117,5 +107,15 @@
                 </small>
             </div>
         </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Channel List Component (moved to top) -->
+        <div class="mb-4">
+            <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
+        </div>
+
+        <!-- Channel Search Component (moved below list) -->
+        <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
     </div>
 </div>

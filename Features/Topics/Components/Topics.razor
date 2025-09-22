@@ -16,17 +16,7 @@
 </div>
 
 <div class="row">
-    <div class="col-lg-6">
-        <!-- Topic List Component (converted to table) -->
-        <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
-
-        <!-- Add Topic Component (moved below list) -->
-        <div class="mt-4">
-            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
-        </div>
-    </div>
-
-    <div class="col-lg-6">
+    <div class="col-lg-4">
         <!-- Help and Tips -->
         <div class="card">
             <div class="card-header">
@@ -74,6 +64,16 @@
                     <li class="mb-0"><i class="bi bi-arrow-right me-2"></i>Generate AI-powered video summaries</li>
                 </ul>
             </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Topic List Component (converted to table) -->
+        <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
+
+        <!-- Add Topic Component (moved below list) -->
+        <div class="mt-4">
+            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
         </div>
     </div>
 </div>
