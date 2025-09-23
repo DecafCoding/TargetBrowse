@@ -85,7 +85,7 @@ public partial class ChannelRatingModal : ComponentBase
     /// </summary>
     public void CloseModal()
     {
-        if (IsSubmitting || IsDeleting) return;
+        //if (IsSubmitting || IsDeleting) return;
 
         IsVisible = false;
         CurrentChannel = null;

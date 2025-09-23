@@ -206,5 +206,30 @@ public partial class Index : ComponentBase
         return "https://via.placeholder.com/80x80?text=Channel";
     }
 
+    /// <summary>
+    /// Gets the appropriate CSS class for individual stars in the channel rating.
+    /// All filled stars are yellow (text-warning), empty stars are muted.
+    /// </summary>
+    /// <param name="starNumber">The position of the star (1-5)</param>
+    /// <returns>Bootstrap CSS class for the star color</returns>
+    protected string GetStarClass(int starNumber)
+    {
+        if (!Model.UserRating.HasValue) return "text-muted";
+
+        return starNumber <= Model.UserRating.Value ? "text-warning" : "text-muted";
+    }
+
+    /// <summary>
+    /// Gets the star fill type (filled or empty) for the channel rating.
+    /// </summary>
+    /// <param name="starNumber">The position of the star (1-5)</param>
+    /// <returns>String suffix for Bootstrap icon class</returns>
+    protected string GetStarFill(int starNumber)
+    {
+        if (!Model.UserRating.HasValue) return "";
+
+        return starNumber <= Model.UserRating.Value ? "-fill" : "";
+    }
+
     #endregion
 }

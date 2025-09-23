@@ -5,14 +5,14 @@ namespace TargetBrowse.Features.Channels.Components;
 
 /// <summary>
 /// Component for displaying and managing channel ratings.
-/// Provides a comprehensive UI for viewing rating details, editing ratings, and handling user interactions.
+/// Provides a simplified UI with clickable stars for rating/editing.
 /// </summary>
 public partial class ChannelRatingDisplay
 {
     #region Parameters
 
     /// <summary>
-    /// The channel rating to display. If null, shows a "Rate" button instead.
+    /// The channel rating to display. If null, shows empty stars for rating.
     /// </summary>
     [Parameter]
     public ChannelRatingModel? Rating { get; set; }
@@ -103,13 +103,31 @@ public partial class ChannelRatingDisplay
         }
     }
 
+    /// <summary>
+    /// Handles clicking on the star display.
+    /// Routes to appropriate handler based on whether rating exists.
+    /// </summary>
+    private async Task HandleRatingClick()
+    {
+        if (IsDisabled) return;
+
+        if (Rating != null)
+        {
+            await HandleEditClick();
+        }
+        else
+        {
+            await HandleRateClick();
+        }
+    }
+
     #endregion
 
     #region Helper Methods
 
     /// <summary>
-    /// Gets the appropriate CSS class for individual stars based on the rating value.
-    /// Provides color-coded feedback: red for 1-star, yellow for 2-star, blue for 3-star, green for 4-5 stars.
+    /// Gets the appropriate CSS class for individual stars.
+    /// All filled stars are yellow (text-warning), empty stars are muted.
     /// </summary>
     /// <param name="starNumber">The position of the star (1-5)</param>
     /// <returns>Bootstrap CSS class for the star color</returns>
@@ -117,36 +135,30 @@ public partial class ChannelRatingDisplay
     {
         if (Rating == null) return "text-muted";
 
-        return Rating.Stars switch
-        {
-            1 when starNumber <= 1 => "text-danger",
-            2 when starNumber <= 2 => "text-warning",
-            3 when starNumber <= 3 => "text-info",
-            4 when starNumber <= 4 => "text-success",
-            5 when starNumber <= 5 => "text-success",
-            _ when starNumber <= Rating.Stars => "text-warning",
-            _ => "text-muted"
-        };
+        return starNumber <= Rating.Stars ? "text-warning" : "text-muted";
     }
 
     /// <summary>
-    /// Gets the appropriate CSS class for the rating badge.
-    /// Matches the color scheme used for stars to provide consistent visual feedback.
+    /// Gets the star fill type (filled or empty).
     /// </summary>
-    /// <returns>Bootstrap CSS class for the badge background</returns>
-    private string GetRatingBadgeClass()
+    /// <param name="starNumber">The position of the star (1-5)</param>
+    /// <returns>String suffix for Bootstrap icon class</returns>
+    private string GetStarFill(int starNumber)
     {
-        if (Rating == null) return "bg-secondary";
+        if (Rating == null) return "";
 
-        return Rating.Stars switch
-        {
-            1 => "bg-danger",
-            2 => "bg-warning text-dark",
-            3 => "bg-info",
-            4 => "bg-success",
-            5 => "bg-success",
-            _ => "bg-secondary"
-        };
+        return starNumber <= Rating.Stars ? "-fill" : "";
+    }
+
+    /// <summary>
+    /// Gets the appropriate tooltip text for the star display.
+    /// </summary>
+    /// <returns>Tooltip text based on current rating state</returns>
+    private string GetClickTooltip()
+    {
+        if (IsDisabled) return "Rating disabled";
+
+        return Rating != null ? "Click to edit rating" : "Click to rate this channel";
     }
 
     #endregion
