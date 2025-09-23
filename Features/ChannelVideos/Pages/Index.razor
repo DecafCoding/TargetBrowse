@@ -66,13 +66,13 @@ else
                     <div class="channel-info">
                         <h1 class="channel-name h4 mb-1">
                             @Model.Channel.Name
-                            @if (Model.UserRating.HasValue)
-                            {
-                                <span class="badge bg-warning text-dark ms-2">
-                                    <i class="bi bi-star-fill me-1"></i>
-                                    @Model.UserRating.Value stars
-                                </span>
-                            }
+                            @* Star Rating Display *@
+                            <span class="ms-2 h6">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi bi-star@(GetStarFill(i)) @GetStarClass(i)"></i>
+                                }
+                            </span>
                         </h1>
 
                         <div class="channel-stats text-muted">

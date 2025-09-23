@@ -1,103 +1,74 @@
 @using TargetBrowse.Features.Channels.Models
 
-@if (Rating != null)
-{
-    <!-- Existing Rating Display -->
-    <div class="d-flex align-items-center">
-        <!-- Star Display -->
-        <div class="me-2">
-            @for (int i = 1; i <= 5; i++)
-            {
-                <i class="bi bi-star@(i <= Rating.Stars ? "-fill" : "") @GetStarClass(i)"></i>
-            }
-        </div>
-
-        <!-- Rating Info -->
-        <span class="badge @GetRatingBadgeClass() me-2">@Rating.Stars</span>
-
-        @if (ShowDetailsButton)
+<!-- Star Display - Always Show 5 Stars -->
+<div class="d-flex align-items-center">
+    <!-- Clickable Star Display -->
+    <div class="me-2" style="cursor: pointer;" @onclick="HandleRatingClick" title="@GetClickTooltip()">
+        @for (int i = 1; i <= 5; i++)
         {
-            <!-- View Details Button -->
-            <button type="button"
-                    class="btn btn-outline-secondary btn-sm"
-                    @onclick="ToggleDetails"
-                    title="@(ShowDetails ? "Hide rating details" : "Show rating details")">
-                <i class="bi bi-@(ShowDetails ? "eye-slash" : "eye")"></i>
-            </button>
-        }
-
-        @if (ShowEditButton)
-        {
-            <!-- Edit Rating Button -->
-            <button type="button"
-                    class="btn btn-outline-primary btn-sm ms-1"
-                    @onclick="HandleEditClick"
-                    title="Edit your rating">
-                <i class="bi bi-pencil"></i>
-            </button>
+            <i class="bi bi-star@(GetStarFill(i)) @GetStarClass(i)"></i>
         }
     </div>
 
-    @if (ShowDetails && ShowDetailsButton)
+    @if (Rating != null && ShowDetailsButton)
     {
-        <!-- Rating Details -->
-        <div class="mt-2 p-2 bg-light rounded">
-            <div class="small">
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                    <strong>@Rating.StarDisplayText</strong>
-                    <small class="text-muted">@Rating.CreatedAtDisplay</small>
-                </div>
+        <!-- View Details Button -->
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @onclick="ToggleDetails"
+                title="@(ShowDetails ? "Hide rating details" : "Show rating details")">
+            <i class="bi bi-@(ShowDetails ? "eye-slash" : "eye")"></i>
+        </button>
+    }
+</div>
 
-                @if (!string.IsNullOrWhiteSpace(Rating.Notes))
-                {
-                    <div class="text-muted">
-                        @if (ShowFullNotes)
-                        {
-                            <span>@Rating.Notes</span>
-                        }
-                        else
-                        {
-                            <span>@Rating.ShortNotes</span>
-                            @if (Rating.Notes.Length > 100)
-                            {
-                                <button type="button"
-                                        class="btn btn-link btn-sm p-0 ms-1"
-                                        @onclick="() => ShowFullNotes = true">
-                                    <small>Show more</small>
-                                </button>
-                            }
-                        }
+@if (Rating != null && ShowDetails && ShowDetailsButton)
+{
+    <!-- Rating Details -->
+    <div class="mt-2 p-2 bg-light rounded">
+        <div class="small">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <strong>@Rating.StarDisplayText</strong>
+                <small class="text-muted">@Rating.CreatedAtDisplay</small>
+            </div>
 
-                        @if (ShowFullNotes && Rating.Notes.Length > 100)
+            @if (!string.IsNullOrWhiteSpace(Rating.Notes))
+            {
+                <div class="text-muted">
+                    @if (ShowFullNotes)
+                    {
+                        <span>@Rating.Notes</span>
+                    }
+                    else
+                    {
+                        <span>@Rating.ShortNotes</span>
+                        @if (Rating.Notes.Length > 100)
                         {
                             <button type="button"
                                     class="btn btn-link btn-sm p-0 ms-1"
-                                    @onclick="() => ShowFullNotes = false">
-                                <small>Show less</small>
+                                    @onclick="() => ShowFullNotes = true">
+                                <small>Show more</small>
                             </button>
                         }
-                    </div>
-                }
+                    }
 
-                @if (Rating.WasModified)
-                {
-                    <div class="mt-1">
-                        <small class="text-muted fst-italic">@Rating.UpdatedAtDisplay</small>
-                    </div>
-                }
-            </div>
+                    @if (ShowFullNotes && Rating.Notes.Length > 100)
+                    {
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 ms-1"
+                                @onclick="() => ShowFullNotes = false">
+                            <small>Show less</small>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (Rating.WasModified)
+            {
+                <div class="mt-1">
+                    <small class="text-muted fst-italic">@Rating.UpdatedAtDisplay</small>
+                </div>
+            }
         </div>
-    }
-}
-else
-{
-    <!-- No Rating - Show Rate Button -->
-    <button type="button"
-            class="btn btn-outline-warning btn-sm"
-            @onclick="HandleRateClick"
-            disabled="@IsDisabled"
-            title="Rate this channel">
-        <i class="bi bi-star me-1"></i>
-        Rate
-    </button>
+    </div>
 }

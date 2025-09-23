@@ -6,11 +6,11 @@ A personalized YouTube curation platform that learns from your viewing preferenc
 
 In my opinion YouTube's recommendation algorithm fails at several points by:
 
-- Over emphasizes the topic of the most recent video watched
+- Over emphasizes the topic of the most recently watched video
 - Constantly recommends games and shorts with no way to turn off permanantly
-- Recommends video you have already watched
-- Recommends partially watched videos
-- Pulls recommendations from you "Watch Later" list
+- Recommends videos you have already watched
+- Recommends partially watched videos, which you have already decided were not interesting
+- Pulls recommendations from your "Watch Later" list
 
 This causes you to waste time browsing through irrelevant suggestions or miss valuable content from channels they care about. This application provides:
 
@@ -88,38 +88,28 @@ This causes you to waste time browsing through irrelevant suggestions or miss va
 ## Project Structure
 
 ```
-YouTubeTracker/
-├── YouTubeTracker.Web/                 # Main Blazor Server Application
-│   ├── Features/                       # Feature-based organization
-│   │   ├── Authentication/             # User management
-│   │   ├── Topics/                     # Topic management
-│   │   ├── Channels/                   # Channel tracking
-│   │   ├── Videos/                     # Video library
-│   │   ├── Ratings/                    # Rating system
-│   │   ├── Suggestions/                # Suggestion engine
-│   │   └── Summaries/                  # AI summarization
-│   ├── Shared/
-│   │   ├── Services/                   # Cross-cutting services
-│   │   ├── Components/                 # Reusable UI components
-│   │   └── Models/                     # Shared data models
-│   ├── Data/
-│   │   ├── ApplicationDbContext.cs     # EF Core context
-│   │   ├── Entities/                   # Database entities
-│   │   └── Migrations/                 # Database migrations
-│   └── appsettings.json                # Configuration
-└── YouTubeTracker.Shared/              # Shared library
-    ├── Prompts/                        # AI prompt templates
-    ├── Integration/                    # External API classes
-    └── Models/                         # Shared models
+
+Solution/                 # Main Blazor Server Application
+  ├── Features/                       # Feature-based organization
+  │   ├── Authentication/             # User management
+  │   ├── Topics/                     # Topic management
+  │   ├── Channels/                   # Channel tracking
+  │   ├── Videos/                     # Video library
+  │   ├── Ratings/                    # Rating system
+  │   ├── Suggestions/                # Suggestion engine
+  │   └── Summaries/                  # AI summarization
+  ├── Services/
+  │   ├── DataServices/               # Shared data services
+  │   ├── Components/                 # Reusable UI components
+  │   └── Models/                     # Shared data models
+  ├── Data/
+  │   ├── ApplicationDbContext.cs     # EF Core context
+  │   └── Entities/                   # Database entities
+  └── appsettings.json                # Configuration
+
 ```
 
 ## API Limits & Quotas
-
-### Daily Limits (Per User)
-- **Video Summaries**: 10 per day (resets at midnight UTC)
-- **Tracked Channels**: 50 maximum
-- **Topics**: 10 maximum
-- **Pending Suggestions**: 100 maximum (auto-cleanup after 30 days)
 
 ### API Rate Limiting
 - YouTube Data API v3: Managed through application-level quotas
@@ -170,7 +160,7 @@ The application follows **Vertical Slice Architecture** principles:
 ## Roadmap
 
 ### Planned Enhancements
-- **AI-Powered Thumbnail Analysis** (YT-026) - Analyze video thumbnails to improve suggestion accuracy
+- **AI-Powered Thumbnail Analysis** - Analyze video thumbnails to improve suggestion accuracy
 - **Advanced Search & Filtering** - Enhanced content discovery capabilities
 - **Mobile App** - Native mobile application
 - **Advanced Analytics** - User behavior insights and recommendation analytics
