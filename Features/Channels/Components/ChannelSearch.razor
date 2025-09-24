@@ -8,8 +8,7 @@
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <i class="bi bi-search me-2"></i>
-            Search YouTube Channels
+            Add A New Channel
         </h5>
     </div>
     <div class="card-body">
@@ -18,7 +17,6 @@
             <DataAnnotationsValidator />
 
             <div class="mb-3">
-                <label for="searchQuery" class="form-label">Channel Name or YouTube URL</label>
                 <div class="input-group">
                     <InputText @bind-Value="SearchModel.SearchQuery"
                                class="form-control"
@@ -41,7 +39,6 @@
                 </div>
                 <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
                 <div class="form-text">
-                    <i class="bi bi-info-circle me-1"></i>
                     Search by channel name or paste a YouTube channel URL (youtube.com/channel/, youtube.com/, etc.)
                 </div>
             </div>

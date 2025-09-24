@@ -16,9 +16,9 @@
             <div class="queue-stats">
                 <h5 class="mb-1">
                     <i class="bi bi-collection-play me-2"></i>
-                    Your Suggestion Queue
+                    Suggestions
                 </h5>
-                @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+@*                 @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
                 {
                     var counts = QueueModel.GetSourceCounts();
                     <div class="d-flex flex-wrap gap-2 small text-muted">
@@ -32,7 +32,7 @@
                             <span>• <span class="text-warning"><strong>@counts.NearExpiry</strong> expiring soon</span></span>
                         }
                     </div>
-                }
+                } *@
             </div>
 
             <!-- Filter and Sort Controls -->

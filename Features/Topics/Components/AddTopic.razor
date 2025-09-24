@@ -10,8 +10,7 @@
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <i class="bi bi-plus-circle me-2"></i>
-            Add New Topic
+            Add A New Topic
         </h5>
     </div>
     <div class="card-body">
@@ -19,28 +18,26 @@
             <DataAnnotationsValidator />
 
             <div class="mb-3">
-                <label for="topicName" class="form-label">Topic Name</label>
-                <InputText @bind-Value="TopicModel.Name"
-                           class="form-control"
-                           id="topicName"
-                           placeholder="Enter topic name (e.g., Machine Learning, Web Development)"
-                           disabled="@IsSubmitting" />
+                <div class="input-group">
+                    <InputText @bind-Value="TopicModel.Name"
+                               class="form-control"
+                               id="topicName"
+                               placeholder="Enter topic name (e.g., Machine Learning, Web Development)"
+                               disabled="@IsSubmitting" />
+                    <button type="submit"
+                            class="btn btn-primary"
+                            disabled="@IsSubmitting">
+                        @if (IsSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        Add Topic
+                    </button>
+                </div>
                 <ValidationMessage For="@(() => TopicModel.Name)" class="text-danger" />
                 <div class="form-text">
                     Topics help us find relevant YouTube content for you. Be specific for better suggestions.
                 </div>
-            </div>
-
-            <div class="d-flex justify-content-end">
-                <button type="submit"
-                        class="btn btn-primary"
-                        disabled="@IsSubmitting">
-                    @if (IsSubmitting)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    }
-                    Add Topic
-                </button>
             </div>
         </EditForm>
     </div>

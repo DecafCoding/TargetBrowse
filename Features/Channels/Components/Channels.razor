@@ -6,17 +6,17 @@
 
 <PageTitle>Channel Tracking - YouTube Video Tracker</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+@* <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h2 mb-1">Channel Tracking</h1>
         <p class="text-muted mb-0">
             Track up to 50 YouTube channels to get personalized content suggestions when new videos are published.
         </p>
     </div>
-</div>
+</div> *@
 
 <div class="row">
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <!-- Help and Tips -->
         <div class="card">
             <div class="card-header">
@@ -109,7 +109,7 @@
         </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-lg-9">
         <!-- Channel List Component (moved to top) -->
         <div class="mb-4">
             <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
