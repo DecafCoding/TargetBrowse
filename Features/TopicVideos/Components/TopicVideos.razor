@@ -5,91 +5,7 @@
 
 @attribute [Authorize]
 
-<PageTitle>@GetPageTitle() - YouTube Video Tracker</PageTitle>
-
-<!-- Page Header -->
-<div class="d-flex justify-content-between align-items-start mb-4">
-    <div class="flex-grow-1">
-        @if (IsLoading)
-        {
-            <div class="placeholder-glow">
-                <h1 class="h2 mb-1">
-                    <span class="placeholder col-6"></span>
-                </h1>
-                <p class="text-muted mb-0">
-                    <span class="placeholder col-8"></span>
-                </p>
-            </div>
-        }
-        else if (CurrentTopic != null)
-        {
-            <h1 class="h2 mb-1">
-                <i class="bi bi-play-circle me-2 text-primary"></i>
-                Recent Videos: @CurrentTopic.Name
-            </h1>
-            <p class="text-muted mb-0">
-                Discover the latest YouTube content related to your topic. 
-                Videos from the past year, sorted by relevance.
-            </p>
-        }
-        else if (HasError)
-        {
-            <h1 class="h2 mb-1 text-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Topic Not Found
-            </h1>
-            <p class="text-muted mb-0">
-                The requested topic could not be found or you don't have access to it.
-            </p>
-        }
-        else
-        {
-            <h1 class="h2 mb-1">
-                <i class="bi bi-play-circle me-2 text-primary"></i>
-                Recent Videos
-            </h1>
-            <p class="text-muted mb-0">
-                Loading topic information...
-            </p>
-        }
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="d-flex gap-2">
-        @if (!IsLoading && CurrentTopic != null)
-        {
-            <!-- Back to Topics Button -->
-            <a href="/topics" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>
-                Back to Topics
-            </a>
-
-            <!-- Refresh Button -->
-            <button type="button"
-                    class="btn btn-primary"
-                    @onclick="RefreshVideos"
-                    disabled="@IsRefreshing"
-                    title="Search for new videos">
-                @if (IsRefreshing)
-                {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                }
-                else
-                {
-                    <i class="bi bi-search me-2"></i>
-                }
-                @(IsRefreshing ? "Searching..." : "Search YouTube")
-            </button>
-        }
-        else if (HasError)
-        {
-            <a href="/topics" class="btn btn-primary">
-                <i class="bi bi-arrow-left me-2"></i>
-                Return to Topics
-            </a>
-        }
-    </div>
-</div>
+<PageTitle>@GetPageTitle()</PageTitle>
 
 <!-- Main Content -->
 @if (HasError && CurrentTopic == null)
@@ -137,7 +53,7 @@ else
 {
     <div class="row mt-5">
         <div class="col-lg-8 offset-lg-2">
-            <div class="card bg-light border-0">
+            <div class="card border-0">
                 <div class="card-body">
                     <h6 class="card-title mb-3">
                         <i class="bi bi-lightbulb me-2 text-warning"></i>

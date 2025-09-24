@@ -6,23 +6,14 @@
 
 <PageTitle>My Topics - YouTube Video Tracker</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-1">My Topics</h1>
-        <p class="text-muted mb-0">
-            Define your learning interests to get personalized YouTube content suggestions.
-        </p>
-    </div>
-</div>
-
 <div class="row">
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <!-- Help and Tips -->
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-question-circle me-2"></i>
-                    Tips for Better Suggestions
+                    Tips
                 </h5>
             </div>
             <div class="card-body">
@@ -67,7 +58,7 @@
         </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-lg-9">
         <!-- Topic List Component (converted to table) -->
         <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
 

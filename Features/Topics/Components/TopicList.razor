@@ -7,8 +7,7 @@
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <i class="bi bi-list-ul me-2"></i>
-            Your Topics
+            Topics
         </h5>
     </div>
     <div class="card-body">
@@ -37,11 +36,12 @@
         {
             <!-- Topic Table -->
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle table-sm">
                     <thead class="table-light">
                         <tr>
                             <th scope="col" class="border-0">Topic</th>
                             <th scope="col" class="border-0">Age</th>
+                            <th scope="col" class="border-0">Video Counts</th>
                             <th scope="col" class="border-0 text-center">Recent Videos</th>
                             <th scope="col" class="border-0 text-center" style="width: 120px;">Actions</th>
                         </tr>
@@ -60,10 +60,12 @@
                                     @topic.CreatedAtDisplay
                                 </td>
 
+                                <td># / # / #</td>
+
                                 <!-- Recent Videos Link -->
                                 <td class="text-center">
                                     <a href="/topics/@topic.Id/videos"
-                                       class="btn btn-outline-primary btn-sm"
+                                       class="btn btn-outline-primary btn-tiny"
                                        title="View recent YouTube videos for this topic">
                                         <i class="bi bi-play-circle me-1"></i>
                                         View Videos
@@ -75,14 +77,14 @@
                                     <div class="d-flex justify-content-center gap-1">
                                         <!-- View Recent Videos (icon version for mobile) -->
                                         <a href="/topics/@topic.Id/videos"
-                                           class="btn btn-outline-info btn-sm d-md-none"
+                                           class="btn btn-outline-info btn-tiny d-md-none"
                                            title="View recent videos">
                                             <i class="bi bi-play-circle"></i>
                                         </a>
 
                                         <!-- Delete Action -->
                                         <button type="button"
-                                                class="btn btn-outline-danger btn-sm"
+                                                class="btn btn-outline-danger btn-tiny"
                                                 @onclick="() => ShowDeleteConfirmation(topic)"
                                                 disabled="@IsDeleting"
                                                 title="Delete topic">
