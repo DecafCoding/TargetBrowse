@@ -1,4 +1,6 @@
-﻿namespace TargetBrowse.Features.Topics.Models;
+﻿using TargetBrowse.Services;
+
+namespace TargetBrowse.Features.Topics.Models;
 
 /// <summary>
 /// Display model for topic information in the UI.
@@ -24,23 +26,5 @@ public class TopicDisplayModel
     /// <summary>
     /// User-friendly display of when the topic was created.
     /// </summary>
-    public string CreatedAtDisplay => FormatCreatedAt();
-
-    /// <summary>
-    /// Formats the creation date for user-friendly display.
-    /// </summary>
-    private string FormatCreatedAt()
-    {
-        var now = DateTime.UtcNow;
-        var timeSpan = now - CreatedAt;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just now",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            _ => CreatedAt.ToString("MMM d, yyyy")
-        };
-    }
+    public string CreatedAtDisplay => FormatHelper.FormatDateDisplay(CreatedAt);
 }

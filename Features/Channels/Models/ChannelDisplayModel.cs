@@ -1,3 +1,5 @@
+using TargetBrowse.Services;
+
 namespace TargetBrowse.Features.Channels.Models;
 
 /// <summary>
@@ -64,7 +66,7 @@ public class ChannelDisplayModel
     /// <summary>
     /// User-friendly display of when the channel was last checked.
     /// </summary>
-    public string LastCheckedDisplay => FormatLastChecked();
+    public string LastCheckedDisplay => FormatHelper.FormatUpdateDateDisplay(LastCheckDate);
 
     /// <summary>
     /// Gets the year the channel was started/published.
@@ -79,17 +81,17 @@ public class ChannelDisplayModel
     /// <summary>
     /// Formatted subscriber count for display (e.g., "1.2M", "45.3K").
     /// </summary>
-    public string SubscriberCountDisplay => FormatCount(SubscriberCount);
+    public string SubscriberCountDisplay => FormatHelper.FormatCount(SubscriberCount);
 
     /// <summary>
     /// Formatted video count for display.
     /// </summary>
-    public string VideoCountDisplay => FormatCount(VideoCount);
+    public string VideoCountDisplay => FormatHelper.FormatCount(VideoCount);
 
     /// <summary>
     /// User-friendly display of when tracking started.
     /// </summary>
-    public string TrackedSinceDisplay => FormatTrackedSince();
+    public string TrackedSinceDisplay => FormatHelper.FormatUpdateDateDisplay(TrackedSince);
 
     /// <summary>
     /// Truncated description for card display.
@@ -139,45 +141,6 @@ public class ChannelDisplayModel
     };
 
     /// <summary>
-    /// Formats large numbers into human-readable format (k, M, B).
-    /// </summary>
-    private static string FormatCount(ulong? count)
-    {
-        if (!count.HasValue || count == 0)
-            return "0";
-
-        var value = (double)count.Value;
-
-        return value switch
-        {
-            >= 1_000_000 => $"{value / 1_000_000:F1}M",
-            >= 1_000 => $"{(int)(value / 1_000)}k",
-            _ => count.Value.ToString("N0")
-        };
-    }
-
-    /// <summary>
-    /// Formats the tracking start date for user-friendly display.
-    /// </summary>
-    private string FormatTrackedSince()
-    {
-        if (!TrackedSince.HasValue)
-            return "Not tracked";
-
-        var now = DateTime.UtcNow;
-        var timeSpan = now - TrackedSince.Value;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just now",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            _ => TrackedSince.Value.ToString("MMM d, yyyy")
-        };
-    }
-
-    /// <summary>
     /// Truncates description text to specified length with ellipsis.
     /// </summary>
     private static string TruncateDescription(string text, int maxLength)
@@ -189,26 +152,5 @@ public class ChannelDisplayModel
             return text;
 
         return text.Substring(0, maxLength).TrimEnd() + "...";
-    }
-
-    /// <summary>
-    /// Formats the last checked date for user-friendly display.
-    /// </summary>
-    private string FormatLastChecked()
-    {
-        if (!LastCheckDate.HasValue)
-            return "Never";
-
-        var now = DateTime.UtcNow;
-        var timeSpan = now - LastCheckDate.Value;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just now",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            _ => LastCheckDate.Value.ToString("MMM d, yyyy")
-        };
     }
 }

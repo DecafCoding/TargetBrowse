@@ -1,3 +1,5 @@
+using TargetBrowse.Services;
+
 namespace TargetBrowse.Features.ChannelVideos.Models;
 
 /// <summary>
@@ -59,27 +61,27 @@ public class ChannelVideoModel
     /// <summary>
     /// Formatted duration for display (e.g., "4:13", "1:02:45").
     /// </summary>
-    public string DurationDisplay => FormatDuration(Duration);
+    public string DurationDisplay => FormatHelper.FormatDuration(Duration.ToString());
 
     /// <summary>
     /// Formatted view count for display.
     /// </summary>
-    public string ViewCountDisplay => FormatCount(ViewCount);
+    public string ViewCountDisplay => FormatHelper.FormatCount(ViewCount);
 
     /// <summary>
     /// Formatted like count for display.
     /// </summary>
-    public string LikeCountDisplay => FormatCount(LikeCount);
+    public string LikeCountDisplay => FormatHelper.FormatCount(LikeCount);
 
     /// <summary>
     /// Formatted comment count for display.
     /// </summary>
-    public string CommentCountDisplay => FormatCount(CommentCount);
+    public string CommentCountDisplay => FormatHelper.FormatCount(CommentCount);
 
     /// <summary>
     /// Formatted publication date for display.
     /// </summary>
-    public string PublishedDisplay => FormatPublishedDate();
+    public string PublishedDisplay => FormatHelper.FormatDateDisplay(PublishedAt);
 
     /// <summary>
     /// Short description for card display.
@@ -101,63 +103,6 @@ public class ChannelVideoModel
 
         // Fallback to YouTube thumbnail
         return $"https://img.youtube.com/vi/{YouTubeVideoId}/hqdefault.jpg";
-    }
-
-    /// <summary>
-    /// Formats duration from seconds to human-readable format.
-    /// </summary>
-    private static string FormatDuration(int durationSeconds)
-    {
-        if (durationSeconds <= 0)
-            return "0:00";
-
-        var timespan = TimeSpan.FromSeconds(durationSeconds);
-
-        if (timespan.TotalHours >= 1)
-        {
-            return $"{(int)timespan.TotalHours}:{timespan.Minutes:D2}:{timespan.Seconds:D2}";
-        }
-        else
-        {
-            return $"{timespan.Minutes}:{timespan.Seconds:D2}";
-        }
-    }
-
-    /// <summary>
-    /// Formats large numbers into human-readable format.
-    /// </summary>
-    private static string FormatCount(int count)
-    {
-        if (count == 0)
-            return "0";
-
-        var value = (double)count;
-        return value switch
-        {
-            >= 1_000_000_000 => $"{value / 1_000_000_000:F1}B",
-            >= 1_000_000 => $"{value / 1_000_000:F1}M",
-            >= 1_000 => $"{value / 1_000:F1}K",
-            _ => count.ToString("N0")
-        };
-    }
-
-    /// <summary>
-    /// Formats the publication date for user-friendly display.
-    /// </summary>
-    private string FormatPublishedDate()
-    {
-        var now = DateTime.UtcNow;
-        var timeSpan = now - PublishedAt;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just published",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            < 365 => $"{(int)(timeSpan.TotalDays / 30)}mo ago",
-            _ => PublishedAt.ToString("MMM d, yyyy")
-        };
     }
 
     /// <summary>

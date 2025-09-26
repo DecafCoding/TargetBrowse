@@ -1,5 +1,6 @@
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Services;
+using TargetBrowse.Services;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -163,30 +164,30 @@ public class VideoDisplayModel
     /// Formatted view count for display (e.g., "1.2M", "45.3K").
     /// Returns empty string if view count is null.
     /// </summary>
-    public string ViewCountDisplay => FormatCount(ViewCount);
+    public string ViewCountDisplay => FormatHelper.FormatCount(ViewCount);
 
     /// <summary>
     /// Formatted like count for display (e.g., "1.2K", "45").
     /// Returns empty string if like count is null.
     /// </summary>
-    public string LikeCountDisplay => FormatCount(LikeCount);
+    public string LikeCountDisplay => FormatHelper.FormatCount(LikeCount);
 
     /// <summary>
     /// Formatted comment count for display (e.g., "1.2K", "45").
     /// Returns empty string if comment count is null.
     /// </summary>
-    public string CommentCountDisplay => FormatCount(CommentCount);
+    public string CommentCountDisplay => FormatHelper.FormatCount(CommentCount);
 
     /// <summary>
     /// Formatted duration for display (e.g., "4:13", "1:02:45").
     /// Returns empty string if duration is null.
     /// </summary>
-    public string DurationDisplay => FormatDuration(Duration);
+    public string DurationDisplay => FormatHelper.FormatDuration(Duration);
 
     /// <summary>
     /// User-friendly display of when added to library.
     /// </summary>
-    public string AddedToLibraryDisplay => FormatAddedDate();
+    public string AddedToLibraryDisplay => FormatHelper.FormatDateDisplay(AddedToLibrary);
 
     /// <summary>
     /// Truncated description for card display.
@@ -211,7 +212,7 @@ public class VideoDisplayModel
     /// <summary>
     /// User-friendly display of publication date.
     /// </summary>
-    public string PublishedDisplay => FormatPublishedDate();
+    public string PublishedDisplay => FormatHelper.FormatDateDisplay(PublishedAt);
 
     // ===== NEW RATING DISPLAY PROPERTIES =====
 
@@ -269,98 +270,6 @@ public class VideoDisplayModel
     public string CannotRateReason => !IsInLibrary
         ? "Add video to your library to rate it"
         : string.Empty;
-
-    /// <summary>
-    /// Formats large numbers into human-readable format (K, M, B).
-    /// Returns empty string for null values.
-    /// </summary>
-    private static string FormatCount(ulong? count)
-    {
-        if (!count.HasValue)
-            return string.Empty;
-
-        if (count == 0)
-            return "0";
-
-        var value = (double)count.Value;
-
-        return value switch
-        {
-            >= 1_000_000_000 => $"{value / 1_000_000_000:F1}B",
-            >= 1_000_000 => $"{value / 1_000_000:F1}M",
-            >= 1_000 => $"{value / 1_000:F1}K",
-            _ => count.Value.ToString("N0")
-        };
-    }
-
-    /// <summary>
-    /// Formats ISO 8601 duration to human-readable format.
-    /// Returns empty string for null/empty durations.
-    /// </summary>
-    private static string FormatDuration(string? duration)
-    {
-        if (string.IsNullOrWhiteSpace(duration))
-            return string.Empty;
-
-        try
-        {
-            // Parse ISO 8601 duration (PT4M13S)
-            var timespan = System.Xml.XmlConvert.ToTimeSpan(duration);
-
-            if (timespan.TotalHours >= 1)
-            {
-                return $"{(int)timespan.TotalHours}:{timespan.Minutes:D2}:{timespan.Seconds:D2}";
-            }
-            else
-            {
-                return $"{timespan.Minutes}:{timespan.Seconds:D2}";
-            }
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
-    /// <summary>
-    /// Formats the library addition date for user-friendly display.
-    /// </summary>
-    private string FormatAddedDate()
-    {
-        if (!AddedToLibrary.HasValue)
-            return "Not in library";
-
-        var now = DateTime.UtcNow;
-        var timeSpan = now - AddedToLibrary.Value;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just now",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            _ => AddedToLibrary.Value.ToString("MMM d, yyyy")
-        };
-    }
-
-    /// <summary>
-    /// Formats the publication date for user-friendly display.
-    /// </summary>
-    private string FormatPublishedDate()
-    {
-        var now = DateTime.UtcNow;
-        var timeSpan = now - PublishedAt;
-
-        return timeSpan.TotalDays switch
-        {
-            < 1 when timeSpan.TotalHours < 1 => "Just published",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours}h ago",
-            < 7 => $"{(int)timeSpan.TotalDays}d ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)}w ago",
-            < 365 => $"{(int)(timeSpan.TotalDays / 30)}mo ago",
-            _ => PublishedAt.ToString("MMM d, yyyy")
-        };
-    }
 
     /// <summary>
     /// Truncates text to specified length with ellipsis.
