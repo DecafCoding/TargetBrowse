@@ -38,117 +38,16 @@
         }
         else
         {
-            <!-- Channel Table -->
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" class="border-0">Channel</th>
-                            <th scope="col" class="border-0">Subs</th>
-                            <th scope="col" class="border-0">Videos</th>
-                            <th scope="col" class="border-0">Last Checked</th>
-                            <th scope="col" class="border-0">Started</th>
-                            <th scope="col" class="border-0 text-center">Rating</th>
-                            <th scope="col" class="border-0 text-center">Actions</th>
-                            <th scope="col" class="border-0 text-center" style="width: 80px;">Delete</th>
-                        </tr>
-                    </thead>
-                    <!-- Updated table body section in ChannelList.razor - replace the existing tbody content -->
-                    <tbody>
-                        @foreach (var channel in TrackedChannels)
-                        {
-                            <tr>
-                                <!-- Channel Info -->
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        @if (!string.IsNullOrEmpty(channel.ThumbnailUrl))
-                                        {
-                                            <img src="@channel.ThumbnailUrl"
-                                                 alt="@channel.Name thumbnail"
-                                                 class="rounded me-3"
-                                                 style="width: 40px; height: 40px; object-fit: cover;" />
-                                        }
-                                        else
-                                        {
-                                            <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center"
-                                                 style="width: 40px; height: 40px;">
-                                                <i class="bi bi-person-circle text-white"></i>
-                                            </div>
-                                        }
-                                        <div>
-                                            <div class="fw-medium">@channel.Name</div>
-                                            <div class="text-muted small">@channel.ShortDescription</div>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <!-- Subscriber Count -->
-                                <td class="text-muted">
-                                    @channel.SubscriberCountDisplay
-                                </td>
-
-                                <!-- Video Count -->
-                                <td class="text-muted">
-                                    @channel.VideoCountDisplay
-                                </td>
-
-                                <!-- Last Checked Date -->
-                                <td class="text-muted">
-                                    @channel.LastCheckedDisplay
-                                </td>
-
-                                <!-- Channel Started Year -->
-                                <td class="text-muted">
-                                    @channel.PublishedYear
-                                </td>
-
-                                <!-- Rating -->
-                                <td class="text-center">
-                                    <ChannelRatingDisplay Rating="@channel.UserRating"
-                                                          ShowDetailsButton="false"
-                                                          ShowEditButton="true"
-                                                          OnRateClick="@(() => ShowRatingModal(channel))"
-                                                          OnEditClick="@(() => ShowEditRatingModal(channel))" />
-                                </td>
-
-                                <!-- Links -->
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="/channel-videos/@channel.YouTubeChannelId"
-                                           class="btn btn-outline-primary"
-                                           title="View Recent Videos">
-                                            <i class="bi bi-play-circle"></i>
-                                        </a>
-                                        <a href="@channel.YouTubeUrl"
-                                           target="_blank"
-                                           class="btn btn-outline-secondary"
-                                           title="View on YouTube">
-                                            <i class="bi bi-youtube"></i>
-                                        </a>
-                                    </div>
-                                </td>
-
-                                <!-- Remove Action -->
-                                <td class="text-center">
-                                    <button type="button"
-                                            class="btn btn-outline-danger btn-sm"
-                                            @onclick="() => ShowRemoveConfirmation(channel)"
-                                            disabled="@IsRemoving"
-                                            title="Remove from tracking">
-                                        @if (IsRemoving && _channelToRemove?.Id == channel.Id)
-                                        {
-                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-trash"></i>
-                                        }
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <!-- Channel Cards Grid - UPDATED SECTION -->
+            <div class="row g-3">
+                @foreach (var channel in TrackedChannels)
+                {
+                    <div class="col-lg-3 col-md-4 col-sm-2">
+                        <ChannelCard Channel="@channel"
+                                     OnChannelDeleted="@HandleChannelDeleted"
+                                     OnChannelRatingRequested="@HandleChannelRatingRequested" />
+                    </div>
+                }
             </div>
         }
 
@@ -183,70 +82,6 @@
         }
     </div>
 </div>
-
-<!-- Remove Confirmation Modal -->
-@if (_showRemoveModal && _channelToRemove != null)
-{
-    <div class="modal show d-block" tabindex="-1" role="dialog" aria-labelledby="removeModalTitle" aria-hidden="false">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="removeModalTitle">
-                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                        Confirm Remove
-                    </h5>
-                    <button type="button"
-                            class="btn-close"
-                            @onclick="HideRemoveConfirmation"
-                            disabled="@IsRemoving"
-                            aria-label="Close">
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="d-flex align-items-center mb-3">
-                        @if (!string.IsNullOrEmpty(_channelToRemove.ThumbnailUrl))
-                        {
-                            <img src="@_channelToRemove.ThumbnailUrl"
-                                 alt="@_channelToRemove.Name thumbnail"
-                                 class="rounded me-3"
-                                 style="width: 50px; height: 50px; object-fit: cover;" />
-                        }
-                        <div>
-                            <h6 class="mb-1">@_channelToRemove.Name</h6>
-                            <small class="text-muted">@_channelToRemove.SubscriberCountDisplay subscribers</small>
-                        </div>
-                    </div>
-                    <p class="mb-2">Are you sure you want to remove this channel from your tracking list?</p>
-                    <p class="text-muted small mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        You'll no longer receive suggestions from this channel, but you can add it back anytime.
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="HideRemoveConfirmation"
-                            disabled="@IsRemoving">
-                        Cancel
-                    </button>
-                    <button type="button"
-                            class="btn btn-danger"
-                            @onclick="ConfirmRemove"
-                            disabled="@IsRemoving">
-                        @if (IsRemoving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        }
-                        Remove Channel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Backdrop -->
-    <div class="modal-backdrop show" @onclick="HideRemoveConfirmation"></div>
-}
 
 <!-- Channel Rating Modal -->
 <ChannelRatingModal @ref="RatingModal"

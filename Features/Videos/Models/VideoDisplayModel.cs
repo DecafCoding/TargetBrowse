@@ -104,6 +104,12 @@ public class VideoDisplayModel
     public bool IsInLibrary { get; set; }
 
     /// <summary>
+    /// ID of the UserVideo entity (the library relationship record).
+    /// Only populated when the video is in the user's library.
+    /// </summary>
+    public Guid? UserVideoId { get; set; }
+
+    /// <summary>
     /// User's watch status for this video.
     /// </summary>
     public WatchStatus WatchStatus { get; set; } = WatchStatus.NotWatched;

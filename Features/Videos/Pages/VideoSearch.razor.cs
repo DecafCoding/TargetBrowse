@@ -10,7 +10,8 @@ public partial class VideoSearch : ComponentBase
     [Inject] private IVideoService VideoService { get; set; } = default!;
     [Inject] private IMessageCenterService MessageCenter { get; set; } = default!;
 
-    private VideoSearchModel SearchModel = new();
+    // Defaulting to returning 50, since no difference in API quota cost
+    private VideoSearchModel SearchModel = new() { MaxResults = 50 };
     private List<VideoDisplayModel> SearchResults = new();
     private bool IsSearching = false;
     private bool HasSearched = false;

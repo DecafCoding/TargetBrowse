@@ -460,6 +460,7 @@ public class LibraryDataService : ILibraryDataService
         var displayModel = new VideoDisplayModel
         {
             Id = userVideo.Video.Id,
+            UserVideoId = userVideo.Id, // ADD THIS LINE - Store the UserVideo ID
             YouTubeVideoId = userVideo.Video.YouTubeVideoId,
             Title = userVideo.Video.Title,
             Description = userVideo.Video.Description ?? string.Empty,
@@ -471,9 +472,9 @@ public class LibraryDataService : ILibraryDataService
             PublishedAt = userVideo.Video.PublishedAt,
             ChannelId = userVideo.Video.Channel.YouTubeChannelId,
             ChannelTitle = userVideo.Video.Channel.Name,
-            CategoryId = null, // Not stored currently
-            Tags = new List<string>(), // Not stored currently
-            DefaultLanguage = null, // Not stored currently
+            CategoryId = null,
+            Tags = new List<string>(),
+            DefaultLanguage = null,
             IsInLibrary = true,
             AddedToLibrary = userVideo.AddedToLibraryAt,
             WatchStatus = userVideo.Status

@@ -13,11 +13,11 @@
     border-top: 1px solid var(--bs-border-color);
 }
 
-.table > thead > tr > th {
+/*.table > thead > tr > th {
     font-weight: 600;
     font-size: 0.9rem;
     letter-spacing: 0.025em;
-}
+}*/
 
 /* Button hover effects */
 .btn-outline-danger:hover {

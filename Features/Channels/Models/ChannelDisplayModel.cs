@@ -99,7 +99,7 @@ public class ChannelDisplayModel
     /// <summary>
     /// Gets the YouTube channel URL.
     /// </summary>
-    public string YouTubeUrl => $"https://www.youtube.com/channel/{YouTubeChannelId}";
+    public string YouTubeUrl => $"https://www.youtube.com/channel/{YouTubeChannelId}/videos";
 
     /// <summary>
     /// Indicates if the user has rated this channel.

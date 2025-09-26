@@ -5,7 +5,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
-<PageTitle>Video Search - YouTube Video Tracker</PageTitle>
+<PageTitle>Video Search</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -14,40 +14,60 @@
             Discover and add YouTube videos to your personal library for organized content consumption.
         </p>
     </div>
-    <div>
-        <a href="/video-library" class="btn btn-outline-primary">
-            <i class="bi bi-collection-play me-2"></i>
-            View My Library
-        </a>
-    </div>
 </div>
 
 <div class="row">
     <div class="col-lg-12">
         <!-- Video Search Section -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-search me-2"></i>
-                    Search Videos
-                </h5>
-            </div>
             <div class="card-body">
                 <!-- Search Form -->
                 <EditForm Model="@SearchModel" OnValidSubmit="@HandleSearchSubmit">
                     <DataAnnotationsValidator />
-
-                    <div class="mb-4">
-                        <label for="searchQuery" class="form-label">Search Videos (Enter keywords or for quick addition paste direct video links)</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="bi bi-search"></i>
-                            </span>
+                    <!-- Advanced Options (Always Expanded, Single Row) -->
+                    <div class="row g-3">
+                        <div class="col-lg-5 col-md-12">
                             <InputText @bind-Value="SearchModel.SearchQuery"
                                        class="form-control"
                                        id="searchQuery"
-                                       placeholder="Enter video title, keywords, or YouTube URL"
+                                       placeholder="Enter search term to search YouTube"
                                        disabled="@IsSearching" />
+                            <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
+                        </div>
+                        <div class="col-lg-2 col-md-12">
+                            <div class="d-flex align-items-center">
+                                <InputSelect @bind-Value="SearchModel.SortOrder" class="form-select" id="sortOrder">
+                                    <option value="@VideoSortOrder.Relevance">Sort By</option>
+                                    <option value="@VideoSortOrder.Relevance">Relevance</option>
+                                    <option value="@VideoSortOrder.UploadDate">Upload Date</option>
+                                    <option value="@VideoSortOrder.ViewCount">View Count</option>
+                                    <option value="@VideoSortOrder.Rating">Rating</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-12">
+                            <div class="d-flex align-items-center">
+                                <InputSelect @bind-Value="SearchModel.DurationFilter" class="form-select" id="durationFilter">
+                                    <option value="@VideoDurationFilter.Any">Any Duration</option>
+                                    <option value="@VideoDurationFilter.Short">Short (&lt; 4 min)</option>
+                                    <option value="@VideoDurationFilter.Medium">Medium (4-20 min)</option>
+                                    <option value="@VideoDurationFilter.Long">Long (&gt; 20 min)</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-12">
+                            <div class="d-flex align-items-center">
+                                <InputSelect @bind-Value="SearchModel.DateFilter" class="form-select" id="dateFilter">
+                                    <option value="@VideoDateFilter.Any">Any Age</option>
+                                    <option value="@VideoDateFilter.LastHour">Last Hour</option>
+                                    <option value="@VideoDateFilter.Today">Today</option>
+                                    <option value="@VideoDateFilter.ThisWeek">This Week</option>
+                                    <option value="@VideoDateFilter.ThisMonth">This Month</option>
+                                    <option value="@VideoDateFilter.ThisYear">This Year</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="col-lg-1 col-md-12">
                             <button type="submit"
                                     class="btn btn-primary"
                                     disabled="@IsSearching">
@@ -57,62 +77,6 @@
                                 }
                                 Search
                             </button>
-                        </div>
-                        <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
-                    </div>
-
-                    <!-- Advanced Options (Always Expanded, Single Row) -->
-                    <div class="border rounded p-3 mb-4 bg-light advanced-options">
-                        <div class="row g-3">
-                            <div class="col-lg-3 col-md-6 col-12">
-                                <label for="maxResults" class="form-label">Max Results</label>
-                                <InputSelect @bind-Value="SearchModel.MaxResults" class="form-select" id="maxResults">
-                                    <option value="10">10 results</option>
-                                    <option value="25">25 results</option>
-                                    <option value="50">50 results</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-lg-3 col-md-6 col-12">
-                                <label for="sortOrder" class="form-label">Sort By</label>
-                                <InputSelect @bind-Value="SearchModel.SortOrder" class="form-select" id="sortOrder">
-                                    <option value="@VideoSortOrder.Relevance">Relevance</option>
-                                    <option value="@VideoSortOrder.UploadDate">Upload Date</option>
-                                    <option value="@VideoSortOrder.ViewCount">View Count</option>
-                                    <option value="@VideoSortOrder.Rating">Rating</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-lg-3 col-md-6 col-12">
-                                <label for="durationFilter" class="form-label">Duration</label>
-                                <InputSelect @bind-Value="SearchModel.DurationFilter" class="form-select" id="durationFilter">
-                                    <option value="@VideoDurationFilter.Any">Any Duration</option>
-                                    <option value="@VideoDurationFilter.Short">Short (&lt; 4 min)</option>
-                                    <option value="@VideoDurationFilter.Medium">Medium (4-20 min)</option>
-                                    <option value="@VideoDurationFilter.Long">Long (&gt; 20 min)</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-lg-3 col-md-6 col-12">
-                                <label for="dateFilter" class="form-label">Upload Date</label>
-                                <InputSelect @bind-Value="SearchModel.DateFilter" class="form-select" id="dateFilter">
-                                    <option value="@VideoDateFilter.Any">Any Date</option>
-                                    <option value="@VideoDateFilter.LastHour">Last Hour</option>
-                                    <option value="@VideoDateFilter.Today">Today</option>
-                                    <option value="@VideoDateFilter.ThisWeek">This Week</option>
-                                    <option value="@VideoDateFilter.ThisMonth">This Month</option>
-                                    <option value="@VideoDateFilter.ThisYear">This Year</option>
-                                </InputSelect>
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="form-check">
-                                    <InputCheckbox @bind-Value="SearchModel.SearchInTrackedChannelsOnly"
-                                                   class="form-check-input"
-                                                   id="trackedChannelsOnly" />
-                                    <label class="form-check-label" for="trackedChannelsOnly">
-                                        Search only in my tracked channels
-                                    </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </EditForm>

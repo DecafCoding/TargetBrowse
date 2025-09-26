@@ -1,0 +1,164 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TargetBrowse.Features.Channels.Models
+
+<div class="card video-card h-100">
+    <!-- Channel Header with Thumbnail and Basic Info -->
+    <div class="card-body d-flex p-3">
+        <!-- Channel Thumbnail Container -->
+        <div class="position-relative channel-thumbnail-container me-3 flex-shrink-0">
+            @if (!string.IsNullOrEmpty(Channel.ThumbnailUrl))
+            {
+                <img src="@Channel.ThumbnailUrl"
+                     class="channel-thumbnail rounded"
+                     alt="@Channel.Name thumbnail"
+                     loading="lazy"
+                     style="width: 80px; height: 80px; object-fit: cover;" />
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center bg-secondary channel-thumbnail rounded"
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-circle text-white" style="font-size: 2rem;"></i>
+                </div>
+            }
+        </div>
+
+        <!-- Channel Info and Rating -->
+        <div class="flex-grow-1 d-flex flex-column">
+            <!-- Channel Title -->
+            <h6 class="card-title channel-title mb-2">
+                <a href="@Channel.YouTubeUrl"
+                   target="_blank"
+                   class="text-decoration-none title-link"
+                   title="@Channel.Name">
+                    @Channel.Name
+                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                </a>
+            </h6>
+
+            <!-- Rating Display -->
+            <div class="channel-rating mb-auto">
+                <ChannelRatingDisplay Rating="@Channel.UserRating"
+                                      ShowDetailsButton="false"
+                                      ShowEditButton="true"
+                                      OnRateClick="@HandleRatingClick"
+                                      OnEditClick="@HandleRatingClick" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Channel Details Section -->
+    <div class="card-body pt-0 px-3 pb-3">
+        <!-- Channel Metadata - Subscriber, Video count, Year -->
+        <div class="channel-metadata mb-2">
+            <small class="text-muted d-flex align-items-center flex-wrap">
+                <span class="me-3">
+                    <i class="bi bi-people me-1"></i>@Channel.SubscriberCountDisplay
+                </span>
+                <span class="me-3">
+                    <i class="bi bi-camera-video me-1"></i>@Channel.VideoCountDisplay
+                </span>
+                <span>
+                    @Channel.PublishedYear
+                </span>
+            </small>
+        </div>
+
+        <!-- Update Information -->
+        <div class="channel-update-info mb-3">
+            <small class="text-muted">
+                <i class="bi bi-clock-history me-1"></i>
+                Updated: @Channel.LastCheckedDisplay
+            </small>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2">
+            <div class="d-flex gap-2">
+                <a href="/channel-videos/@Channel.YouTubeChannelId"
+                   class="btn btn-outline-primary btn-sm flex-fill">
+                    <i  class="bi bi-play-circle me-1"></i>
+                </a>
+                <a href="@Channel.YouTubeUrl"
+                   target="_blank"
+                   class="btn btn-outline-secondary btn-sm flex-fill">
+                    <i class="bi bi-youtube me-1"></i>
+                </a>
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        @onclick="() => ShowDeleteConfirmation()"
+                        disabled="@IsDeleting">
+                    @if (IsDeleting)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash"></i>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (ShowDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        Remove Channel
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="HideDeleteConfirmation"
+                            disabled="@IsDeleting">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-3">
+                        @if (!string.IsNullOrEmpty(Channel.ThumbnailUrl))
+                        {
+                            <img src="@Channel.ThumbnailUrl"
+                                 alt="@Channel.Name thumbnail"
+                                 class="rounded me-3"
+                                 style="width: 50px; height: 50px; object-fit: cover;" />
+                        }
+                        <div>
+                            <h6 class="mb-1">@Channel.Name</h6>
+                            <small class="text-muted">@Channel.SubscriberCountDisplay subscribers</small>
+                        </div>
+                    </div>
+                    <p class="mb-2">Are you sure you want to remove this channel from your tracking list?</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        You'll no longer receive suggestions from this channel, but you can add it back anytime.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="HideDeleteConfirmation"
+                            disabled="@IsDeleting">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            @onclick="ConfirmDelete"
+                            disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Remove Channel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
