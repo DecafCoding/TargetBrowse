@@ -55,11 +55,6 @@ public class VideoService : IVideoService
 
             // Search videos via YouTube API with advanced options
             string? channelId = null;
-            if (searchModel.SearchInTrackedChannelsOnly)
-            {
-                // TODO: Get user's tracked channels and search within them
-                // For now, search all channels
-            }
 
             var searchResult = await _youTubeService.SearchVideosAsync(
                 searchModel.SearchQuery,

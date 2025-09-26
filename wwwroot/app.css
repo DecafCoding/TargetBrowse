@@ -108,7 +108,7 @@ header {
 
 .navbar-nav .nav-link:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
-    transform: translateY(-1px) !important;
+    /*transform: translateY(-1px) !important;*/
 }
 
 .navbar-nav .nav-link.active {
@@ -124,11 +124,13 @@ header {
 
 /* User dropdown styling */
 .dropdown-menu {
-    border: none !important;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-    border-radius: 0.5rem !important;
-    margin-top: 0.5rem !important;
 }
+
+    .dropdown-menu li {
+        margin-right: 4px;
+        margin-left: 4px;
+    }
 
 /* Dropdown toggle alignment fix */
 .dropdown-toggle {
@@ -149,8 +151,8 @@ header {
 
     .dropdown-item:hover {
         background-color: #f8f9fa !important;
-        transform: translateX(2px) !important;
-        transition: all 0.2s ease-in-out !important;
+        ? /*        transform: translateX(2px) !important;
+        transition: all 0.2s ease-in-out !important*/;
         color: #212529 !important;
     }
 

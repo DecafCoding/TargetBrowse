@@ -37,6 +37,7 @@ public partial class ChannelList : ComponentBase
     private bool _showRemoveModal { get; set; } = false;
     private ChannelDisplayModel? _channelToRemove { get; set; }
     private ChannelRatingModal? RatingModal { get; set; }
+    private string? CurrentUserId;
 
     #endregion
 
@@ -44,7 +45,24 @@ public partial class ChannelList : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await GetCurrentUserIdAsync();
         await LoadTrackedChannelsAsync();
+    }
+
+    /// <summary>
+    /// Gets the current authenticated user's ID.
+    /// </summary>
+    private async Task GetCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateTask!;
+            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch (Exception)
+        {
+            CurrentUserId = null;
+        }
     }
 
     #endregion
@@ -66,6 +84,7 @@ public partial class ChannelList : ComponentBase
 
     /// <summary>
     /// Shows the rating modal for creating a new rating.
+    /// Called from ChannelCard components via ChannelRatingDisplay.
     /// </summary>
     private void ShowRatingModal(ChannelDisplayModel channel)
     {
@@ -74,6 +93,7 @@ public partial class ChannelList : ComponentBase
 
     /// <summary>
     /// Shows the rating modal for editing an existing rating.
+    /// Called from ChannelCard components via ChannelRatingDisplay.
     /// </summary>
     private void ShowEditRatingModal(ChannelDisplayModel channel)
     {
@@ -214,6 +234,43 @@ public partial class ChannelList : ComponentBase
         {
             IsLoading = false;
             StateHasChanged();
+        }
+    }
+
+    #endregion
+
+    #region ChannelCard Event Handlers
+
+    /// <summary>
+    /// Handles when a channel is deleted from a ChannelCard component.
+    /// </summary>
+    private async Task HandleChannelDeleted(ChannelDisplayModel deletedChannel)
+    {
+        // Remove the channel from the local list
+        TrackedChannels.RemoveAll(c => c.Id == deletedChannel.Id);
+
+        // Notify parent component of channel changes
+        if (OnChannelsChanged.HasDelegate)
+        {
+            await OnChannelsChanged.InvokeAsync();
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles when a channel rating is requested from a ChannelCard component.
+    /// Opens the rating modal for the specified channel.
+    /// </summary>
+    private void HandleChannelRatingRequested(ChannelDisplayModel channel)
+    {
+        if (channel.UserRating != null)
+        {
+            ShowEditRatingModal(channel);
+        }
+        else
+        {
+            ShowRatingModal(channel);
         }
     }
 

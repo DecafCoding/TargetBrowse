@@ -2,19 +2,6 @@
     min-height: 100vh;
 }
 
-/* Page Header */
-.page-header {
-    background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, transparent 50%);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-    .page-header h1 {
-        font-weight: 700;
-        color: var(--bs-emphasis-color);
-    }
-
 /* Suggestion Trigger Button */
 .suggestion-trigger .btn-primary {
     font-weight: 600;
@@ -72,20 +59,8 @@
         transform: translateY(-1px);
     }
 
-.sidebar-content .card-header {
-    background: var(--bs-primary-bg-subtle);
-    border-bottom: 1px solid var(--bs-border-color);
-    padding: 1rem;
-}
-
-.sidebar-content .card-title {
-    color: var(--bs-primary);
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
 /* How It Works Steps */
-.how-it-works-steps .step {
+/*.how-it-works-steps .step {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -100,7 +75,7 @@
 .how-it-works-steps .step-content {
     flex: 1;
     line-height: 1.4;
-}
+}*/
 
 /* Tips List */
 .tips-list .tip-item {
@@ -137,16 +112,6 @@
 
 /* Mobile Responsive */
 @@media (max-width: 992px) {
-    .page-header {
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-        .page-header .d-flex {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-
     .suggestion-trigger {
         width: 100%;
         margin-top: 1rem;
@@ -170,11 +135,7 @@
         }
 }
 
-@@media (max-width: 576px) {
-    .page-header h1 {
-        font-size: 1.5rem;
-    }
-
+/*@@media (max-width: 576px) {
     .quick-stats-card .row > div {
         margin-bottom: 1rem;
     }
@@ -190,18 +151,9 @@
         text-align: center;
         gap: 0.25rem;
     }
-}
+}*/
 
 /* Dark Theme */
-[data-bs-theme="dark"] .page-header {
-    background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, transparent 50%);
-}
-
-[data-bs-theme="dark"] .sidebar-content .card-header {
-    background: var(--bs-gray-800);
-    border-bottom-color: var(--bs-border-color);
-}
-
 [data-bs-theme="dark"] .generation-history .generation-item:hover {
     background-color: var(--bs-gray-700);
 }

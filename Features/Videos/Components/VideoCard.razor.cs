@@ -257,6 +257,13 @@ public partial class VideoCard : ComponentBase
         if (string.IsNullOrWhiteSpace(CurrentUserId) || IsUpdatingStatus)
             return;
 
+        // IMPORTANT: Check if we have the UserVideoId for library operations
+        if (!Video.UserVideoId.HasValue)
+        {
+            await MessageCenter.ShowErrorAsync("Unable to update watch status. Video may not be properly loaded.");
+            return;
+        }
+
         // If clicking the same status, toggle back to NotWatched
         if (Video.WatchStatus == newStatus)
         {
@@ -268,7 +275,11 @@ public partial class VideoCard : ComponentBase
 
         try
         {
-            var success = await LibraryDataService.UpdateVideoWatchStatusAsync(CurrentUserId, Video.Id, newStatus);
+            // Use UserVideoId instead of Video.Id
+            var success = await LibraryDataService.UpdateVideoWatchStatusAsync(
+                CurrentUserId,
+                Video.UserVideoId.Value, // CHANGED: Use UserVideoId instead of Video.Id
+                newStatus);
 
             if (success)
             {

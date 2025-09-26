@@ -20,14 +20,6 @@
             }
         </p>
     </div>
-    <div>
-        <button type="button"
-                class="btn btn-outline-secondary btn-sm"
-                @onclick="RefreshAsync">
-            <i class="bi bi-arrow-clockwise me-1"></i>
-            Refresh
-        </button>
-    </div>
 </div>
 
 <!-- Debug Information (only visible in development) -->
@@ -171,6 +163,13 @@
                                 <li><button class="dropdown-item" @onclick="SortByRatingLowToHigh">Rating (Low to High)</button></li>
                             </ul>
                         </div>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="RefreshAsync">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Refresh
+                        </button>
                     </div>
 
                     <!-- Video Grid using VideoCard Component -->
