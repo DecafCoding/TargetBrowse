@@ -30,7 +30,7 @@
         @if (Suggestion.Video.Duration > 0)
         {
             <span class="badge bg-dark position-absolute duration-badge">
-                @Suggestion.Video.FormattedDuration
+                @Suggestion.Video.DurationDisplay
             </span>
         }
 
@@ -77,9 +77,9 @@
                     <i class="bi bi-person-circle me-1"></i>
                     @Suggestion.Video.ChannelName
                 </a>
-                @if (!string.IsNullOrEmpty(Suggestion.Video.FormattedViewCount))
+                @if (!string.IsNullOrEmpty(Suggestion.Video.ViewCountDisplay))
                 {
-                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.FormattedViewCount</span>
+                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.ViewCountDisplay</span>
                 }
             </small>
         </div>
@@ -87,7 +87,7 @@
         <!-- Video Metadata -->
         <div class="video-metadata mb-2">
             <small class="text-muted d-flex justify-content-between">
-                <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.TimeSincePublished</span>
+                <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.PublishedAtDisplay</span>
                 <span title="Expires in @Suggestion.DaysUntilExpiry days">
                     <i class="bi bi-hourglass-split me-1"></i>
                     @Suggestion.DaysUntilExpiry days left

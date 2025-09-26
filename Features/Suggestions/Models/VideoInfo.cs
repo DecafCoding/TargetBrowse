@@ -1,3 +1,5 @@
+using TargetBrowse.Services;
+
 namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
@@ -32,9 +34,19 @@ public class VideoInfo
     public DateTime PublishedAt { get; set; }
 
     /// <summary>
+    /// When the video was published on YouTube.
+    /// </summary>
+    public string PublishedAtDisplay => FormatHelper.FormatUpdateDateDisplay(PublishedAt);
+
+    /// <summary>
     /// Video view count from YouTube.
     /// </summary>
     public int ViewCount { get; set; }
+
+    /// <summary>
+    /// Video view count formatted for UI display.
+    /// </summary>
+    public string ViewCountDisplay => FormatHelper.FormatCount(ViewCount);
 
     /// <summary>
     /// Video like count from YouTube.
@@ -42,14 +54,29 @@ public class VideoInfo
     public int LikeCount { get; set; }
 
     /// <summary>
+    /// Video like count formatted for UI display.
+    /// </summary>
+    public string LikeCountDisplay => FormatHelper.FormatCount(LikeCount);
+
+    /// <summary>
     /// Video comment count from YouTube.
     /// </summary>
     public int CommentCount { get; set; }
 
     /// <summary>
+    /// Video comment count formatted for UI display.
+    /// </summary>
+    public string CommentCountDisplay => FormatHelper.FormatCount(CommentCount);
+
+    /// <summary>
     /// Video duration in seconds.
     /// </summary>
     public int Duration { get; set; }
+
+    /// <summary>
+    /// Video duration formatted for display.
+    /// </summary>
+    public string DurationDisplay => FormatHelper.FormatDuration(Duration);
 
     /// <summary>
     /// Video thumbnail URL for display.
@@ -65,53 +92,4 @@ public class VideoInfo
     /// Duration category based on YouTube API search filter
     /// </summary>
     public string DurationCategory { get; set; } = string.Empty; // "Medium", "Long", or empty
-
-    /// <summary>
-    /// Helper property to get formatted duration for display.
-    /// </summary>
-    public string FormattedDuration
-    {
-        get
-        {
-            var timeSpan = TimeSpan.FromSeconds(Duration);
-            if (timeSpan.TotalHours >= 1)
-                return timeSpan.ToString(@"h\:mm\:ss");
-            return timeSpan.ToString(@"m\:ss");
-        }
-    }
-
-    /// <summary>
-    /// Helper property to get formatted view count for display.
-    /// </summary>
-    public string FormattedViewCount
-    {
-        get
-        {
-            return ViewCount switch
-            {
-                >= 1_000_000 => $"{ViewCount / 1_000_000.0:F1}M views",
-                >= 1_000 => $"{ViewCount / 1_000.0:F1}K views",
-                _ => $"{ViewCount} views"
-            };
-        }
-    }
-
-    /// <summary>
-    /// Helper property to get time since publication for display.
-    /// </summary>
-    public string TimeSincePublished
-    {
-        get
-        {
-            var timeSince = DateTime.UtcNow - PublishedAt;
-            return timeSince.TotalDays switch
-            {
-                < 1 => "Today",
-                < 7 => $"{(int)timeSince.TotalDays} days old",
-                < 30 => $"{(int)(timeSince.TotalDays / 7)} weeks old",
-                < 365 => $"{(int)(timeSince.TotalDays / 30)} months old",
-                _ => $"{(int)(timeSince.TotalDays / 365)} years old"
-            };
-        }
-    }
 }

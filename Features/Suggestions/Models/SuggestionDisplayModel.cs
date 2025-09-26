@@ -82,23 +82,23 @@ public class SuggestionDisplayModel
     /// </summary>
     public string FormattedScore => Score?.ToString("F1") ?? "N/A";
 
-    /// <summary>
-    /// Gets time since creation for display.
-    /// </summary>
-    public string TimeSinceCreated
-    {
-        get
-        {
-            var timeSince = DateTime.UtcNow - CreatedAt;
-            return timeSince.TotalDays switch
-            {
-                < 1 => "Added Today",
-                < 7 => $"Added {(int)timeSince.TotalDays} days ago",
-                < 30 => $"Added {(int)(timeSince.TotalDays / 7)} weeks ago",
-                _ => $"Added {(int)(timeSince.TotalDays / 30)} months ago"
-            };
-        }
-    }
+    ///// <summary>
+    ///// Gets time since creation for display.
+    ///// </summary>
+    //public string TimeSinceCreated
+    //{
+    //    get
+    //    {
+    //        var timeSince = DateTime.UtcNow - CreatedAt;
+    //        return timeSince.TotalDays switch
+    //        {
+    //            < 1 => "Added Today",
+    //            < 7 => $"Added {(int)timeSince.TotalDays} days ago",
+    //            < 30 => $"Added {(int)(timeSince.TotalDays / 7)} weeks ago",
+    //            _ => $"Added {(int)(timeSince.TotalDays / 30)} months ago"
+    //        };
+    //    }
+    //}
 
     /// <summary>
     /// Gets the suggestion source enum based on the reason text.

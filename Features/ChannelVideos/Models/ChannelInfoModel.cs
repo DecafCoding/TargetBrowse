@@ -1,3 +1,5 @@
+using TargetBrowse.Services;
+
 namespace TargetBrowse.Features.ChannelVideos.Models;
 
 /// <summary>
@@ -30,8 +32,6 @@ public class ChannelInfoModel
     /// </summary>
     public ulong? VideoCount { get; set; }
 
-
-
     /// <summary>
     /// When the channel was created.
     /// </summary>
@@ -45,12 +45,12 @@ public class ChannelInfoModel
     /// <summary>
     /// Formatted subscriber count for display.
     /// </summary>
-    public string SubscriberCountDisplay => FormatCount(SubscriberCount);
+    public string SubscriberCountDisplay => FormatHelper.FormatCount(SubscriberCount);
 
     /// <summary>
     /// Formatted video count for display.
     /// </summary>
-    public string VideoCountDisplay => FormatCount(VideoCount);
+    public string VideoCountDisplay => FormatHelper.FormatCount(VideoCount);
 
     /// <summary>
     /// Last time this channel was checked for new videos.
@@ -60,25 +60,7 @@ public class ChannelInfoModel
     /// <summary>
     /// Formatted display text for the last check date.
     /// </summary>
-    public string LastCheckDateDisplay
-    {
-        get
-        {
-            if (!LastCheckDate.HasValue)
-                return "Never checked";
-
-            var timeDiff = DateTime.UtcNow - LastCheckDate.Value;
-
-            return timeDiff.TotalDays switch
-            {
-                < 1 when timeDiff.TotalHours < 1 => $"{(int)timeDiff.TotalMinutes} minutes ago",
-                < 1 => $"{(int)timeDiff.TotalHours} hours ago",
-                < 7 => $"{(int)timeDiff.TotalDays} days ago",
-                < 30 => $"{(int)(timeDiff.TotalDays / 7)} weeks ago",
-                _ => LastCheckDate.Value.ToString("MMM d, yyyy")
-            };
-        }
-    }
+    public string LastCheckDateDisplay => FormatHelper.FormatUpdateDateDisplay(LastCheckDate);
 
     /// <summary>
     /// Number of videos from this channel that exist in our database.
@@ -92,32 +74,4 @@ public class ChannelInfoModel
     /// </summary>
     public string DatabaseVideoCountDisplay => DatabaseVideoCount > 0 ? $"({DatabaseVideoCount} in database)" : string.Empty;
 
-    /// <summary>
-    /// Formats large numbers into human-readable format.
-    /// </summary>
-    private static string FormatCount(ulong? count)
-    {
-        if (!count.HasValue || count == 0)
-            return "N/A";
-
-        var value = (double)count.Value;
-        return value switch
-        {
-            >= 1_000_000_000 => $"{value / 1_000_000_000:F1}B",
-            >= 1_000_000 => $"{value / 1_000_000:F1}M",
-            >= 1_000 => $"{value / 1_000:F1}K",
-            _ => count.Value.ToString("N0")
-        };
-    }
-
-    /// <summary>
-    /// Truncates text to specified length with ellipsis.
-    /// </summary>
-    private static string TruncateText(string text, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
-            return text;
-
-        return text.Substring(0, maxLength).TrimEnd() + "...";
-    }
 }
