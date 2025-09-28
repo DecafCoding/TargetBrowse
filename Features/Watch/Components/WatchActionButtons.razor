@@ -1,0 +1,61 @@
+﻿@using TargetBrowse.Features.Watch.Models
+@using TargetBrowse.Data.Entities
+
+<!-- Action Buttons Card -->
+<div class="card watch-actions-card h-100">
+    <div class="card-header">
+        <h6 class="mb-0">
+            <i class="bi bi-gear me-2"></i>
+            Video Actions
+        </h6>
+    </div>
+    <div class="card-body d-flex flex-column">
+
+        <!-- Retrieve Transcript Button -->
+        <button type="button"
+                class="btn btn-outline-primary mb-3 w-100"
+                disabled
+                title="Coming soon - retrieve video transcript">
+            <i class="bi bi-file-text me-2"></i>
+            Retrieve Transcript
+        </button>
+
+        <!-- Mark Watched Button -->
+        <button type="button"
+                class="btn @GetWatchedButtonClass() mb-3 w-100"
+                disabled
+                title="@GetWatchedButtonTitle()">
+            <i class="bi @GetWatchedButtonIcon() me-2"></i>
+            @GetWatchedButtonText()
+            @if (Model.WatchStatus != WatchStatus.NotWatched)
+            {
+                <small class="d-block text-muted mt-1">@GetWatchStatusDisplay()</small>
+            }
+        </button>
+
+        <!-- View on YouTube Button -->
+        <a href="@Model.YouTubeUrl"
+           target="_blank"
+           class="btn btn-outline-danger mb-3 w-100"
+           title="Open video on YouTube">
+            <i class="bi bi-youtube me-2"></i>
+            View on YouTube
+            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+        </a>
+
+        <!-- Summarize Button -->
+        <button type="button"
+                class="btn btn-outline-info mb-3 w-100"
+                disabled
+                title="Coming soon - AI-powered video summary">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            Summarize
+        </button>
+
+        <!-- Back to Library Navigation -->
+        <a href="/video-library" class="btn btn-outline-secondary mt-auto">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Library
+        </a>
+    </div>
+</div>

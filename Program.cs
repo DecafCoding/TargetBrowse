@@ -10,6 +10,8 @@ using TargetBrowse.Data;
 using TargetBrowse.Features.Suggestions.BackgroundServices;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.TopicVideos.Services;
+using TargetBrowse.Features.Watch.Data;
+using TargetBrowse.Features.Watch.Services;
 using TargetBrowse.Services;
 using TargetBrowse.Services.DataServices;
 using TargetBrowse.Services.Interfaces;
@@ -116,6 +118,10 @@ public class Program
         builder.Services.AddScoped<Features.ChannelVideos.Data.IChannelVideosRepository, Features.ChannelVideos.Data.ChannelVideosRepository>();
 
         builder.Services.AddScoped<ITopicVideosService, TopicVideosService>();
+
+        // Watch Feature Services
+        builder.Services.AddScoped<IWatchService, WatchService>();
+        builder.Services.AddScoped<IWatchRepository, WatchRepository>();
 
         #endregion
 
