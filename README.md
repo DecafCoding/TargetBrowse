@@ -98,7 +98,7 @@ Solution/                 # Main Blazor Server Application
   │   ├── Ratings/                    # Rating system
   │   ├── Suggestions/                # Suggestion engine
   │   └── Summaries/                  # AI summarization
-  ├── Services/
+  ├── Services/                       # Shared services
   │   ├── DataServices/               # Shared data services
   │   ├── Components/                 # Reusable UI components
   │   └── Models/                     # Shared data models

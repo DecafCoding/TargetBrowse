@@ -34,6 +34,9 @@ public partial class Watch : ComponentBase
     [Inject]
     protected NavigationManager Navigation { get; set; } = default!;
 
+    [Inject]
+    protected ITranscriptRetrievalService TranscriptRetrievalService { get; set; } = default!;
+
     #endregion
 
     #region State
@@ -47,6 +50,17 @@ public partial class Watch : ComponentBase
     /// The current authenticated user's ID.
     /// </summary>
     protected string? CurrentUserId { get; set; }
+
+    /// <summary>
+    /// Tracks whether transcript retrieval is currently in progress.
+    /// </summary>
+    protected bool IsRetrievingTranscript { get; set; } = false;
+
+    /// <summary>
+    /// Tracks whether user is viewing summary (true) or transcript (false)
+    /// Only relevant when both are available
+    /// </summary>
+    protected bool IsViewingSummary { get; set; } = true;
 
     #endregion
 
@@ -172,6 +186,55 @@ public partial class Watch : ComponentBase
         await LoadVideoData();
     }
 
+    /// <summary>
+    /// Handles the user request to retrieve a video transcript.
+    /// Triggers the Apify service and updates the UI accordingly.
+    /// </summary>
+    protected async Task HandleRetrieveTranscript()
+    {
+        if (IsRetrievingTranscript)
+        {
+            Logger.LogInformation("Transcript retrieval already in progress");
+            return;
+        }
+
+        try
+        {
+            IsRetrievingTranscript = true;
+            StateHasChanged();
+
+            Logger.LogInformation("User requested transcript retrieval for {YouTubeVideoId}", YouTubeVideoId);
+
+            // Call the transcript retrieval service (this takes 8-20 seconds)
+            var success = await TranscriptRetrievalService.RetrieveAndStoreTranscriptAsync(YouTubeVideoId);
+
+            if (success)
+            {
+                // Reload the watch data to reflect the updated transcript status
+                await LoadVideoData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error during transcript retrieval for {YouTubeVideoId}", YouTubeVideoId);
+            await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
+        }
+        finally
+        {
+            IsRetrievingTranscript = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Toggles between summary and transcript view
+    /// </summary>
+    protected void ToggleContentView()
+    {
+        IsViewingSummary = !IsViewingSummary;
+        StateHasChanged();
+    }
+
     #endregion
 
     #region UI Helper Methods
@@ -191,6 +254,27 @@ public partial class Watch : ComponentBase
             return $"{Model.Title} - Watch - YouTube Video Tracker";
 
         return "Watch Video - YouTube Video Tracker";
+    }
+
+    /// <summary>
+    /// Gets the appropriate title for the content display card header
+    /// </summary>
+    protected string GetContentHeaderTitle()
+    {
+        // If summary exists and is being viewed
+        if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && IsViewingSummary)
+            return "Summary";
+
+        // If transcript exists and is being viewed (or is the only content)
+        if (!string.IsNullOrWhiteSpace(Model.RawTranscript))
+            return "Transcript";
+
+        // If only description is available
+        if (!string.IsNullOrWhiteSpace(Model.Description))
+            return "Video Information";
+
+        // No content available
+        return "Content";
     }
 
     #endregion
