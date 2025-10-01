@@ -1,4 +1,5 @@
-﻿using TargetBrowse.Data.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Watch.Data;
 using TargetBrowse.Features.Watch.Models;
 using TargetBrowse.Services;
@@ -21,7 +22,6 @@ namespace TargetBrowse.Features.Watch.Services
             _logger = logger;
         }
 
-        /// <inheritdoc/>
         public async Task<WatchViewModel> GetWatchDataAsync(string youTubeVideoId, string userId)
         {
             var model = new WatchViewModel
@@ -49,6 +49,7 @@ namespace TargetBrowse.Features.Watch.Services
                 model.PublishedAt = video.PublishedAt;
                 model.PublishedDisplay = FormatHelper.FormatDateDisplay(video.PublishedAt);
                 model.ViewCount = video.ViewCount;
+                model.RawTranscript = video.RawTranscript;
 
                 // Add " views" suffix for view count
                 var viewCountFormatted = FormatHelper.FormatCount((ulong)video.ViewCount);
@@ -89,7 +90,15 @@ namespace TargetBrowse.Features.Watch.Services
                 }
 
                 model.HasTranscript = await _watchRepository.HasTranscriptAsync(video.Id);
+
                 model.HasSummary = await _watchRepository.HasSummaryAsync(video.Id);
+
+                if (model.HasSummary)
+                {
+                    // Load most recent summary if available
+                    var summary = await _watchRepository.GetMostRecentSummaryAsync(video.Id);
+                    model.SummaryContent = summary?.Content;
+                }
 
                 // Load user rating if exists
                 var rating = await _watchRepository.GetUserVideoRatingAsync(userId, video.Id);
@@ -111,7 +120,6 @@ namespace TargetBrowse.Features.Watch.Services
             return model;
         }
 
-        /// <inheritdoc/>
         public async Task<bool> VideoExistsAsync(string youTubeVideoId)
         {
             try
@@ -126,11 +134,12 @@ namespace TargetBrowse.Features.Watch.Services
             }
         }
 
-        /// <inheritdoc/>
         public string GetYouTubeEmbedUrl(string youTubeVideoId)
         {
             // Build embed URL with autoplay disabled and modest branding
             return $"https://www.youtube.com/embed/{youTubeVideoId}?rel=0&modestbranding=1&autoplay=0";
         }
+
+
     }
 }

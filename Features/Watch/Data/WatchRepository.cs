@@ -20,7 +20,6 @@ namespace TargetBrowse.Features.Watch.Data
             _logger = logger;
         }
 
-        /// <inheritdoc/>
         public async Task<VideoEntity?> GetVideoByYouTubeIdAsync(string youTubeVideoId)
         {
             try
@@ -38,7 +37,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<RatingEntity?> GetUserVideoRatingAsync(string userId, Guid videoId)
         {
             try
@@ -56,7 +54,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<UserVideoEntity?> GetUserVideoAsync(string userId, Guid videoId)
         {
             try
@@ -74,7 +71,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> IsVideoInUserLibraryAsync(string userId, Guid videoId)
         {
             try
@@ -93,7 +89,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> IsVideoWatchedAsync(string userId, Guid videoId)
         {
             try
@@ -109,7 +104,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> HasTranscriptAsync(Guid videoId)
         {
             try
@@ -128,7 +122,6 @@ namespace TargetBrowse.Features.Watch.Data
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> HasSummaryAsync(Guid videoId)
         {
             try
@@ -142,6 +135,53 @@ namespace TargetBrowse.Features.Watch.Data
             {
                 _logger.LogError(ex, "Error checking summary availability for video {VideoId}", videoId);
                 return false;
+            }
+        }
+
+        public async Task<bool> UpdateVideoTranscriptAsync(Guid videoId, string transcript)
+        {
+            try
+            {
+                var video = await _context.Videos
+                    .Where(v => !v.IsDeleted)
+                    .FirstOrDefaultAsync(v => v.Id == videoId);
+
+                if (video == null)
+                {
+                    _logger.LogWarning("Video {VideoId} not found for transcript update", videoId);
+                    return false;
+                }
+
+                // Update the RawTranscript field
+                video.RawTranscript = transcript;
+                video.LastModifiedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated transcript for video {VideoId}", videoId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating transcript for video {VideoId}", videoId);
+                return false;
+            }
+        }
+
+        public async Task<SummaryEntity?> GetMostRecentSummaryAsync(Guid videoId)
+        {
+            try
+            {
+                // Get the most recent summary for this video (sorted by CreatedAt descending)
+                return await _context.Summaries
+                    .Where(s => !s.IsDeleted && s.VideoId == videoId)
+                    .OrderByDescending(s => s.CreatedAt)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving summary for video {VideoId}", videoId);
+                return null;
             }
         }
     }

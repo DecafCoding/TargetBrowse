@@ -1,8 +1,10 @@
+using Google.Apis.Discovery;
 using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Numerics;
 using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
@@ -11,12 +13,15 @@ using TargetBrowse.Features.Suggestions.BackgroundServices;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.TopicVideos.Services;
 using TargetBrowse.Features.Watch.Data;
+using TargetBrowse.Features.Watch.Pages;
 using TargetBrowse.Features.Watch.Services;
 using TargetBrowse.Services;
 using TargetBrowse.Services.DataServices;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.YouTube.Models;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TargetBrowse;
 
@@ -80,6 +85,7 @@ public class Program
         builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
         builder.Services.AddScoped<IVideoDataService, VideoDataService>();
         builder.Services.AddScoped<ILibraryDataService, LibraryDataService>();
+        builder.Services.AddScoped<ITranscriptService, TranscriptService>();
 
         #endregion
 
@@ -122,6 +128,7 @@ public class Program
         // Watch Feature Services
         builder.Services.AddScoped<IWatchService, WatchService>();
         builder.Services.AddScoped<IWatchRepository, WatchRepository>();
+        builder.Services.AddScoped<ITranscriptRetrievalService, TranscriptRetrievalService>();
 
         #endregion
 

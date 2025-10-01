@@ -163,6 +163,16 @@ namespace TargetBrowse.Features.Watch.Models
         /// </summary>
         public bool VideoExists { get; set; } = true;
 
+        /// <summary>
+        /// Raw transcript text from the video (if available)
+        /// </summary>
+        public string? RawTranscript { get; set; }
+
+        /// <summary>
+        /// AI-generated summary content (if available)
+        /// </summary>
+        public string? SummaryContent { get; set; }
+
         // Helper Methods
         /// <summary>
         /// Gets the appropriate thumbnail URL with fallback

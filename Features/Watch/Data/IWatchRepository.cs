@@ -60,5 +60,18 @@ namespace TargetBrowse.Features.Watch.Data
         /// <param name="videoId">The database video ID (Guid)</param>
         /// <returns>True if a summary exists for this video, false otherwise</returns>
         Task<bool> HasSummaryAsync(Guid videoId);
+
+        /// <summary>
+        /// Updates the transcript for a video in the database.
+        /// </summary>
+        /// <param name="videoId">The database video ID (Guid)</param>
+        /// <param name="transcript">The transcript text to store</param>
+        /// <returns>True if update was successful, false otherwise</returns>
+        Task<bool> UpdateVideoTranscriptAsync(Guid videoId, string transcript);
+
+        /// <summary>
+        /// Gets the most recent summary for a video if available
+        /// </summary>
+        Task<SummaryEntity?> GetMostRecentSummaryAsync(Guid videoId);
     }
 }

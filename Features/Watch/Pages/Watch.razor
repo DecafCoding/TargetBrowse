@@ -52,7 +52,7 @@ else
 {
     <div class="row">
         <!-- Main Content - Video Player and Details -->
-        <div class="col-lg-9">
+        <div class="col-lg-8">
             <!-- Video Player Container -->
             <div class="mb-1 bg-dark rounded overflow-hidden shadow-sm">
                 <div class="ratio ratio-16x9">
@@ -84,11 +84,11 @@ else
                 </div>
 
                 <!-- Video Metadata Row -->
-                <div class="py-1">
+                <div class="py-0">
                     <div class="row align-items-center">
                         <!-- Channel Info -->
                         <div class="col-12">
-                            <div class="d-flex align-items-center mb-3">
+                            <div class="d-flex align-items-center mb-1">
                                 <!-- Channel Thumbnail -->
                                 @if (!string.IsNullOrEmpty(Model.ChannelThumbnailUrl))
                                 {
@@ -173,10 +173,32 @@ else
                                     }
 
                                     <!-- Transcript Status -->
-                                    <span class="badge @(Model.HasTranscript ? "bg-info" : "bg-secondary") me-1">
-                                        <i class="bi @(Model.HasTranscript ? "bi-file-text-fill" : "bi-file-text") me-1"></i>
-                                        @(Model.HasTranscript ? "Transcript" : "No Transcript")
-                                    </span>
+                                    @if (Model.HasTranscript)
+                                    {
+                                        <span class="badge bg-info me-1">
+                                            <i class="bi bi-file-text-fill me-1"></i>
+                                            Transcript
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button"
+                                                class="badge bg-secondary me-1 border-0"
+                                                style="cursor: pointer;"
+                                                @onclick="HandleRetrieveTranscript"
+                                                disabled="@IsRetrievingTranscript">
+                                            @if (IsRetrievingTranscript)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                <span>Retrieving...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-file-text me-1"></i>
+                                                <span>No Transcript</span>
+                                            }
+                                        </button>
+                                    }
 
                                     <!-- Summary Status -->
                                     <span class="badge @(Model.HasSummary ? "bg-info" : "bg-secondary") me-1">
@@ -187,37 +209,97 @@ else
                             </div>
 
                             <!-- Status Badges (moved under channel) -->
-                            <div class="d-flex flex-wrap gap-2 mb-3">
+                            <div class="d-flex flex-wrap gap-2 mb-1">
                                 <!-- Video Stats (directly after channel title) -->
 
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Video Description -->
-                @if (!string.IsNullOrEmpty(Model.Description))
-                {
-                    <div class="mt-1">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="card-title">
-                                    <i class="bi bi-text-paragraph me-2"></i>
-                                    Description
-                                </h6>
-                                <p class="mb-0 lh-base" style="white-space: pre-wrap; word-wrap: break-word;">
-                                    @Model.GetShortDescription()
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                }
             </div>
         </div>
 
         <!-- Left Sidebar - Action Buttons -->
-        <div class="col-lg-3">
-            <WatchActionButtons Model="@Model" />
+        <div class="col-lg-4">
+            <!-- Content Display Card -->
+            <div class="card watch-actions-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>
+                        @GetContentHeaderTitle()
+                    </h6>
+
+                    @* Show toggle buttons only when both summary and transcript are available *@
+                    @if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && !string.IsNullOrWhiteSpace(Model.RawTranscript))
+                    {
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button"
+                                    class="btn @(IsViewingSummary ? "btn-primary" : "btn-outline-primary")"
+                                    @onclick="() => IsViewingSummary = true">
+                                <i class="bi bi-stars me-1"></i>
+                                Summary
+                            </button>
+                            <button type="button"
+                                    class="btn @(!IsViewingSummary ? "btn-primary" : "btn-outline-primary")"
+                                    @onclick="() => IsViewingSummary = false">
+                                <i class="bi bi-file-text me-1"></i>
+                                Transcript
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    @* Priority: Summary > Transcript > Description *@
+                    @if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && IsViewingSummary)
+                    {
+                        @* Display AI Summary *@
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-stars me-1"></i>
+                            <small>AI-Generated Summary</small>
+                        </div>
+                        <div class="mb-3" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">
+                            @Model.SummaryContent
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Model.RawTranscript))
+                    {
+                        @* Display Transcript *@
+                        <div class="alert alert-secondary mb-3">
+                            <i class="bi bi-file-text me-1"></i>
+                            <small>Video Transcript</small>
+                        </div>
+                        <div class="mb-3 overflow-auto" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; max-height: 525px;">
+                            @Model.RawTranscript
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        @* Display Description as fallback *@
+                        <div class="alert alert-light mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <small>Video Description</small>
+                        </div>
+                        <p class="mb-3 lh-base" style="white-space: pre-wrap; word-wrap: break-word;">
+                            @Model.Description
+                        </p>
+                    }
+                    else
+                    {
+                        @* No content available *@
+                        <div class="text-muted text-center py-4">
+                            <i class="bi bi-file-earmark-x display-4"></i>
+                            <p class="mt-2">No content available for this video.</p>
+                        </div>
+                    }
+
+                    <!-- Back to Library Navigation -->
+                    <a href="/video-library" class="btn btn-outline-secondary mt-auto">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to Library
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
