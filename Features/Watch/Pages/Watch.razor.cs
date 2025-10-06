@@ -9,6 +9,16 @@ using TargetBrowse.Data.Entities;
 namespace TargetBrowse.Features.Watch.Pages;
 
 /// <summary>
+/// Represents the current content view mode in the watch page
+/// </summary>
+public enum ContentViewMode
+{
+    Description,
+    Transcript,
+    Summary
+}
+
+/// <summary>
 /// Code-behind for the Watch page component. Handles loading video data
 /// and managing the watch experience.
 /// </summary>
@@ -57,10 +67,9 @@ public partial class Watch : ComponentBase
     protected bool IsRetrievingTranscript { get; set; } = false;
 
     /// <summary>
-    /// Tracks whether user is viewing summary (true) or transcript (false)
-    /// Only relevant when both are available
+    /// Tracks which content type is currently being displayed
     /// </summary>
-    protected bool IsViewingSummary { get; set; } = true;
+    protected ContentViewMode CurrentViewMode { get; set; } = ContentViewMode.Summary;
 
     #endregion
 
@@ -153,6 +162,9 @@ public partial class Watch : ComponentBase
             {
                 Logger.LogInformation("Successfully loaded watch data for video: {Title}",
                     Model.Title);
+
+                // Initialize the content view based on available content
+                InitializeContentView();
             }
 
             StateHasChanged();
@@ -166,6 +178,31 @@ public partial class Watch : ComponentBase
 
             await MessageCenter.ShowErrorAsync("Failed to load video. Please try again.");
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Initializes the content view mode based on available content.
+    /// Priority: Summary > Transcript > Description
+    /// </summary>
+    private void InitializeContentView()
+    {
+        if (IsContentAvailable(ContentViewMode.Summary))
+        {
+            CurrentViewMode = ContentViewMode.Summary;
+        }
+        else if (IsContentAvailable(ContentViewMode.Transcript))
+        {
+            CurrentViewMode = ContentViewMode.Transcript;
+        }
+        else if (IsContentAvailable(ContentViewMode.Description))
+        {
+            CurrentViewMode = ContentViewMode.Description;
+        }
+        else
+        {
+            // Default to Summary if nothing is available
+            CurrentViewMode = ContentViewMode.Summary;
         }
     }
 
@@ -212,6 +249,9 @@ public partial class Watch : ComponentBase
             {
                 // Reload the watch data to reflect the updated transcript status
                 await LoadVideoData();
+
+                // Switch to transcript view after successful retrieval
+                CurrentViewMode = ContentViewMode.Transcript;
             }
         }
         catch (Exception ex)
@@ -229,10 +269,22 @@ public partial class Watch : ComponentBase
     /// <summary>
     /// Toggles between summary and transcript view
     /// </summary>
-    protected void ToggleContentView()
+    //protected void ToggleContentView()
+    //{
+    //    IsViewingSummary = !IsViewingSummary;
+    //    StateHasChanged();
+    //}
+
+    /// <summary>
+    /// Switches the content view to the specified mode
+    /// </summary>
+    protected void SwitchContentView(ContentViewMode mode)
     {
-        IsViewingSummary = !IsViewingSummary;
-        StateHasChanged();
+        if (IsContentAvailable(mode))
+        {
+            CurrentViewMode = mode;
+            StateHasChanged();
+        }
     }
 
     #endregion
@@ -257,24 +309,108 @@ public partial class Watch : ComponentBase
     }
 
     /// <summary>
-    /// Gets the appropriate title for the content display card header
+    /// Gets the appropriate title for the content display card header based on current view mode
     /// </summary>
     protected string GetContentHeaderTitle()
     {
-        // If summary exists and is being viewed
-        if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && IsViewingSummary)
-            return "Summary";
+        return CurrentViewMode switch
+        {
+            ContentViewMode.Description => "Description",
+            ContentViewMode.Transcript => "Transcript",
+            ContentViewMode.Summary => "Summary",
+            _ => "Content"
+        };
+    }
 
-        // If transcript exists and is being viewed (or is the only content)
-        if (!string.IsNullOrWhiteSpace(Model.RawTranscript))
-            return "Transcript";
+    /// <summary>
+    /// Determines if a specific content type is available for viewing
+    /// </summary>
+    protected bool IsContentAvailable(ContentViewMode mode)
+    {
+        return mode switch
+        {
+            ContentViewMode.Description => !string.IsNullOrWhiteSpace(Model.Description),
+            ContentViewMode.Transcript => !string.IsNullOrWhiteSpace(Model.RawTranscript),
+            ContentViewMode.Summary => !string.IsNullOrWhiteSpace(Model.SummaryContent),
+            _ => false
+        };
+    }
 
-        // If only description is available
-        if (!string.IsNullOrWhiteSpace(Model.Description))
-            return "Video Information";
+    /// <summary>
+    /// Gets the appropriate CSS class for a content button based on content availability and current view
+    /// </summary>
+    protected string GetButtonClass(ContentViewMode mode)
+    {
+        // Active view - primary button
+        if (CurrentViewMode == mode)
+            return "btn-primary";
 
-        // No content available
-        return "Content";
+        // Content exists - outline primary (inactive but available)
+        if (IsContentAvailable(mode))
+            return "btn-outline-primary";
+
+        // Content missing - warning (yellow)
+        return "btn-warning";
+    }
+
+    /// <summary>
+    /// Gets the button label - adds "Get" prefix when content is missing
+    /// </summary>
+    protected string GetButtonLabel(ContentViewMode mode)
+    {
+        var baseName = mode switch
+        {
+            ContentViewMode.Description => "Description",
+            ContentViewMode.Transcript => "Transcript",
+            ContentViewMode.Summary => "Summary",
+            _ => "Content"
+        };
+
+        // Add "Get" prefix when content is not available
+        if (!IsContentAvailable(mode))
+        {
+            return $"Get {baseName}";
+        }
+
+        return baseName;
+    }
+
+    /// <summary>
+    /// Determines if a button should be disabled
+    /// </summary>
+    protected bool IsButtonDisabled(ContentViewMode mode)
+    {
+        // Summary button is disabled when no summary exists (no service yet)
+        if (mode == ContentViewMode.Summary && !IsContentAvailable(mode))
+            return true;
+
+        // Transcript button is disabled during retrieval
+        if (mode == ContentViewMode.Transcript && IsRetrievingTranscript)
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Handles button clicks - either switches view or retrieves content
+    /// </summary>
+    protected async Task HandleContentButtonClick(ContentViewMode mode)
+    {
+        // If content exists, switch to that view
+        if (IsContentAvailable(mode))
+        {
+            SwitchContentView(mode);
+            return;
+        }
+
+        // If no content exists and it's Transcript, retrieve it
+        if (mode == ContentViewMode.Transcript && !IsRetrievingTranscript)
+        {
+            await HandleRetrieveTranscript();
+        }
+
+        // For Description and Summary with no content, button click does nothing
+        // (Summary button should be disabled anyway)
     }
 
     #endregion
