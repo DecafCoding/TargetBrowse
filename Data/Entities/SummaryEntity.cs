@@ -17,20 +17,11 @@ namespace TargetBrowse.Data.Entities
         [StringLength(2000)]
         public string Content { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(20)]
-        public string PromptVersion { get; set; } = string.Empty;
-
         /// <summary>
-        /// OpenAI model used for generation (e.g., "gpt-4o-mini")
+        /// Links to the AI call that generated this summary.
+        /// Provides full audit trail including prompt used, tokens, and cost.
         /// </summary>
-        [StringLength(50)]
-        public string? ModelUsed { get; set; }
-
-        /// <summary>
-        /// Token count for the summary generation (for cost tracking)
-        /// </summary>
-        public int? TokensUsed { get; set; }
+        public Guid? AICallId { get; set; }
 
         /// <summary>
         /// Number of times this summary has been requested/generated (for analytics)
@@ -39,6 +30,7 @@ namespace TargetBrowse.Data.Entities
 
         // Navigation properties
         public virtual VideoEntity Video { get; set; } = null!;
+        public virtual AICallEntity? AICall { get; set; }
         public virtual ICollection<SummaryGenerationRequestEntity> GenerationRequests { get; set; } = new List<SummaryGenerationRequestEntity>();
     }
 }
