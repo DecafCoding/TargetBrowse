@@ -224,36 +224,46 @@ else
             <!-- Content Display Card -->
             <div class="card watch-actions-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="bi bi-file-text me-2"></i>
-                        @GetContentHeaderTitle()
-                    </h6>
+                    <!-- Content View Toggle Buttons -->
+                    <div class="d-flex gap-2" role="group" aria-label="Content view options">
+                        <!-- Description Button -->
+                        <button type="button"
+                                class="btn flex-fill @GetButtonClass(ContentViewMode.Description)"
+                                @onclick="() => HandleContentButtonClick(ContentViewMode.Description)"
+                                disabled="@IsButtonDisabled(ContentViewMode.Description)">
+                            @GetButtonLabel(ContentViewMode.Description)
+                        </button>
 
-                    @* Show toggle buttons only when both summary and transcript are available *@
-                    @if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && !string.IsNullOrWhiteSpace(Model.RawTranscript))
-                    {
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button"
-                                    class="btn @(IsViewingSummary ? "btn-primary" : "btn-outline-primary")"
-                                    @onclick="() => IsViewingSummary = true">
-                                <i class="bi bi-stars me-1"></i>
-                                Summary
-                            </button>
-                            <button type="button"
-                                    class="btn @(!IsViewingSummary ? "btn-primary" : "btn-outline-primary")"
-                                    @onclick="() => IsViewingSummary = false">
-                                <i class="bi bi-file-text me-1"></i>
-                                Transcript
-                            </button>
-                        </div>
-                    }
+                        <!-- Transcript Button -->
+                        <button type="button"
+                                class="btn flex-fill @GetButtonClass(ContentViewMode.Transcript)"
+                                @onclick="() => HandleContentButtonClick(ContentViewMode.Transcript)"
+                                disabled="@(IsRetrievingTranscript || IsButtonDisabled(ContentViewMode.Transcript))">
+                            @if (IsRetrievingTranscript && !IsContentAvailable(ContentViewMode.Transcript))
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                <span>Retrieving...</span>
+                            }
+                            else
+                            {
+                                <span>@GetButtonLabel(ContentViewMode.Transcript)</span>
+                            }
+                        </button>
+
+                        <!-- Summary Button -->
+                        <button type="button"
+                                class="btn flex-fill @GetButtonClass(ContentViewMode.Summary)"
+                                @onclick="() => HandleContentButtonClick(ContentViewMode.Summary)"
+                                disabled="@IsButtonDisabled(ContentViewMode.Summary)">
+                            @GetButtonLabel(ContentViewMode.Summary)
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card-body d-flex flex-column">
-                    @* Priority: Summary > Transcript > Description *@
-                    @if (!string.IsNullOrWhiteSpace(Model.SummaryContent) && IsViewingSummary)
+                    @if (CurrentViewMode == ContentViewMode.Summary && !string.IsNullOrWhiteSpace(Model.SummaryContent))
                     {
-                        @* Display AI Summary *@
+                        <!-- Display AI Summary -->
                         <div class="alert alert-info mb-3">
                             <i class="bi bi-stars me-1"></i>
                             <small>AI-Generated Summary</small>
@@ -262,9 +272,9 @@ else
                             @Model.SummaryContent
                         </div>
                     }
-                    else if (!string.IsNullOrWhiteSpace(Model.RawTranscript))
+                    else if (CurrentViewMode == ContentViewMode.Transcript && !string.IsNullOrWhiteSpace(Model.RawTranscript))
                     {
-                        @* Display Transcript *@
+                        <!-- Display Transcript -->
                         <div class="alert alert-secondary mb-3">
                             <i class="bi bi-file-text me-1"></i>
                             <small>Video Transcript</small>
@@ -273,9 +283,9 @@ else
                             @Model.RawTranscript
                         </div>
                     }
-                    else if (!string.IsNullOrWhiteSpace(Model.Description))
+                    else if (CurrentViewMode == ContentViewMode.Description && !string.IsNullOrWhiteSpace(Model.Description))
                     {
-                        @* Display Description as fallback *@
+                        <!-- Display Description -->
                         <div class="alert alert-light mb-3">
                             <i class="bi bi-info-circle me-1"></i>
                             <small>Video Description</small>
@@ -286,10 +296,10 @@ else
                     }
                     else
                     {
-                        @* No content available *@
+                        <!-- No content available for selected view -->
                         <div class="text-muted text-center py-4">
                             <i class="bi bi-file-earmark-x display-4"></i>
-                            <p class="mt-2">No content available for this video.</p>
+                            <p class="mt-2">No @(CurrentViewMode.ToString().ToLower()) available for this video.</p>
                         </div>
                     }
 
@@ -302,5 +312,4 @@ else
             </div>
         </div>
     </div>
-
 }

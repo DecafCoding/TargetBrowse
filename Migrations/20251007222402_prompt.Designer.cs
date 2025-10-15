@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TargetBrowse.Data;
 
@@ -11,9 +12,11 @@ using TargetBrowse.Data;
 namespace TargetBrowse.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007222402_prompt")]
+    partial class prompt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -272,25 +275,18 @@ namespace TargetBrowse.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("TotalCost")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
-
                     b.HasIndex("PromptId");
-
-                    b.HasIndex("Success");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.ToTable("AICalls", (string)null);
+                    b.ToTable("AICallEntity");
                 });
 
             modelBuilder.Entity("TargetBrowse.Data.Entities.ChannelEntity", b =>
@@ -359,12 +355,10 @@ namespace TargetBrowse.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("CostPer1kInputTokens")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("CostPer1kOutputTokens")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -396,12 +390,7 @@ namespace TargetBrowse.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("Provider", "Name")
-                        .IsUnique();
-
-                    b.ToTable("Models", (string)null);
+                    b.ToTable("ModelEntity");
                 });
 
             modelBuilder.Entity("TargetBrowse.Data.Entities.PromptEntity", b =>
@@ -444,12 +433,10 @@ namespace TargetBrowse.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Temperature")
-                        .HasPrecision(3, 2)
-                        .HasColumnType("decimal(3,2)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("TopP")
-                        .HasPrecision(3, 2)
-                        .HasColumnType("decimal(3,2)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UserPromptTemplate")
                         .IsRequired()
@@ -462,14 +449,9 @@ namespace TargetBrowse.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsActive");
-
                     b.HasIndex("ModelId");
 
-                    b.HasIndex("Name", "Version")
-                        .IsUnique();
-
-                    b.ToTable("Prompts", (string)null);
+                    b.ToTable("PromptEntity");
                 });
 
             modelBuilder.Entity("TargetBrowse.Data.Entities.RatingEntity", b =>
@@ -1011,13 +993,12 @@ namespace TargetBrowse.Migrations
                     b.HasOne("TargetBrowse.Data.Entities.PromptEntity", "Prompt")
                         .WithMany("AICalls")
                         .HasForeignKey("PromptId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("TargetBrowse.Data.ApplicationUser", "User")
-                        .WithMany("AICalls")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .WithMany()
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Prompt");
 
@@ -1029,7 +1010,7 @@ namespace TargetBrowse.Migrations
                     b.HasOne("TargetBrowse.Data.Entities.ModelEntity", "Model")
                         .WithMany("Prompts")
                         .HasForeignKey("ModelId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Model");
@@ -1102,8 +1083,7 @@ namespace TargetBrowse.Migrations
                 {
                     b.HasOne("TargetBrowse.Data.Entities.AICallEntity", "AICall")
                         .WithMany("Summaries")
-                        .HasForeignKey("AICallId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("AICallId");
 
                     b.HasOne("TargetBrowse.Data.Entities.VideoEntity", "Video")
                         .WithOne("Summary")
@@ -1204,8 +1184,6 @@ namespace TargetBrowse.Migrations
 
             modelBuilder.Entity("TargetBrowse.Data.ApplicationUser", b =>
                 {
-                    b.Navigation("AICalls");
-
                     b.Navigation("Ratings");
 
                     b.Navigation("SavedVideos");

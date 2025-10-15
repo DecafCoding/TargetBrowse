@@ -230,20 +230,23 @@ namespace TargetBrowse.Data.Configurations
             builder.HasKey(s => s.Id);
             builder.HasIndex(s => s.VideoId).IsUnique(); // One summary per video
             builder.HasIndex(s => s.CreatedAt);
-            builder.HasIndex(s => s.PromptVersion);
+            builder.HasIndex(s => s.AICallId);
             builder.HasIndex(s => s.GenerationCount);
 
             // Properties
             builder.Property(s => s.VideoId).IsRequired();
             builder.Property(s => s.Content).IsRequired().HasMaxLength(2000);
-            builder.Property(s => s.PromptVersion).IsRequired().HasMaxLength(20);
-            builder.Property(s => s.ModelUsed).HasMaxLength(50);
 
             // Relationships
             builder.HasOne(s => s.Video)
                    .WithOne(v => v.Summary)
                    .HasForeignKey<SummaryEntity>(s => s.VideoId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(s => s.AICall)
+                   .WithMany(a => a.Summaries)
+                   .HasForeignKey(s => s.AICallId)
+                   .OnDelete(DeleteBehavior.SetNull); // Keep summary even if AI call is deleted
         }
     }
 
@@ -318,6 +321,104 @@ namespace TargetBrowse.Data.Configurations
 
             builder.Property(st => st.TopicId)
                    .IsRequired();
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for ModelEntity.
+    /// Configures AI models with provider and cost tracking.
+    /// </summary>
+    public class ModelEntityConfiguration : IEntityTypeConfiguration<ModelEntity>
+    {
+        public void Configure(EntityTypeBuilder<ModelEntity> builder)
+        {
+            builder.ToTable("Models");
+
+            // Primary key and indexes
+            builder.HasKey(m => m.Id);
+            builder.HasIndex(m => new { m.Provider, m.Name }).IsUnique();
+            builder.HasIndex(m => m.IsActive);
+
+            // Properties
+            builder.Property(m => m.Name).IsRequired().HasMaxLength(100);
+            builder.Property(m => m.Provider).IsRequired().HasMaxLength(50);
+            builder.Property(m => m.CostPer1kInputTokens).IsRequired().HasPrecision(18, 6);
+            builder.Property(m => m.CostPer1kOutputTokens).IsRequired().HasPrecision(18, 6);
+            builder.Property(m => m.IsActive).IsRequired();
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for PromptEntity.
+    /// Configures AI prompt templates with model relationships.
+    /// </summary>
+    public class PromptEntityConfiguration : IEntityTypeConfiguration<PromptEntity>
+    {
+        public void Configure(EntityTypeBuilder<PromptEntity> builder)
+        {
+            builder.ToTable("Prompts");
+
+            // Primary key and indexes
+            builder.HasKey(p => p.Id);
+            builder.HasIndex(p => new { p.Name, p.Version }).IsUnique();
+            builder.HasIndex(p => p.IsActive);
+            builder.HasIndex(p => p.ModelId);
+
+            // Properties
+            builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
+            builder.Property(p => p.Version).IsRequired().HasMaxLength(20);
+            builder.Property(p => p.SystemPrompt).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(p => p.UserPromptTemplate).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(p => p.Temperature).HasPrecision(3, 2);
+            builder.Property(p => p.TopP).HasPrecision(3, 2);
+            builder.Property(p => p.IsActive).IsRequired();
+
+            // Relationships
+            builder.HasOne(p => p.Model)
+                   .WithMany(m => m.Prompts)
+                   .HasForeignKey(p => p.ModelId)
+                   .OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for AICallEntity.
+    /// Configures AI API call tracking with full audit trail.
+    /// </summary>
+    public class AICallEntityConfiguration : IEntityTypeConfiguration<AICallEntity>
+    {
+        public void Configure(EntityTypeBuilder<AICallEntity> builder)
+        {
+            builder.ToTable("AICalls");
+
+            // Primary key and indexes
+            builder.HasKey(a => a.Id);
+            builder.HasIndex(a => a.PromptId);
+            builder.HasIndex(a => a.UserId);
+            builder.HasIndex(a => a.CreatedAt);
+            builder.HasIndex(a => a.Success);
+            builder.HasIndex(a => new { a.UserId, a.CreatedAt }); // For cost analysis queries
+
+            // Properties
+            builder.Property(a => a.ActualSystemPrompt).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(a => a.ActualUserPrompt).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(a => a.Response).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(a => a.InputTokens).IsRequired();
+            builder.Property(a => a.OutputTokens).IsRequired();
+            builder.Property(a => a.TotalCost).IsRequired().HasPrecision(18, 6);
+            builder.Property(a => a.Success).IsRequired();
+            builder.Property(a => a.ErrorMessage).HasColumnType("nvarchar(max)");
+
+            // Relationships
+            builder.HasOne(a => a.Prompt)
+                   .WithMany(p => p.AICalls)
+                   .HasForeignKey(a => a.PromptId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(a => a.User)
+                   .WithMany(u => u.AICalls)
+                   .HasForeignKey(a => a.UserId)
+                   .OnDelete(DeleteBehavior.SetNull); // Keep AI call records even if user is deleted
         }
     }
 }
