@@ -16,4 +16,5 @@ public class ApplicationUser : IdentityUser
     public virtual ICollection<RatingEntity> Ratings { get; set; } = new List<RatingEntity>();
     public virtual ICollection<SuggestionEntity> Suggestions { get; set; } = new List<SuggestionEntity>();
     public virtual ICollection<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; } = new List<SummaryGenerationRequestEntity>();
+    public virtual ICollection<AICallEntity> AICalls { get; set; } = new List<AICallEntity>();
 }

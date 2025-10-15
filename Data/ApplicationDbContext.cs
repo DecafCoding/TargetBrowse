@@ -27,6 +27,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; }
     public DbSet<SuggestionTopicEntity> SuggestionTopics { get; set; }
 
+    // AI Tracking DbSets
+    public DbSet<ModelEntity> Models { get; set; }
+    public DbSet<PromptEntity> Prompts { get; set; }
+    public DbSet<AICallEntity> AICalls { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -42,6 +47,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new SummaryEntityConfiguration());
         builder.ApplyConfiguration(new SummaryGenerationRequestEntityConfiguration());
         builder.ApplyConfiguration(new SuggestionTopicEntityConfiguration());
+
+        // Apply AI tracking configurations
+        builder.ApplyConfiguration(new ModelEntityConfiguration());
+        builder.ApplyConfiguration(new PromptEntityConfiguration());
+        builder.ApplyConfiguration(new AICallEntityConfiguration());
 
         // Configure Identity tables to avoid conflicts
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers");
