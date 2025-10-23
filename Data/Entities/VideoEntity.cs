@@ -52,6 +52,12 @@ namespace TargetBrowse.Data.Entities
         /// </summary>
         public string RawTranscript { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Foreign key to VideoType for content classification.
+        /// Optional - videos can exist without a type initially.
+        /// </summary>
+        public Guid? VideoTypeId { get; set; }
+
         // Navigation properties
         public virtual ChannelEntity Channel { get; set; } = null!;
         public virtual ICollection<RatingEntity> Ratings { get; set; } = new List<RatingEntity>();
@@ -59,5 +65,11 @@ namespace TargetBrowse.Data.Entities
         public virtual ICollection<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; } = new List<SummaryGenerationRequestEntity>();
         public virtual ICollection<SuggestionEntity> Suggestions { get; set; } = new List<SuggestionEntity>();
         public virtual ICollection<UserVideoEntity> UserVideos { get; set; } = new List<UserVideoEntity>();
+
+        /// <summary>
+        /// Video type classification (Tutorial, Podcast, Vlog, etc.).
+        /// Nullable - videos may not have a type assigned.
+        /// </summary>
+        public virtual VideoTypeEntity? VideoType { get; set; }
     }
 }
