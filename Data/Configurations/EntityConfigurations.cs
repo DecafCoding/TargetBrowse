@@ -84,13 +84,14 @@ namespace TargetBrowse.Data.Configurations
         public void Configure(EntityTypeBuilder<VideoEntity> builder)
         {
             builder.ToTable("Videos");
-
+            
             // Primary key and indexes
             builder.HasKey(v => v.Id);
             builder.HasIndex(v => v.YouTubeVideoId).IsUnique();
             builder.HasIndex(v => v.ChannelId);
             builder.HasIndex(v => v.PublishedAt);
             builder.HasIndex(v => v.Title);
+            builder.HasIndex(v => v.VideoTypeId);
 
             // Properties
             builder.Property(v => v.YouTubeVideoId).IsRequired().HasMaxLength(20);
@@ -102,6 +103,12 @@ namespace TargetBrowse.Data.Configurations
                    .WithMany(c => c.Videos)
                    .HasForeignKey(v => v.ChannelId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(v => v.VideoType)
+                   .WithMany(vt => vt.Videos)
+                   .HasForeignKey(v => v.VideoTypeId)
+                   .IsRequired(false) // Optional relationship
+                   .OnDelete(DeleteBehavior.SetNull); // Set to null if type is deleted
         }
     }
 
@@ -419,6 +426,30 @@ namespace TargetBrowse.Data.Configurations
                    .WithMany(u => u.AICalls)
                    .HasForeignKey(a => a.UserId)
                    .OnDelete(DeleteBehavior.SetNull); // Keep AI call records even if user is deleted
+        }
+    }
+
+    public class VideoTypeEntityConfiguration : IEntityTypeConfiguration<VideoTypeEntity>
+    {
+        public void Configure(EntityTypeBuilder<VideoTypeEntity> builder)
+        {
+            builder.ToTable("VideoTypes");
+
+            // Primary key and indexes
+            builder.HasKey(vt => vt.Id);
+            builder.HasIndex(vt => vt.Code).IsUnique(); // Code must be unique
+            builder.HasIndex(vt => vt.Name);
+
+            // Properties
+            builder.Property(vt => vt.Name).IsRequired().HasMaxLength(100);
+            builder.Property(vt => vt.Description).HasMaxLength(500);
+            builder.Property(vt => vt.Code).IsRequired().HasMaxLength(50);
+
+            // Relationships
+            builder.HasMany(vt => vt.Videos)
+                   .WithOne(v => v.VideoType)
+                   .HasForeignKey(v => v.VideoTypeId)
+                   .OnDelete(DeleteBehavior.SetNull); // Preserve video if type is deleted
         }
     }
 }

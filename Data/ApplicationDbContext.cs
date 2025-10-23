@@ -31,6 +31,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ModelEntity> Models { get; set; }
     public DbSet<PromptEntity> Prompts { get; set; }
     public DbSet<AICallEntity> AICalls { get; set; }
+    public DbSet<VideoTypeEntity> VideoTypes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -52,6 +53,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new ModelEntityConfiguration());
         builder.ApplyConfiguration(new PromptEntityConfiguration());
         builder.ApplyConfiguration(new AICallEntityConfiguration());
+        builder.ApplyConfiguration(new VideoTypeEntityConfiguration());
 
         // Configure Identity tables to avoid conflicts
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers");
