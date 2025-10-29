@@ -4,6 +4,7 @@ using System.Security.Claims;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
+using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Pages;
@@ -21,6 +22,12 @@ public partial class VideoLibrary : ComponentBase
 
     [Inject]
     private IMessageCenterService MessageCenter { get; set; } = default!;
+
+    [Inject]
+    private ILibraryVideoClassificationService VideoCategorizationService { get; set; } = default!;
+
+    [Inject]
+    private ILogger<VideoLibrary> _logger { get; set; } = default!;
 
     private List<VideoDisplayModel> Videos = new();
     private List<VideoDisplayModel> FilteredVideos = new();
@@ -47,6 +54,9 @@ public partial class VideoLibrary : ComponentBase
     private double NotWatchedPercentage => Videos.Any() ? (double)NotWatchedCount / Videos.Count * 100 : 0;
     private double WatchedPercentage => Videos.Any() ? (double)WatchedCount / Videos.Count * 100 : 0;
     private double SkippedPercentage => Videos.Any() ? (double)SkippedCount / Videos.Count * 100 : 0;
+
+    private bool IsCategorizing = false;
+    private int UncategorizedCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,8 +107,30 @@ public partial class VideoLibrary : ComponentBase
         }
         finally
         {
+            await LoadUncategorizedCountAsync();
+
             IsLoading = false;
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads the count of uncategorized videos for button state management.
+    /// </summary>
+    private async Task LoadUncategorizedCountAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(CurrentUserId))
+            {
+                UncategorizedCount = await VideoCategorizationService.GetUncategorizedVideoCountAsync(CurrentUserId);
+                await MessageCenter.ShowInfoAsync($"Found {UncategorizedCount} uncategorized videos for user {CurrentUserId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageCenter.ShowInfoAsync($"Error loading uncategorized count: {ex.Message}");
+            UncategorizedCount = 0;
         }
     }
 
@@ -337,5 +369,78 @@ public partial class VideoLibrary : ComponentBase
     {
         var oneMonthAgo = DateTime.UtcNow.AddDays(-30);
         return Videos.Count(v => v.AddedToLibrary >= oneMonthAgo);
+    }
+
+    /// <summary>
+    /// Handles the categorize button click event.
+    /// Categorizes all uncategorized videos in the user's library using AI.
+    /// </summary>
+    private async Task CategorizeVideosAsync()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                await MessageCenter.ShowErrorAsync("User not authenticated.");
+                return;
+            }
+
+            if (UncategorizedCount == 0)
+            {
+                await MessageCenter.ShowInfoAsync("All videos in your library are already categorized.");
+                return;
+            }
+
+            IsCategorizing = true;
+            StateHasChanged();
+
+            // Show initial progress message
+            await MessageCenter.ShowInfoAsync($"Categorizing {UncategorizedCount} videos...");
+
+            // Perform categorization with progress callback
+            var result = await VideoCategorizationService.CategorizeUserLibraryVideosAsync(
+                CurrentUserId,
+                progressMessage =>
+                {
+                    // Update message center with progress
+                    InvokeAsync(async () =>
+                    {
+                        await MessageCenter.ShowInfoAsync(progressMessage);
+                        StateHasChanged();
+                    });
+                });
+
+            // Show final result
+            if (result.Success)
+            {
+                await MessageCenter.ShowSuccessAsync(result.Message);
+
+                // Log category breakdown if available
+                if (result.CategoryCounts.Any())
+                {
+                    var breakdown = string.Join(", ", result.CategoryCounts
+                        .OrderByDescending(kvp => kvp.Value)
+                        .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+                    _logger.LogInformation("Categorization breakdown: {Breakdown}", breakdown);
+                }
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync(result.Message);
+            }
+
+            // Refresh the library to show updated data
+            await LoadLibraryAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during video categorization: {Message}", ex.Message);
+            await MessageCenter.ShowErrorAsync($"Categorization failed: {ex.Message}");
+        }
+        finally
+        {
+            IsCategorizing = false;
+            StateHasChanged();
+        }
     }
 }

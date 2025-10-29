@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Services.DataServices;
 
 /// <summary>
 /// Service for retrieving prompt configurations from the database
 /// </summary>
-public class PromptDataService
+public class PromptDataService : IPromptDataService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<PromptDataService> _logger;
@@ -38,6 +40,7 @@ public class PromptDataService
 
             var prompt = await _context.Prompts
                 .AsNoTracking()
+                .Include(p => p.Model)
                 .FirstOrDefaultAsync(p => p.Name == promptName && p.IsActive);
 
             if (prompt == null)

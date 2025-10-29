@@ -73,7 +73,7 @@
             </a>
         </h6>
 
-        <!-- Channel Name - Updated to show actual channel name -->
+        <!-- Channel Name -->
         <div class="video-channel mb-2">
             <small class="text-muted">
                 <i class="bi bi-person-circle me-1"></i>
@@ -81,7 +81,7 @@
             </small>
         </div>
 
-        <!-- Video Metadata - Reorganized with views first using eye icon -->
+        <!-- Video Metadata -->
         <div class="video-metadata mb-2">
             <small class="text-muted">
                 @if (!string.IsNullOrEmpty(Video.ViewCountDisplay))
@@ -117,6 +117,13 @@
                         Added @Video.AddedToLibraryDisplay
                     </span>
                 }
+            </small>
+        </div>
+
+        <!-- Video Type -->
+        <div class="video-type mb-2">
+            <small class="text-muted">
+                <i class="bi bi-tag me-1"></i>@Video.VideoTypeDisplay
             </small>
         </div>
 
@@ -218,7 +225,7 @@
             {
                 <!-- Library Mode Actions -->
                 <div class="d-grid gap-2">
-                    <!-- Watch Status Row - Now separated with gap-2 spacing -->
+                    <!-- Watch Status Row -->
                     <div class="d-flex gap-2">
                         <button type="button"
                                 class="btn @(Video.WatchStatus == WatchStatus.Watched ? "btn-success" : "btn-outline-success") btn-sm flex-fill"
@@ -273,14 +280,14 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Remove Video</h5>
-                    <button type="button" class="btn-close" @onclick="CancelRemove"></button>
+                    <button type="button" class="btn-close" @@onclick="CancelRemove"></button>
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to remove <strong>"@Video.ShortTitle"</strong> from your library?</p>
                     <p class="text-muted small mb-0">This action cannot be undone, but you can always add the video back later.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CancelRemove">Cancel</button>
+                    <button type="button" class="btn btn-secondary" @@onclick="CancelRemove">Cancel</button>
                     <button type="button"
                             class="btn btn-danger"
                             @onclick="RemoveVideo"

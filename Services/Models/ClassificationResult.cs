@@ -27,4 +27,24 @@ public class ClassificationResult
     /// Statistics about the classification results
     /// </summary>
     public Dictionary<string, int> CategoryCounts { get; set; } = new Dictionary<string, int>();
+
+    /// <summary>
+    /// Number of tokens used in the API request (for cost tracking)
+    /// </summary>
+    public int InputTokens { get; set; }
+
+    /// <summary>
+    /// Number of tokens used in the API response (for cost tracking)
+    /// </summary>
+    public int OutputTokens { get; set; }
+
+    /// <summary>
+    /// Estimated cost of the API call in USD
+    /// </summary>
+    public decimal TotalCost { get; set; }
+
+    /// <summary>
+    /// Duration of the API call in milliseconds
+    /// </summary>
+    public int? DurationMs { get; set; }
 }

@@ -1,27 +1,21 @@
-using Google.Apis.Discovery;
-using Google.Apis.YouTube.v3;
+
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Numerics;
 using TargetBrowse.Components;
 using TargetBrowse.Components.Account;
 using TargetBrowse.Data;
-// Enhanced YouTube API Service imports
 using TargetBrowse.Features.Suggestions.BackgroundServices;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.TopicVideos.Services;
 using TargetBrowse.Features.Watch.Data;
-using TargetBrowse.Features.Watch.Pages;
 using TargetBrowse.Features.Watch.Services;
 using TargetBrowse.Services;
 using TargetBrowse.Services.DataServices;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.YouTube.Models;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TargetBrowse;
 
@@ -80,12 +74,22 @@ public class Program
 
         #region Shared Data Services
 
-        // Add this line to your Program.cs if not already present
-        builder.Services.AddScoped<ITopicDataService, TopicDataService>();
-        builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
-        builder.Services.AddScoped<IVideoDataService, VideoDataService>();
+        builder.Services.AddScoped<IAICallDataService, AICallDataService>();
         builder.Services.AddScoped<ILibraryDataService, LibraryDataService>();
+        builder.Services.AddScoped<IPromptDataService, PromptDataService>();
+        builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
+        builder.Services.AddScoped<ITopicDataService, TopicDataService>();
+        builder.Services.AddScoped<IVideoDataService, VideoDataService>();
+
+        #endregion
+
+        #region Shared Services
+
         builder.Services.AddScoped<ITranscriptService, TranscriptService>();
+
+        builder.Services.AddScoped<IVideoTitleClassificationService, VideoTitleClassificationService>();
+        builder.Services.AddScoped<ILibraryVideoClassificationService, LibraryVideoClassificationService>();
+
 
         #endregion
 
@@ -129,6 +133,7 @@ public class Program
         builder.Services.AddScoped<IWatchService, WatchService>();
         builder.Services.AddScoped<IWatchRepository, WatchRepository>();
         builder.Services.AddScoped<ITranscriptRetrievalService, TranscriptRetrievalService>();
+
 
         #endregion
 

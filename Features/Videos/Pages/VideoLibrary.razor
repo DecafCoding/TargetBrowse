@@ -164,6 +164,24 @@
                             </ul>
                         </div>
 
+                        <!-- Categorize Button (NEW) -->
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                @onclick="CategorizeVideosAsync"
+                                disabled="@(IsCategorizing || UncategorizedCount == 0)">
+                            @if (IsCategorizing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                <span>Categorizing...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-tags me-1"></i>
+                                <span>Categorize (@UncategorizedCount)</span>
+                            }
+                        </button>
+
+                        <!-- Refresh Button (EXISTING - Keep as is) -->
                         <button type="button"
                                 class="btn btn-outline-secondary"
                                 @onclick="RefreshAsync">

@@ -115,6 +115,31 @@ public class VideoDisplayModel
     /// </summary>
     public WatchStatus WatchStatus { get; set; } = WatchStatus.NotWatched;
 
+    // ===== VIDEO TYPE PROPERTIES =====
+
+    /// <summary>
+    /// Video type ID for content classification.
+    /// Null if no type has been assigned.
+    /// </summary>
+    public Guid? VideoTypeId { get; set; }
+
+    /// <summary>
+    /// Video type name (e.g., "Tutorial", "Podcast", "Vlog").
+    /// Null if no type has been assigned.
+    /// </summary>
+    public string? VideoTypeName { get; set; }
+
+    /// <summary>
+    /// Video type code (e.g., "TUTORIAL", "PODCAST", "VLOG").
+    /// Null if no type has been assigned.
+    /// </summary>
+    public string? VideoTypeCode { get; set; }
+
+    /// <summary>
+    /// Display text for video type with fallback for unclassified videos.
+    /// </summary>
+    public string VideoTypeDisplay => VideoTypeName ?? "Unclassified";
+
     // ===== RATING SYSTEM PROPERTIES =====
 
     /// <summary>
@@ -298,6 +323,8 @@ public class VideoDisplayModel
             VideoTitle = Title,
             VideoThumbnailUrl = ThumbnailUrl,
             ChannelTitle = ChannelTitle,
+            VideoTypeId = VideoTypeId,
+            VideoTypeName = VideoTypeName,
             Stars = UserStars,
             Notes = UserRating?.Notes ?? string.Empty,
             RatingId = UserRating?.Id

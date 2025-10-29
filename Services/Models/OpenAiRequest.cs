@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace TargetBrowse.Services.Models;
 
@@ -10,7 +10,7 @@ internal class OpenAiRequest
     [JsonProperty("messages")]
     public List<OpenAiMessage> Messages { get; set; } = new List<OpenAiMessage>();
 
-    [JsonProperty("max_tokens")]
+    [JsonProperty("max_completion_tokens")]
     public int MaxTokens { get; set; } = 1500;
 
     [JsonProperty("temperature")]
@@ -39,10 +39,25 @@ internal class OpenAiResponse
 {
     [JsonProperty("choices")]
     public List<OpenAiChoice> Choices { get; set; } = new List<OpenAiChoice>();
+
+    [JsonProperty("usage")]
+    public OpenAiUsage? Usage { get; set; }
 }
 
 internal class OpenAiChoice
 {
     [JsonProperty("message")]
     public OpenAiMessage Message { get; set; } = new OpenAiMessage();
+}
+
+internal class OpenAiUsage
+{
+    [JsonProperty("prompt_tokens")]
+    public int PromptTokens { get; set; }
+
+    [JsonProperty("completion_tokens")]
+    public int CompletionTokens { get; set; }
+
+    [JsonProperty("total_tokens")]
+    public int TotalTokens { get; set; }
 }

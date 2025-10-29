@@ -42,6 +42,23 @@ public class RateVideoModel
     public string ChannelTitle { get; set; } = string.Empty;
 
     /// <summary>
+    /// Video type ID for content classification.
+    /// Null if no type has been assigned.
+    /// </summary>
+    public Guid? VideoTypeId { get; set; }
+
+    /// <summary>
+    /// Video type name for display in the rating form.
+    /// Null if no type has been assigned.
+    /// </summary>
+    public string? VideoTypeName { get; set; }
+
+    /// <summary>
+    /// Display text for video type with fallback for unclassified videos.
+    /// </summary>
+    public string VideoTypeDisplay => VideoTypeName ?? "Unclassified";
+
+    /// <summary>
     /// Star rating from 1 to 5.
     /// </summary>
     [Required(ErrorMessage = "Please select a star rating")]
@@ -150,6 +167,8 @@ public class RateVideoModel
             VideoTitle = video.Title,
             VideoThumbnailUrl = video.ThumbnailUrl,
             ChannelTitle = video.ChannelTitle,
+            VideoTypeId = video.VideoTypeId,
+            VideoTypeName = video.VideoTypeName,
             Stars = 0,
             Notes = string.Empty
         };
@@ -171,6 +190,8 @@ public class RateVideoModel
             VideoTitle = video.Title,
             VideoThumbnailUrl = video.ThumbnailUrl,
             ChannelTitle = video.ChannelTitle,
+            VideoTypeId = video.VideoTypeId,
+            VideoTypeName = video.VideoTypeName,
             Stars = rating.Stars,
             Notes = rating.Notes
         };

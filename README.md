@@ -2,6 +2,8 @@
 
 A personalized YouTube curation platform that learns from your viewing preferences, ratings, and interests to suggest truly relevant content. Unlike YouTube's algorithm, users have full control over their content discovery through explicit ratings, topic preferences, and channel management, with AI-powered summaries to help decide what's worth watching.
 
+This is a single project MVP (Minimum Viable Product) meant to learn AI implementation. So it lacks several pieces, for instance there is no mapper, yet.
+
 ## Problem Statement
 
 In my opinion YouTube's recommendation algorithm fails at several points by:

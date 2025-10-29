@@ -35,6 +35,7 @@ public class LibraryDataService : ILibraryDataService
 
     /// <summary>
     /// Gets all videos in the user's library with rating information.
+    /// TODO this is duplicated in the VideoRepository
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetUserVideosAsync(string userId)
     {
@@ -45,6 +46,8 @@ public class LibraryDataService : ILibraryDataService
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId))
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.VideoType)
                 .Where(uv => uv.UserId == userId)
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
                 .ToListAsync();
@@ -220,7 +223,7 @@ public class LibraryDataService : ILibraryDataService
                 YouTubeVideoId = video.YouTubeVideoId,
                 Title = video.Title,
                 ChannelId = ExtractChannelIdFromYouTubeUrl(video.YouTubeUrl), // Need to extract from URL if not available
-                ChannelName = "Unknown Channel", // ChannelVideoModel doesn't include channel name
+                ChannelName = "Unknown Channel", // TODO ChannelVideoModel doesn't include channel name
                 PublishedAt = video.PublishedAt,
                 Duration = video.Duration,
                 ViewCount = video.ViewCount,
@@ -454,6 +457,7 @@ public class LibraryDataService : ILibraryDataService
 
     /// <summary>
     /// Maps a UserVideoEntity to a VideoDisplayModel for presentation.
+    /// TODO this is duplicated in the VideoRepository
     /// </summary>
     private static VideoDisplayModel MapToDisplayModel(UserVideoEntity userVideo, string userId)
     {
@@ -477,7 +481,12 @@ public class LibraryDataService : ILibraryDataService
             DefaultLanguage = null,
             IsInLibrary = true,
             AddedToLibrary = userVideo.AddedToLibraryAt,
-            WatchStatus = userVideo.Status
+            WatchStatus = userVideo.Status,
+
+            // Map video type properties
+            VideoTypeId = userVideo.Video.VideoTypeId,
+            VideoTypeName = userVideo.Video.VideoType?.Name,
+            VideoTypeCode = userVideo.Video.VideoType?.Code
         };
 
         // Map user rating if exists
