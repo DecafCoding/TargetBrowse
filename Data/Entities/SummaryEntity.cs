@@ -14,7 +14,6 @@ namespace TargetBrowse.Data.Entities
         public Guid VideoId { get; set; }
 
         [Required]
-        [StringLength(4000)]
         public string Content { get; set; } = string.Empty;
 
         /// <summary>

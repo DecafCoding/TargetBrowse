@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
 @using System.Security.Claims
+@using System.Net
 @using TargetBrowse.Features.Watch.Models
 @using TargetBrowse.Features.Watch.Services
 @using TargetBrowse.Services.Interfaces
@@ -255,7 +256,7 @@ else
                     else if (CurrentViewMode == ContentViewMode.Description && !string.IsNullOrWhiteSpace(Model.Description))
                     {
                         <p class="mb-3 lh-base" style="white-space: pre-wrap; word-wrap: break-word;">
-                            @Model.Description
+                            @((MarkupString)WebUtility.HtmlDecode(Model.Description))
                         </p>
                     }
                     else
