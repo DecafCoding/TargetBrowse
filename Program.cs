@@ -80,6 +80,7 @@ public class Program
         builder.Services.AddScoped<ISuggestionDataService, SuggestionDataService>();
         builder.Services.AddScoped<ITopicDataService, TopicDataService>();
         builder.Services.AddScoped<IVideoDataService, VideoDataService>();
+        builder.Services.AddScoped<ISummaryDataService, SummaryDataService>();
 
         #endregion
 
@@ -89,6 +90,7 @@ public class Program
 
         builder.Services.AddScoped<IVideoTitleClassificationService, VideoTitleClassificationService>();
         builder.Services.AddScoped<ILibraryVideoClassificationService, LibraryVideoClassificationService>();
+        builder.Services.AddScoped<ITranscriptSummaryService, TranscriptSummaryService>();
 
 
         #endregion
