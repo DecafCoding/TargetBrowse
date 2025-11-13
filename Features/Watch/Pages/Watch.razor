@@ -224,8 +224,16 @@ else
                         <button type="button"
                                 class="btn flex-fill @GetButtonClass(ContentViewMode.Summary)"
                                 @onclick="() => HandleContentButtonClick(ContentViewMode.Summary)"
-                                disabled="@IsButtonDisabled(ContentViewMode.Summary)">
-                            @GetButtonLabel(ContentViewMode.Summary)
+                                disabled="@(IsGeneratingSummary || IsButtonDisabled(ContentViewMode.Summary))">
+                            @if (IsGeneratingSummary && !IsContentAvailable(ContentViewMode.Summary))
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                <span>Generating...</span>
+                            }
+                            else
+                            {
+                                <span>@GetButtonLabel(ContentViewMode.Summary)</span>
+                            }
                         </button>
                     </div>
 

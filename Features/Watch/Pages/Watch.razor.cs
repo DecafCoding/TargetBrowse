@@ -47,6 +47,9 @@ public partial class Watch : ComponentBase
     [Inject]
     protected ITranscriptRetrievalService TranscriptRetrievalService { get; set; } = default!;
 
+    [Inject]
+    protected ITranscriptSummaryService TranscriptSummaryService { get; set; } = default!;
+
     #endregion
 
     #region State
@@ -65,6 +68,11 @@ public partial class Watch : ComponentBase
     /// Tracks whether transcript retrieval is currently in progress.
     /// </summary>
     protected bool IsRetrievingTranscript { get; set; } = false;
+
+    /// <summary>
+    /// Tracks whether summary generation is currently in progress.
+    /// </summary>
+    protected bool IsGeneratingSummary { get; set; } = false;
 
     /// <summary>
     /// Tracks which content type is currently being displayed
@@ -267,6 +275,85 @@ public partial class Watch : ComponentBase
     }
 
     /// <summary>
+    /// Handles the user request to generate a video summary.
+    /// Calls the TranscriptSummaryService and updates the UI accordingly.
+    /// </summary>
+    protected async Task HandleGetSummary()
+    {
+        if (IsGeneratingSummary)
+        {
+            Logger.LogInformation("Summary generation already in progress");
+            return;
+        }
+
+        // Verify we have a video ID
+        if (Model.VideoId == Guid.Empty)
+        {
+            Logger.LogWarning("Cannot generate summary: Video ID is not set");
+            await MessageCenter.ShowErrorAsync("Unable to generate summary. Please try reloading the page.");
+            return;
+        }
+
+        try
+        {
+            IsGeneratingSummary = true;
+            StateHasChanged();
+
+            Logger.LogInformation("User requested summary generation for video {VideoId}", Model.VideoId);
+
+            // Call the transcript summary service
+            var result = await TranscriptSummaryService.SummarizeVideoTranscriptAsync(Model.VideoId, CurrentUserId);
+
+            if (result.Success)
+            {
+                // Update the model with the new summary
+                Model.SummaryContent = result.SummaryContent;
+
+                // Switch to summary view
+                CurrentViewMode = ContentViewMode.Summary;
+
+                // Show success message with cost information
+                var costMessage = $"Summary generated successfully! (Cost: ${result.TotalCost:F4})";
+                await MessageCenter.ShowSuccessAsync(costMessage);
+
+                Logger.LogInformation("Summary generated successfully for video {VideoId}. Cost: ${Cost:F4}",
+                    Model.VideoId, result.TotalCost);
+            }
+            else if (result.Skipped)
+            {
+                // Summary was skipped (e.g., already exists, no transcript)
+                if (result.SummaryContent != null)
+                {
+                    // Update with existing summary
+                    Model.SummaryContent = result.SummaryContent;
+                    CurrentViewMode = ContentViewMode.Summary;
+                }
+
+                await MessageCenter.ShowWarningAsync($"Summary not generated: {result.SkipReason}");
+                Logger.LogInformation("Summary generation skipped for video {VideoId}: {Reason}",
+                    Model.VideoId, result.SkipReason);
+            }
+            else
+            {
+                // Generation failed
+                await MessageCenter.ShowErrorAsync($"Failed to generate summary: {result.ErrorMessage}");
+                Logger.LogError("Summary generation failed for video {VideoId}: {Error}",
+                    Model.VideoId, result.ErrorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error during summary generation for video {VideoId}", Model.VideoId);
+            await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
+        }
+        finally
+        {
+            IsGeneratingSummary = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
     /// Toggles between summary and transcript view
     /// </summary>
     //protected void ToggleContentView()
@@ -380,8 +467,8 @@ public partial class Watch : ComponentBase
     /// </summary>
     protected bool IsButtonDisabled(ContentViewMode mode)
     {
-        // Summary button is disabled when no summary exists (no service yet)
-        if (mode == ContentViewMode.Summary && !IsContentAvailable(mode))
+        // Summary button is disabled during generation
+        if (mode == ContentViewMode.Summary && IsGeneratingSummary)
             return true;
 
         // Transcript button is disabled during retrieval
@@ -407,10 +494,17 @@ public partial class Watch : ComponentBase
         if (mode == ContentViewMode.Transcript && !IsRetrievingTranscript)
         {
             await HandleRetrieveTranscript();
+            return;
         }
 
-        // For Description and Summary with no content, button click does nothing
-        // (Summary button should be disabled anyway)
+        // If no content exists and it's Summary, generate it
+        if (mode == ContentViewMode.Summary && !IsGeneratingSummary)
+        {
+            await HandleGetSummary();
+            return;
+        }
+
+        // For Description with no content, button click does nothing
     }
 
     #endregion
