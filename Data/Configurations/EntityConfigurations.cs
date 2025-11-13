@@ -242,7 +242,7 @@ namespace TargetBrowse.Data.Configurations
 
             // Properties
             builder.Property(s => s.VideoId).IsRequired();
-            builder.Property(s => s.Content).IsRequired().HasMaxLength(2000);
+            builder.Property(s => s.Content).IsRequired().HasMaxLength(4000);
 
             // Relationships
             builder.HasOne(s => s.Video)
