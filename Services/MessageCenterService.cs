@@ -5,16 +5,16 @@ namespace TargetBrowse.Services
 {
     /// <summary>
     /// Implementation of the Message Center Service for centralized user feedback.
-    /// Manages application-wide messages with persistence until replacement.
+    /// Maintains a history of the last 5 messages (newest first).
     /// Thread-safe for concurrent access in Blazor Server applications.
     /// </summary>
     public class MessageCenterService : IMessageCenterService
     {
-        private MessageState? _currentMessage;
+        private readonly List<MessageState> _messages = new();
         private readonly object _lock = new object();
 
         /// <summary>
-        /// Event raised when the current message changes or is cleared.
+        /// Event raised when a new message is added to the message history.
         /// </summary>
         public event Action<MessageState?>? MessageChanged;
 
@@ -94,34 +94,21 @@ namespace TargetBrowse.Services
         }
 
         /// <summary>
-        /// Gets the current message state.
-        /// Returns null if no message is currently displayed.
+        /// Gets the recent message history (up to 5 messages, newest first).
+        /// Returns an empty list if no messages are available.
         /// </summary>
-        public MessageState? GetCurrentMessage()
+        public List<MessageState> GetRecentMessages()
         {
             lock (_lock)
             {
-                return _currentMessage;
+                return new List<MessageState>(_messages);
             }
-        }
-
-        /// <summary>
-        /// Clears the current message.
-        /// </summary>
-        public Task ClearMessageAsync()
-        {
-            lock (_lock)
-            {
-                _currentMessage = null;
-            }
-
-            // Notify subscribers that message was cleared
-            MessageChanged?.Invoke(null);
-            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Sets a new message and notifies subscribers.
+        /// Adds to beginning of message list (newest first).
+        /// Removes oldest message if list exceeds 5 messages.
         /// Thread-safe implementation for concurrent access.
         /// </summary>
         /// <param name="text">Message text</param>
@@ -136,7 +123,15 @@ namespace TargetBrowse.Services
             lock (_lock)
             {
                 newMessage = new MessageState(text.Trim(), type, context);
-                _currentMessage = newMessage;
+
+                // Insert at beginning (newest first)
+                _messages.Insert(0, newMessage);
+
+                // Keep only last 5 messages
+                if (_messages.Count > 5)
+                {
+                    _messages.RemoveAt(5);
+                }
             }
 
             // Notify subscribers of the new message
