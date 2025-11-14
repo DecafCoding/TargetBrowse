@@ -29,16 +29,16 @@ namespace TargetBrowse.Components.Shared
             InvokeAsync(StateHasChanged);
         }
 
-        private string GetBorderColorClass(MessageType type)
+        private string GetTextColorClass(MessageType type)
         {
             return type switch
             {
-                MessageType.Success => "success",
-                MessageType.Error => "danger",
-                MessageType.Warning => "warning",
-                MessageType.Info => "info",
-                MessageType.ApiLimit => "warning",
-                _ => "secondary"
+                MessageType.Success => "text-success",
+                MessageType.Error => "text-danger",
+                MessageType.Warning => "text-warning",
+                MessageType.Info => "text-info",
+                MessageType.ApiLimit => "text-warning",
+                _ => "text-secondary"
             };
         }
 

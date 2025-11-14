@@ -44,34 +44,18 @@
         /// <summary>
         /// Gets the Bootstrap CSS class for this message type.
         /// </summary>
-        public string GetBootstrapClass()
-        {
-            return Type switch
-            {
-                MessageType.Success => "alert-success",
-                MessageType.Error => "alert-danger",
-                MessageType.Warning => "alert-warning",
-                MessageType.Info => "alert-info",
-                MessageType.ApiLimit => "alert-warning",
-                _ => "alert-info"
-            };
-        }
-
-        /// <summary>
-        /// Gets the Bootstrap icon class for this message type.
-        /// </summary>
-        public string GetIconClass()
-        {
-            return Type switch
-            {
-                MessageType.Success => "bi-check-circle-fill",
-                MessageType.Error => "bi-exclamation-triangle-fill",
-                MessageType.Warning => "bi-exclamation-triangle-fill",
-                MessageType.Info => "bi-info-circle-fill",
-                MessageType.ApiLimit => "bi-clock-fill",
-                _ => "bi-info-circle-fill"
-            };
-        }
+        //public string GetBootstrapClass()
+        //{
+        //    return Type switch
+        //    {
+        //        MessageType.Success => "text-success",
+        //        MessageType.Error => "text-danger",
+        //        MessageType.Warning => "text-warning",
+        //        MessageType.Info => "text-info",
+        //        MessageType.ApiLimit => "text-warning",
+        //        _ => "text-info"
+        //    };
+        //}
 
         /// <summary>
         /// Gets the full formatted message including context if available.
