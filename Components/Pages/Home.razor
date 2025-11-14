@@ -105,11 +105,6 @@
                                         Show API Limit
                                     </button>
                                 </div>
-                                <div class="col-auto">
-                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearMessage">
-                                        Clear Message
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -178,10 +173,5 @@
     private async Task ShowApiLimitMessage()
     {
         await MessageCenterService.ShowApiLimitAsync("YouTube Data API", DateTime.UtcNow.AddHours(2));
-    }
-
-    private async Task ClearMessage()
-    {
-        await MessageCenterService.ClearMessageAsync();
     }
 }
