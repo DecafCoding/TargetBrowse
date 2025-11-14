@@ -99,14 +99,16 @@ else
                                              loading="lazy"
                                              width="48"
                                              height="48"
-                                             style="object-fit: cover;" />
+                                             style="object-fit: cover;"
+                                             onerror="handleChannelThumbnailError(this)" />
                                         <img src="@Model.ChannelThumbnailUrl"
                                              class="rounded-circle d-block d-sm-none"
                                              alt="@Model.ChannelName"
                                              loading="lazy"
                                              width="40"
                                              height="40"
-                                             style="object-fit: cover;" />
+                                             style="object-fit: cover;"
+                                             onerror="handleChannelThumbnailError(this)" />
                                     </div>
                                 }
 

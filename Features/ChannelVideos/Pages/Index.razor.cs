@@ -202,8 +202,8 @@ public partial class Index : ComponentBase
         if (!string.IsNullOrEmpty(Model.Channel.ThumbnailUrl))
             return Model.Channel.ThumbnailUrl;
 
-        // Fallback placeholder
-        return "https://via.placeholder.com/80x80?text=Channel";
+        // Fallback to local placeholder
+        return "/images/channel-placeholder.svg";
     }
 
     /// <summary>
