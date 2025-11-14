@@ -7,15 +7,6 @@
 
 <PageTitle>Video Search</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-1">Video Search</h1>
-        <p class="text-muted mb-0">
-            Discover and add YouTube videos to your personal library for organized content consumption.
-        </p>
-    </div>
-</div>
-
 <div class="row">
     <div class="col-lg-3">
         <!-- Sidebar Content -->
@@ -66,6 +57,12 @@
     <div class="col-lg-9">
         <!-- Video Search Section -->
         <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Video Search</h5>
+                <p class="text-muted mb-0">
+                    Discover and add YouTube videos to your personal library for organized content consumption.
+                </p>
+            </div>
             <div class="card-body">
                 <!-- Search Form -->
                 <EditForm Model="@SearchModel" OnValidSubmit="@HandleSearchSubmit">
