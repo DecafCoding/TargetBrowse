@@ -21,12 +21,12 @@
             <ul class="list-unstyled mb-0">
                 @foreach (var message in _messages)
                 {
-                    <li class="message-item border-start border-@GetBorderColorClass(message.Type) border-4 px-3 py-2 @(message != _messages.Last() ? "border-bottom" : "")">
+                    <li class="message-item border-1 px-3 py-2 @(message != _messages.Last() ? "border-bottom" : "")">
                         <div class="d-flex align-items-start">
-                            <i class="@message.GetIconClass() me-2 mt-1 flex-shrink-0"></i>
                             <div class="flex-grow-1 message-content">
-                                <div class="message-text small">@message.GetFullMessage()</div>
-                                <small class="text-muted d-block mt-1">@message.CreatedAt.ToLocalTime().ToString("h:mm tt")</small>
+                                <div class="message-text @GetTextColorClass(message.Type) small">
+                                    @message.GetFullMessage() - @message.CreatedAt.ToLocalTime().ToString("h:mm tt")
+                                </div>
                             </div>
                         </div>
                     </li>

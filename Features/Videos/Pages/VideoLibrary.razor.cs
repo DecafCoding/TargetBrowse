@@ -124,7 +124,7 @@ public partial class VideoLibrary : ComponentBase
             if (!string.IsNullOrEmpty(CurrentUserId))
             {
                 UncategorizedCount = await VideoCategorizationService.GetUncategorizedVideoCountAsync(CurrentUserId);
-                await MessageCenter.ShowInfoAsync($"Found {UncategorizedCount} uncategorized videos for user {CurrentUserId}");
+                await MessageCenter.ShowInfoAsync($"{UncategorizedCount} uncategorized videos in Library");
             }
         }
         catch (Exception ex)
