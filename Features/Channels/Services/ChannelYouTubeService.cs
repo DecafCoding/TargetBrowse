@@ -3,6 +3,7 @@ using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Extensions.Options;
 using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;
@@ -10,25 +11,23 @@ namespace TargetBrowse.Features.Channels.Services;
 /// <summary>
 /// Channel-specific implementation of YouTube Data API v3 service.
 /// Handles channel search, information retrieval, and quota management for the Channel feature.
+/// Uses the shared IYouTubeQuotaManager for centralized quota tracking across all YouTube services.
 /// </summary>
 public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
 {
     private readonly Google.Apis.YouTube.v3.YouTubeService _youTubeClient;
     private readonly YouTubeApiSettings _settings;
+    private readonly IYouTubeQuotaManager _quotaManager;
     private readonly ILogger<ChannelYouTubeService> _logger;
     private readonly SemaphoreSlim _rateLimitSemaphore;
 
-    // Simple in-memory quota tracking for MVP
-    private static int _dailyQuotaUsed = 0;
-    private static DateTime _lastQuotaReset = DateTime.UtcNow.Date;
-
-    // API cost constants (approximate)
-    private const int SearchCost = 100;
-    private const int ChannelDetailsCost = 1;
-
-    public ChannelYouTubeService(IOptions<YouTubeApiSettings> settings, ILogger<ChannelYouTubeService> logger)
+    public ChannelYouTubeService(
+        IOptions<YouTubeApiSettings> settings,
+        IYouTubeQuotaManager quotaManager,
+        ILogger<ChannelYouTubeService> logger)
     {
         _settings = settings.Value;
+        _quotaManager = quotaManager ?? throw new ArgumentNullException(nameof(quotaManager));
         _logger = logger;
         _rateLimitSemaphore = new SemaphoreSlim(1, 1);
 
@@ -42,8 +41,6 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
             ApiKey = _settings.ApiKey,
             ApplicationName = "YouTube Video Tracker - Channels"
         });
-
-        ResetQuotaIfNeeded();
     }
 
     /// <summary>
@@ -58,7 +55,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
 
         try
         {
-            if (!await CheckQuotaAvailableAsync(SearchCost))
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.SearchChannels))
             {
                 return YouTubeApiResult<List<YouTubeChannelResponse>>.Failure(
                     "YouTube API quota exceeded for today. Please try again tomorrow.",
@@ -77,7 +74,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
                 searchRequest.Fields = "items(id/channelId,snippet(title,description,thumbnails/default,publishedAt))";
 
                 var searchResponse = await searchRequest.ExecuteAsync();
-                await IncrementQuotaUsageAsync(SearchCost);
+                await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchChannels);
 
                 if (searchResponse.Items?.Count > 0)
                 {
@@ -145,7 +142,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
 
         try
         {
-            if (!await CheckQuotaAvailableAsync(ChannelDetailsCost))
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.GetChannelDetails))
             {
                 return YouTubeApiResult<YouTubeChannelResponse?>.Failure(
                     "YouTube API quota exceeded for today. Please try again tomorrow.",
@@ -157,7 +154,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
             channelRequest.Fields = "items(id,snippet(title,description,thumbnails/default,publishedAt,customUrl),statistics(subscriberCount,videoCount))";
 
             var channelResponse = await channelRequest.ExecuteAsync();
-            await IncrementQuotaUsageAsync(ChannelDetailsCost);
+            await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.GetChannelDetails);
 
             if (channelResponse.Items?.Count > 0)
             {
@@ -207,7 +204,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
 
         try
         {
-            if (!await CheckQuotaAvailableAsync(ChannelDetailsCost))
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.GetChannelDetails))
             {
                 return YouTubeApiResult<YouTubeChannelResponse?>.Failure(
                     "YouTube API quota exceeded for today. Please try again tomorrow.",
@@ -219,7 +216,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
             channelRequest.Fields = "items(id,snippet(title,description,thumbnails/default,publishedAt,customUrl),statistics(subscriberCount,videoCount))";
 
             var channelResponse = await channelRequest.ExecuteAsync();
-            await IncrementQuotaUsageAsync(ChannelDetailsCost);
+            await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.GetChannelDetails);
 
             if (channelResponse.Items?.Count > 0)
             {
@@ -412,12 +409,8 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
     {
         try
         {
-            // Estimate quota cost for this operation
-            const int searchCost = 100; // Cost for search operation
-            const int videoDetailsCost = 1; // Cost per video for details (we'll estimate based on max results)
-            var estimatedCost = searchCost + (channelRequest.MaxResults * videoDetailsCost / 50); // Video details are batched
-
-            if (!await CheckQuotaAvailableAsync(estimatedCost))
+            // Check quota availability for search operation
+            if (!await _quotaManager.CanPerformOperationAsync(YouTubeApiOperation.SearchVideos))
             {
                 return YouTubeApiResult<List<VideoInfo>>.Failure(
                     "YouTube API quota insufficient for this operation.",
@@ -438,7 +431,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
                 searchRequest.Fields = "items(id/videoId,snippet(title,channelId,channelTitle,publishedAt,thumbnails/medium))";
 
                 var searchResponse = await searchRequest.ExecuteAsync();
-                await IncrementQuotaUsageAsync(searchCost);
+                await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.SearchVideos);
 
                 if (!searchResponse.Items?.Any() == true)
                 {
@@ -530,7 +523,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
                     videoRequest.Fields = "items(id,statistics(viewCount,likeCount,commentCount),contentDetails/duration)";
 
                     var videoResponse = await videoRequest.ExecuteAsync();
-                    await IncrementQuotaUsageAsync(1); // Video details cost
+                    await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.GetVideoDetails); // Video details cost
 
                     if (videoResponse.Items?.Any() == true)
                     {
@@ -611,15 +604,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
     /// </summary>
     public async Task<bool> IsApiAvailableAsync()
     {
-        try
-        {
-            ResetQuotaIfNeeded();
-            return await CheckQuotaAvailableAsync(1);
-        }
-        catch
-        {
-            return false;
-        }
+        return await _quotaManager.IsApiAvailableAsync();
     }
 
     /// <summary>
@@ -627,8 +612,8 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
     /// </summary>
     public async Task<int> GetEstimatedRemainingQuotaAsync()
     {
-        ResetQuotaIfNeeded();
-        return Math.Max(0, _settings.DailyQuotaLimit - _dailyQuotaUsed);
+        var status = await _quotaManager.GetQuotaStatusAsync();
+        return status.Remaining;
     }
 
     /// <summary>
@@ -645,7 +630,7 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
             channelRequest.Fields = "items(id,statistics(subscriberCount,videoCount))";
 
             var channelResponse = await channelRequest.ExecuteAsync();
-            await IncrementQuotaUsageAsync(ChannelDetailsCost);
+            await _quotaManager.TryConsumeQuotaAsync(YouTubeApiOperation.GetChannelDetails);
 
             return channelResponse.Items?.Select(channel => new YouTubeChannelResponse
             {
@@ -658,39 +643,6 @@ public class ChannelYouTubeService : IChannelYouTubeService, IDisposable
         {
             _logger.LogWarning(ex, "Failed to get batch channel details for {ChannelCount} channels", channelIds.Count);
             return new List<YouTubeChannelResponse>();
-        }
-    }
-
-    /// <summary>
-    /// Checks if sufficient quota is available for an operation.
-    /// </summary>
-    private async Task<bool> CheckQuotaAvailableAsync(int requiredQuota)
-    {
-        ResetQuotaIfNeeded();
-        return _dailyQuotaUsed + requiredQuota <= _settings.DailyQuotaLimit;
-    }
-
-    /// <summary>
-    /// Increments the quota usage counter.
-    /// </summary>
-    private async Task IncrementQuotaUsageAsync(int quotaUsed)
-    {
-        _dailyQuotaUsed += quotaUsed;
-        _logger.LogDebug("Channel YouTube API quota used: {QuotaUsed}, Total today: {TotalUsed}/{DailyLimit}",
-            quotaUsed, _dailyQuotaUsed, _settings.DailyQuotaLimit);
-    }
-
-    /// <summary>
-    /// Resets quota tracking if a new day has started.
-    /// </summary>
-    private void ResetQuotaIfNeeded()
-    {
-        var today = DateTime.UtcNow.Date;
-        if (_lastQuotaReset < today)
-        {
-            _dailyQuotaUsed = 0;
-            _lastQuotaReset = today;
-            _logger.LogInformation("Channel YouTube API quota reset for new day");
         }
     }
 
