@@ -20,7 +20,6 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
-                            <i class="bi bi-question-circle me-2"></i>
                             Quick Stats
                         </h5>
                     </div>
@@ -77,8 +76,8 @@
                             </div>
                             <div class="step mb-0">
                                 <div class="step-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.75rem;">3</div>
-                                <div class="stat-value @(LastGeneratedDaysAgo <= 1 ? "text-success" : LastGeneratedDaysAgo <= 7 ? "text-warning" : "text-muted")">
-                                    @(LastGeneratedDaysAgo == 0 ? "Today" : $"{LastGeneratedDaysAgo}d ago")
+                                <div class="step-content d-inline-block @(LastGeneratedDaysAgo <= 1 ? "text-success" : LastGeneratedDaysAgo <= 7 ? "text-warning" : "text-muted")">
+                                    Last Updated: @(LastGeneratedDaysAgo == 0 ? "Today" : $"{LastGeneratedDaysAgo}d ago")
                                 </div>
                             </div>
                         </div>

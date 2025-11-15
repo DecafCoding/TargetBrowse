@@ -8,14 +8,6 @@
 
 <div class="row">
     <div class="col-lg-3">
-        <!-- Channel Search Component (moved to sidebar) -->
-        <div class="mb-4">
-            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" OnSearchCompleted="HandleSearchCompleted" />
-        </div>
-
-        <!-- Recent Messages -->
-        <MessageSidebar />
-
         <!-- Channel Tracking Progress -->
         @if (ChannelListComponent != null && ChannelListComponent.TrackedChannelCount > 0)
         {
@@ -48,6 +40,13 @@
             </div>
         }
 
+        <!-- Channel Search Component (moved to sidebar) -->
+        <div class="mb-4">
+            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" OnSearchCompleted="HandleSearchCompleted" />
+        </div>
+
+        <!-- Recent Messages -->
+        <MessageSidebar />
     </div>
 
     <div class="col-lg-9">

@@ -10,173 +10,147 @@
 
 <div class="suggestion-queue-container">
     <!-- Queue Header with Controls -->
-    <div class="queue-header mb-4">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
-            <!-- Queue Stats -->
-            <div class="queue-stats">
-                <h5 class="mb-1">
-                    <i class="bi bi-collection-play me-2"></i>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
                     Suggestions
                 </h5>
-@*                 @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
-                {
-                    var counts = QueueModel.GetSourceCounts();
-                    <div class="d-flex flex-wrap gap-2 small text-muted">
-                        <span><strong>@counts.Total</strong> total</span>
-                        @if (counts.BothSources > 0)
-                        {
-                            <span>• <span class="text-primary"><strong>@counts.BothSources</strong> high priority</span></span>
-                        }
-                        @if (counts.NearExpiry > 0)
-                        {
-                            <span>• <span class="text-warning"><strong>@counts.NearExpiry</strong> expiring soon</span></span>
-                        }
-                    </div>
-                } *@
             </div>
-
-            <!-- Filter and Sort Controls -->
-            @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
-            {
-                <div class="queue-controls d-flex flex-wrap gap-2">
-                    <!-- Filter Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-funnel me-1"></i>
-                            @GetFilterDisplayText()
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.All ? "active" : "")"
-                                        @onclick="() => SetFilter(SuggestionFilter.All)">
-                                    All Suggestions
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.BothSources ? "active" : "")"
-                                        @onclick="() => SetFilter(SuggestionFilter.BothSources)">
-                                    ⭐ High Priority
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.ChannelOnly ? "active" : "")"
-                                        @onclick="() => SetFilter(SuggestionFilter.ChannelOnly)">
-                                    📺 Channel Updates
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.TopicOnly ? "active" : "")"
-                                        @onclick="() => SetFilter(SuggestionFilter.TopicOnly)">
-                                    🔍 Topic Matches
-                                </button>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.NearExpiry ? "active" : "")"
-                                        @onclick="() => SetFilter(SuggestionFilter.NearExpiry)">
-                                    ⏰ Expiring Soon
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Sort Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-sort-down me-1"></i>
-                            Sort
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedDesc ? "active" : "")"
-                                        @onclick="() => SetSort(SuggestionSort.CreatedDesc)">
-                                    Newest First
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedAsc ? "active" : "")"
-                                        @onclick="() => SetSort(SuggestionSort.CreatedAsc)">
-                                    Oldest First
-                                </button>
-                            </li>
-                            @if (QueueModel.Suggestions.Any(s => s.Score.HasValue))
-                            {
+            <div class="card-body">
+                <!-- Filter and Sort Controls -->
+                @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+                {
+                    <div class="queue-controls d-flex flex-wrap gap-2">
+                        <!-- Filter Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-funnel me-1"></i>
+                                @GetFilterDisplayText()
+                            </button>
+                            <ul class="dropdown-menu">
                                 <li>
-                                    <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ScoreDesc ? "active" : "")"
-                                            @onclick="() => SetSort(SuggestionSort.ScoreDesc)">
-                                        Highest Score
+                                    <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.All ? "active" : "")"
+                                            @onclick="() => SetFilter(SuggestionFilter.All)">
+                                        All Suggestions
                                     </button>
                                 </li>
-                            }
-                            <li>
-                                <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ExpiryAsc ? "active" : "")"
-                                        @onclick="() => SetSort(SuggestionSort.ExpiryAsc)">
-                                    Expiring Soon
-                                </button>
-                            </li>
-                        </ul>
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.BothSources ? "active" : "")"
+                                            @onclick="() => SetFilter(SuggestionFilter.BothSources)">
+                                        ⭐ High Priority
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.ChannelOnly ? "active" : "")"
+                                            @onclick="() => SetFilter(SuggestionFilter.ChannelOnly)">
+                                        📺 Channel Updates
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.TopicOnly ? "active" : "")"
+                                            @onclick="() => SetFilter(SuggestionFilter.TopicOnly)">
+                                        🔍 Topic Matches
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.Filter == SuggestionFilter.NearExpiry ? "active" : "")"
+                                            @onclick="() => SetFilter(SuggestionFilter.NearExpiry)">
+                                        ⏰ Expiring Soon
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Sort Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-sort-down me-1"></i>
+                                Sort
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedDesc ? "active" : "")"
+                                            @onclick="() => SetSort(SuggestionSort.CreatedDesc)">
+                                        Newest First
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.CreatedAsc ? "active" : "")"
+                                            @onclick="() => SetSort(SuggestionSort.CreatedAsc)">
+                                        Oldest First
+                                    </button>
+                                </li>
+                                @if (QueueModel.Suggestions.Any(s => s.Score.HasValue))
+                                {
+                                    <li>
+                                        <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ScoreDesc ? "active" : "")"
+                                                @onclick="() => SetSort(SuggestionSort.ScoreDesc)">
+                                            Highest Score
+                                        </button>
+                                    </li>
+                                }
+                                <li>
+                                    <button class="dropdown-item @(QueueModel.SortBy == SuggestionSort.ExpiryAsc ? "active" : "")"
+                                            @onclick="() => SetSort(SuggestionSort.ExpiryAsc)">
+                                        Expiring Soon
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
+                }
 
-                    <!-- Batch Actions Toggle -->
-                    @if (QueueModel.FilteredSuggestions.Any())
-                    {
-                        <button class="btn @(ShowBatchMode ? "btn-primary" : "btn-outline-secondary") btn-sm"
-                                @onclick="ToggleBatchMode">
-                            <i class="bi bi-check2-square me-1"></i>
-                            @(ShowBatchMode ? "Cancel" : "Select")
-                        </button>
-                    }
-                </div>
-            }
-        </div>
 
-        <!-- Batch Actions Bar -->
-        @if (ShowBatchMode && QueueModel.ShowBatchActions)
-        {
-            <div class="batch-actions-bar mt-3 p-3 bg-light rounded">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>@QueueModel.SelectedSuggestionIds.Count</strong> suggestions selected
-                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="SelectAll">Select All</button>
-                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="ClearSelection">Clear</button>
-                    </div>
-                    <SuggestionActions Mode="ActionMode.Batch"
-                                       SelectedSuggestionIds="@QueueModel.SelectedSuggestionIds"
-                                       OnBatchApproved="@HandleBatchApproved"
-                                       OnBatchDenied="@HandleBatchDenied" />
-                </div>
-            </div>
-        }
-
-        <!-- Progress Bar -->
-        @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
-        {
-            <div class="queue-progress mt-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="text-muted">Queue Usage</small>
-                    <small class="text-muted">@QueueModel.Suggestions.Count / 100</small>
-                </div>
-                <div class="progress" style="height: 4px;">
-                    <div class="progress-bar @GetProgressBarClass()"
-                         style="width: @(QueueModel.ProgressPercentage)%"></div>
-                </div>
-                @if (QueueModel.IsNearLimit)
+                <!-- Batch Actions Bar -->
+                @if (ShowBatchMode && QueueModel.ShowBatchActions)
                 {
-                    <small class="text-warning mt-1 d-block">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        @if (QueueModel.IsAtLimit)
+                    <div class="batch-actions-bar mt-3 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>@QueueModel.SelectedSuggestionIds.Count</strong> suggestions selected
+                                <button class="btn btn-link btn-sm p-0 ms-2" @onclick="SelectAll">Select All</button>
+                                <button class="btn btn-link btn-sm p-0 ms-2" @onclick="ClearSelection">Clear</button>
+                            </div>
+                            <SuggestionActions Mode="ActionMode.Batch"
+                                               SelectedSuggestionIds="@QueueModel.SelectedSuggestionIds"
+                                               OnBatchApproved="@HandleBatchApproved"
+                                               OnBatchDenied="@HandleBatchDenied" />
+                        </div>
+                    </div>
+                }
+
+                <!-- Progress Bar -->
+                @if (!QueueModel.IsLoading && QueueModel.Suggestions.Any())
+                {
+                    <div class="queue-progress mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Queue Usage</small>
+                            <small class="text-muted">@QueueModel.Suggestions.Count / 100</small>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar @GetProgressBarClass()"
+                                 style="width: @(QueueModel.ProgressPercentage)%"></div>
+                        </div>
+                        @if (QueueModel.IsNearLimit)
                         {
-                            @:Queue is full. Approve or remove suggestions to get new ones.
+                            <small class="text-warning mt-1 d-block">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                @if (QueueModel.IsAtLimit)
+                                {
+                                    @:Queue is full. Approve or remove suggestions to get new ones.
+                                }
+                                else
+                                {
+                                    @:Approaching queue limit. Consider reviewing suggestions.
+                                }
+                            </small>
                         }
-                        else
-                        {
-                            @:Approaching queue limit. Consider reviewing suggestions.
-                        }
-                    </small>
+                    </div>
                 }
             </div>
-        }
-    </div>
+        </div>
+
 
     @if (QueueModel.IsLoading)
     {
