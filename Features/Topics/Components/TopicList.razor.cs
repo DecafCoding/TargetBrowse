@@ -43,6 +43,11 @@ public partial class TopicList : ComponentBase
     protected bool _showDeleteModal { get; set; } = false;
     protected TopicDisplayModel? _topicToDelete { get; set; }
 
+    /// <summary>
+    /// Public property to expose topic count for parent component.
+    /// </summary>
+    public int TopicCount => Topics.Count;
+
     #endregion
 
     #region Lifecycle Methods
@@ -137,7 +142,7 @@ public partial class TopicList : ComponentBase
     /// <summary>
     /// Gets the appropriate CSS class for the progress bar based on topic count.
     /// </summary>
-    protected string GetProgressBarClass()
+    public string GetProgressBarClass()
     {
         return Topics.Count switch
         {
