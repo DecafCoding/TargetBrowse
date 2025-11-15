@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Services;
@@ -11,255 +12,183 @@ namespace TargetBrowse.Features.Videos.Services;
 /// Database-backed implementation of video rating service.
 /// Provides full rating functionality with Entity Framework Core persistence.
 /// </summary>
-public class VideoRatingService : IVideoRatingService
+public class VideoRatingService : RatingServiceBase<VideoRatingModel, RateVideoModel>, IVideoRatingService
 {
-    private readonly ApplicationDbContext _context;
-    private readonly IMessageCenterService _messageCenterService;
     private readonly ILogger<VideoRatingService> _logger;
 
     public VideoRatingService(
         ApplicationDbContext context,
         IMessageCenterService messageCenterService,
         ILogger<VideoRatingService> logger)
+        : base(context, messageCenterService, logger)
     {
-        _context = context;
-        _messageCenterService = messageCenterService;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Gets a user's rating for a specific video.
-    /// </summary>
-    public async Task<VideoRatingModel?> GetUserRatingAsync(string userId, Guid videoId)
+    #region Base Class Implementation
+
+    protected override Guid GetEntityId(RateVideoModel ratingModel) => ratingModel.VideoId;
+
+    protected override string GetEntityName() => "video";
+
+    protected override IQueryable<RatingEntity> BuildUserRatingQuery(string userId, Guid entityId)
     {
-        try
-        {
-            var ratingEntity = await _context.Ratings
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.VideoId == videoId);
-
-            if (ratingEntity == null)
-            {
-                _logger.LogInformation("No rating found for user {UserId} and video {VideoId}", userId, videoId);
-                return null;
-            }
-
-            var rating = MapToModel(ratingEntity);
-            _logger.LogInformation("Retrieved rating {RatingId} for user {UserId} and video {VideoId}",
-                rating.Id, userId, videoId);
-
-            return rating;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user rating for user {UserId} and video {VideoId}", userId, videoId);
-            await _messageCenterService.ShowErrorAsync("Failed to retrieve rating. Please try again.");
-            return null;
-        }
+        return Context.Ratings
+            .Where(r => r.UserId == userId && r.VideoId == entityId);
     }
 
-    /// <summary>
-    /// Gets a user's rating for a specific video by YouTube video ID.
-    /// </summary>
-    public async Task<VideoRatingModel?> GetUserRatingByYouTubeIdAsync(string userId, string youTubeVideoId)
+    protected override IQueryable<RatingEntity> BuildUserRatingByYouTubeIdQuery(string userId, string youTubeEntityId)
     {
-        try
-        {
-            var ratingEntity = await _context.Ratings
-                .Include(r => r.Video)
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.Video!.YouTubeVideoId == youTubeVideoId);
-
-            if (ratingEntity == null)
-            {
-                _logger.LogInformation("No rating found for user {UserId} and YouTube video {YouTubeVideoId}",
-                    userId, youTubeVideoId);
-                return null;
-            }
-
-            var rating = MapToModel(ratingEntity);
-            _logger.LogInformation("Retrieved rating {RatingId} for user {UserId} and YouTube video {YouTubeVideoId}",
-                rating.Id, userId, youTubeVideoId);
-
-            return rating;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user rating for user {UserId} and YouTube video {YouTubeVideoId}",
-                userId, youTubeVideoId);
-            await _messageCenterService.ShowErrorAsync("Failed to retrieve rating. Please try again.");
-            return null;
-        }
+        return Context.Ratings
+            .Include(r => r.Video)
+            .Where(r => r.UserId == userId && r.Video!.YouTubeVideoId == youTubeEntityId);
     }
 
-    /// <summary>
-    /// Creates a new rating for a video.
-    /// </summary>
+    protected override IQueryable<RatingEntity> BuildUserRatingsQuery(string userId)
+    {
+        return Context.Ratings
+            .Include(r => r.Video)
+            .Where(r => r.UserId == userId && r.VideoId != null);
+    }
+
+    protected override IQueryable<RatingEntity> BuildSearchQuery(string userId, string? searchQuery)
+    {
+        var query = Context.Ratings
+            .Include(r => r.Video)
+            .Where(r => r.UserId == userId && r.VideoId != null);
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            query = query.Where(r =>
+                EF.Functions.Like(r.Notes, $"%{searchQuery}%") ||
+                EF.Functions.Like(r.Video!.Title, $"%{searchQuery}%"));
+        }
+
+        return query;
+    }
+
+    protected override VideoRatingModel MapToModel(RatingEntity entity, string? videoTitle = null, string? youTubeVideoId = null)
+    {
+        return new VideoRatingModel
+        {
+            Id = entity.Id,
+            VideoId = entity.VideoId ?? Guid.Empty,
+            YouTubeVideoId = youTubeVideoId ?? entity.Video?.YouTubeVideoId ?? string.Empty,
+            VideoTitle = videoTitle ?? entity.Video?.Title ?? string.Empty,
+            UserId = entity.UserId,
+            Stars = entity.Stars,
+            Notes = entity.Notes,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.LastModifiedAt
+        };
+    }
+
+    protected override RatingEntity CreateRatingEntity(string userId, RateVideoModel ratingModel)
+    {
+        return new RatingEntity
+        {
+            VideoId = ratingModel.VideoId,
+            UserId = userId,
+            Stars = ratingModel.Stars,
+            Notes = ratingModel.Notes
+        };
+    }
+
+    protected override void UpdateRatingEntity(RatingEntity entity, string userId, RateVideoModel ratingModel)
+    {
+        entity.Stars = ratingModel.Stars;
+        entity.Notes = ratingModel.Notes;
+    }
+
+    protected override async Task<(bool CanRate, List<string> ErrorMessages)> ValidateCanRateAsync(string userId, Guid entityId)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            errors.Add("User must be authenticated to rate videos");
+        }
+
+        if (entityId == Guid.Empty)
+        {
+            errors.Add("Invalid video identifier");
+        }
+
+        // Check if video exists
+        if (errors.Count == 0)
+        {
+            var videoExists = await Context.Videos.AnyAsync(v => v.Id == entityId);
+            if (!videoExists)
+            {
+                errors.Add("Video not found");
+            }
+        }
+
+        if (errors.Count == 0)
+        {
+            Logger.LogInformation("Validated rating permission for user {UserId} and video {VideoId}", userId, entityId);
+        }
+
+        return (errors.Count == 0, errors);
+    }
+
+    protected override void CleanNotes(RateVideoModel ratingModel)
+    {
+        ratingModel.CleanNotes();
+    }
+
+    protected override int GetStars(RateVideoModel ratingModel) => ratingModel.Stars;
+
+    protected override Task OnRatingCreatedAsync(string userId, RateVideoModel ratingModel, int stars)
+    {
+        // No additional operations needed for video ratings on creation
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnRatingUpdatedAsync(string userId, RateVideoModel ratingModel, int oldStars, int newStars)
+    {
+        // No additional operations needed for video ratings on update
+        return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Public Interface Methods - Delegate to Base Class
+
+    public Task<VideoRatingModel?> GetUserRatingAsync(string userId, Guid videoId)
+        => base.GetUserRatingAsync(userId, videoId);
+
+    public Task<VideoRatingModel?> GetUserRatingByYouTubeIdAsync(string userId, string youTubeVideoId)
+        => base.GetUserRatingByYouTubeIdAsync(userId, youTubeVideoId);
+
     public async Task<VideoRatingModel> CreateRatingAsync(string userId, RateVideoModel ratingModel)
     {
-        try
-        {
-            // Validate the rating model
-            var validationResult = await ValidateCanRateVideoAsync(userId, ratingModel.VideoId);
-            if (!validationResult.CanRate)
-            {
-                var errorMessage = string.Join(", ", validationResult.ErrorMessages);
-                await _messageCenterService.ShowErrorAsync($"Cannot create rating: {errorMessage}");
-                throw new InvalidOperationException($"Cannot create rating: {errorMessage}");
-            }
-
-            // Check for existing rating
-            var existingRating = await GetUserRatingAsync(userId, ratingModel.VideoId);
-            if (existingRating != null)
-            {
-                await _messageCenterService.ShowErrorAsync("You have already rated this video. Use edit to update your rating.");
-                throw new InvalidOperationException("Rating already exists for this video");
-            }
-
-            // Create new rating entity
-            var ratingEntity = new RatingEntity
-            {
-                Id = Guid.NewGuid(),
-                VideoId = ratingModel.VideoId,
-                UserId = userId,
-                Stars = ratingModel.Stars,
-                Notes = ratingModel.Notes.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                LastModifiedAt = DateTime.UtcNow,
-                CreatedBy = userId,
-                LastModifiedBy = userId
-            };
-
-            _context.Ratings.Add(ratingEntity);
-            await _context.SaveChangesAsync();
-
-            var newRating = MapToModel(ratingEntity, ratingModel.VideoTitle, ratingModel.YouTubeVideoId);
-
-            _logger.LogInformation("Created new rating {RatingId} for user {UserId} and video {VideoId} with {Stars} stars",
-                newRating.Id, userId, ratingModel.VideoId, ratingModel.Stars);
-
-            await _messageCenterService.ShowSuccessAsync($"Rating saved successfully! You rated this video {ratingModel.Stars} stars.");
-
-            return newRating;
-        }
-        catch (InvalidOperationException)
-        {
-            throw; // Re-throw validation errors
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating rating for user {UserId} and video {VideoId}", userId, ratingModel.VideoId);
-            await _messageCenterService.ShowErrorAsync("Failed to save rating. Please try again.");
-            throw;
-        }
+        var result = await base.CreateRatingAsync(userId, ratingModel);
+        return MapToModel(await Context.Ratings
+            .Include(r => r.Video)
+            .FirstAsync(r => r.Id == result.Id), ratingModel.VideoTitle, ratingModel.YouTubeVideoId);
     }
 
-    /// <summary>
-    /// Updates an existing rating.
-    /// </summary>
     public async Task<VideoRatingModel> UpdateRatingAsync(string userId, Guid ratingId, RateVideoModel ratingModel)
     {
-        try
-        {
-            var existingRating = await _context.Ratings
-                .FirstOrDefaultAsync(r => r.Id == ratingId && r.UserId == userId);
-
-            if (existingRating == null)
-            {
-                await _messageCenterService.ShowErrorAsync("Rating not found or you don't have permission to edit it.");
-                throw new InvalidOperationException("Rating not found or access denied");
-            }
-
-            var oldStars = existingRating.Stars;
-
-            // Update the rating
-            existingRating.Stars = ratingModel.Stars;
-            existingRating.Notes = ratingModel.Notes.Trim();
-            existingRating.LastModifiedAt = DateTime.UtcNow;
-            existingRating.LastModifiedBy = userId;
-
-            await _context.SaveChangesAsync();
-
-            var updatedRating = MapToModel(existingRating, ratingModel.VideoTitle, ratingModel.YouTubeVideoId);
-
-            _logger.LogInformation("Updated rating {RatingId} for user {UserId} from {OldStars} to {NewStars} stars",
-                ratingId, userId, oldStars, ratingModel.Stars);
-
-            await _messageCenterService.ShowSuccessAsync($"Rating updated successfully! You now rate this video {ratingModel.Stars} stars.");
-
-            return updatedRating;
-        }
-        catch (InvalidOperationException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating rating {RatingId} for user {UserId}", ratingId, userId);
-            await _messageCenterService.ShowErrorAsync("Failed to update rating. Please try again.");
-            throw;
-        }
+        var result = await base.UpdateRatingAsync(userId, ratingId, ratingModel);
+        return MapToModel(await Context.Ratings
+            .Include(r => r.Video)
+            .FirstAsync(r => r.Id == result.Id), ratingModel.VideoTitle, ratingModel.YouTubeVideoId);
     }
 
-    /// <summary>
-    /// Deletes a user's rating for a video.
-    /// </summary>
-    public async Task<bool> DeleteRatingAsync(string userId, Guid ratingId)
-    {
-        try
-        {
-            var ratingToDelete = await _context.Ratings
-                .FirstOrDefaultAsync(r => r.Id == ratingId && r.UserId == userId);
+    public Task<bool> DeleteRatingAsync(string userId, Guid ratingId)
+        => base.DeleteRatingAsync(userId, ratingId);
 
-            if (ratingToDelete == null)
-            {
-                _logger.LogWarning("Rating {RatingId} not found for user {UserId} during deletion", ratingId, userId);
-                await _messageCenterService.ShowErrorAsync("Rating not found or you don't have permission to delete it.");
-                return false;
-            }
+    public Task<List<VideoRatingModel>> GetUserRatingsAsync(string userId, int pageNumber = 1, int pageSize = 20)
+        => base.GetUserRatingsAsync(userId, pageNumber, pageSize);
 
-            _context.Ratings.Remove(ratingToDelete);
-            await _context.SaveChangesAsync();
+    public Task<List<VideoRatingModel>> SearchUserRatingsAsync(string userId, string searchQuery, int? minStars = null, int? maxStars = null)
+        => base.SearchUserRatingsAsync(userId, searchQuery, minStars, maxStars);
 
-            _logger.LogInformation("Deleted rating {RatingId} for user {UserId}", ratingId, userId);
-            await _messageCenterService.ShowSuccessAsync("Rating deleted successfully.");
+    #endregion
 
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting rating {RatingId} for user {UserId}", ratingId, userId);
-            await _messageCenterService.ShowErrorAsync("Failed to delete rating. Please try again.");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Gets all ratings by a specific user.
-    /// </summary>
-    public async Task<List<VideoRatingModel>> GetUserRatingsAsync(string userId, int pageNumber = 1, int pageSize = 20)
-    {
-        try
-        {
-            var ratingEntities = await _context.Ratings
-                .Include(r => r.Video)
-                .Where(r => r.UserId == userId && r.VideoId != null)
-                .OrderByDescending(r => r.LastModifiedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            var ratings = ratingEntities.Select(entity => MapToModel(entity)).ToList();
-
-            _logger.LogInformation($"Retrieved {ratings.Count()} ratings for user {userId} (page {pageNumber}, size {pageSize})");
-
-            return ratings;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user ratings for user {UserId}", userId);
-            await _messageCenterService.ShowErrorAsync("Failed to retrieve your ratings. Please try again.");
-            return new List<VideoRatingModel>();
-        }
-    }
+    #region Video-Specific Methods
 
     /// <summary>
     /// Gets rating statistics for a user.
@@ -268,7 +197,7 @@ public class VideoRatingService : IVideoRatingService
     {
         try
         {
-            var userRatings = await _context.Ratings
+            var userRatings = await Context.Ratings
                 .Where(r => r.UserId == userId && r.VideoId != null)
                 .ToListAsync();
 
@@ -306,7 +235,7 @@ public class VideoRatingService : IVideoRatingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting rating stats for user {UserId}", userId);
-            await _messageCenterService.ShowErrorAsync("Failed to retrieve rating statistics. Please try again.");
+            await MessageCenterService.ShowErrorAsync("Failed to retrieve rating statistics. Please try again.");
             return new UserRatingStats();
         }
     }
@@ -318,7 +247,7 @@ public class VideoRatingService : IVideoRatingService
     {
         try
         {
-            var ratingEntities = await _context.Ratings
+            var ratingEntities = await Context.Ratings
                 .Include(r => r.Video)
                 .Where(r => r.VideoId == videoId)
                 .OrderByDescending(r => r.CreatedAt)
@@ -343,7 +272,7 @@ public class VideoRatingService : IVideoRatingService
     {
         try
         {
-            var videoRatings = await _context.Ratings
+            var videoRatings = await Context.Ratings
                 .Where(r => r.VideoId == videoId)
                 .ToListAsync();
 
@@ -375,81 +304,16 @@ public class VideoRatingService : IVideoRatingService
     }
 
     /// <summary>
-    /// Searches user's ratings by notes content.
-    /// </summary>
-    public async Task<List<VideoRatingModel>> SearchUserRatingsAsync(string userId, string searchQuery, int? minStars = null, int? maxStars = null)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(searchQuery) && minStars == null && maxStars == null)
-            {
-                return await GetUserRatingsAsync(userId);
-            }
-
-            var query = _context.Ratings
-                .Include(r => r.Video)
-                .Where(r => r.UserId == userId && r.VideoId != null);
-
-            // Filter by search query in notes or video title
-            if (!string.IsNullOrWhiteSpace(searchQuery))
-            {
-                query = query.Where(r =>
-                    EF.Functions.Like(r.Notes, $"%{searchQuery}%") ||
-                    EF.Functions.Like(r.Video!.Title, $"%{searchQuery}%"));
-            }
-
-            // Filter by star rating range
-            if (minStars.HasValue)
-            {
-                query = query.Where(r => r.Stars >= minStars.Value);
-            }
-
-            if (maxStars.HasValue)
-            {
-                query = query.Where(r => r.Stars <= maxStars.Value);
-            }
-
-            var ratingEntities = await query.OrderByDescending(r => r.LastModifiedAt).ToListAsync();
-            var results = ratingEntities.Select(entity => MapToModel(entity)).ToList();
-
-            _logger.LogInformation($"Search returned {results.Count()} ratings for user {userId} with query '{searchQuery}' and stars {minStars}-{maxStars}");
-
-            return results;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error searching ratings for user {UserId}", userId);
-            await _messageCenterService.ShowErrorAsync("Failed to search ratings. Please try again.");
-            return new List<VideoRatingModel>();
-        }
-    }
-
-    /// <summary>
     /// Validates if a user can rate a specific video.
     /// </summary>
     public async Task<RatingValidationResult> ValidateCanRateVideoAsync(string userId, Guid videoId)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                return RatingValidationResult.Failure("User must be authenticated to rate videos");
-            }
-
-            if (videoId == Guid.Empty)
-            {
-                return RatingValidationResult.Failure("Invalid video identifier");
-            }
-
-            // Check if video exists
-            var videoExists = await _context.Videos.AnyAsync(v => v.Id == videoId);
-            if (!videoExists)
-            {
-                return RatingValidationResult.Failure("Video not found");
-            }
-
-            _logger.LogInformation("Validated rating permission for user {UserId} and video {VideoId}", userId, videoId);
-            return RatingValidationResult.Success();
+            var (canRate, errors) = await ValidateCanRateAsync(userId, videoId);
+            return canRate
+                ? RatingValidationResult.Success()
+                : RatingValidationResult.Failure(errors.ToArray());
         }
         catch (Exception ex)
         {
@@ -465,7 +329,7 @@ public class VideoRatingService : IVideoRatingService
     {
         try
         {
-            var ratingEntities = await _context.Ratings
+            var ratingEntities = await Context.Ratings
                 .Include(r => r.Video)
                 .Where(r => r.UserId == userId && r.VideoId != null && r.Stars >= 4)
                 .OrderByDescending(r => r.Stars)
@@ -486,22 +350,5 @@ public class VideoRatingService : IVideoRatingService
         }
     }
 
-    /// <summary>
-    /// Maps a RatingEntity to a VideoRatingModel.
-    /// </summary>
-    private static VideoRatingModel MapToModel(RatingEntity entity, string? videoTitle = null, string? youTubeVideoId = null)
-    {
-        return new VideoRatingModel
-        {
-            Id = entity.Id,
-            VideoId = entity.VideoId ?? Guid.Empty,
-            YouTubeVideoId = youTubeVideoId ?? entity.Video?.YouTubeVideoId ?? string.Empty,
-            VideoTitle = videoTitle ?? entity.Video?.Title ?? string.Empty,
-            UserId = entity.UserId,
-            Stars = entity.Stars,
-            Notes = entity.Notes,
-            CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.LastModifiedAt
-        };
-    }
+    #endregion
 }
