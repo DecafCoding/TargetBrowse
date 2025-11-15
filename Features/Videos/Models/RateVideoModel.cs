@@ -154,6 +154,14 @@ public class RateVideoModel
     public bool IsValid => !Validate().Any();
 
     /// <summary>
+    /// Trims and cleans the notes field.
+    /// </summary>
+    public void CleanNotes()
+    {
+        Notes = Notes?.Trim() ?? string.Empty;
+    }
+
+    /// <summary>
     /// Creates a new RateVideoModel from a VideoDisplayModel.
     /// </summary>
     /// <param name="video">Video to create rating model for</param>
