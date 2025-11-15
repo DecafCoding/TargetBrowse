@@ -53,14 +53,14 @@
         <!-- Channel Metadata - Subscriber, Video count, Year -->
         <div class="channel-metadata mb-2">
             <small class="text-muted d-flex align-items-center flex-wrap">
-                <span class="me-3">
+                <span class="me-3" title="Subscriber Count">
                     <i class="bi bi-people me-1"></i>@Channel.SubscriberCountDisplay
                 </span>
-                <span class="me-3">
+                <span class="me-3" title="Posted Video Count">
                     <i class="bi bi-camera-video me-1"></i>@Channel.VideoCountDisplay
                 </span>
-                <span>
-                    @Channel.PublishedYear
+                <span title="Year Joined YouTube">
+                    <i class="bi bi-calendar-check me-1"></i>@Channel.PublishedYear
                 </span>
             </small>
         </div>
@@ -77,18 +77,21 @@
         <div class="d-grid gap-2">
             <div class="d-flex gap-2">
                 <a href="/channel-videos/@Channel.YouTubeChannelId"
-                   class="btn btn-outline-primary btn-sm flex-fill">
+                   class="btn btn-outline-primary btn-sm flex-fill"
+                   title="Video List">
                     <i  class="bi bi-play-circle me-1"></i>
                 </a>
                 <a href="@Channel.YouTubeUrl"
                    target="_blank"
-                   class="btn btn-outline-secondary btn-sm flex-fill">
+                   class="btn btn-outline-secondary btn-sm flex-fill"
+                   title="YouTube Channel Page">
                     <i class="bi bi-youtube me-1"></i>
                 </a>
                 <button type="button"
                         class="btn btn-outline-danger btn-sm"
                         @onclick="() => ShowDeleteConfirmation()"
-                        disabled="@IsDeleting">
+                        disabled="@IsDeleting"
+                        title="Delete Channel">
                     @if (IsDeleting)
                     {
                         <span class="spinner-border spinner-border-sm" role="status"></span>

@@ -41,6 +41,15 @@ public partial class ChannelList : ComponentBase
 
     #endregion
 
+    #region Public Properties
+
+    /// <summary>
+    /// Gets the count of tracked channels.
+    /// </summary>
+    public int TrackedChannelCount => TrackedChannels?.Count ?? 0;
+
+    #endregion
+
     #region Lifecycle Methods
 
     protected override async Task OnInitializedAsync()
@@ -281,7 +290,7 @@ public partial class ChannelList : ComponentBase
     /// <summary>
     /// Gets the appropriate CSS class for the progress bar based on channel count.
     /// </summary>
-    private string GetProgressBarClass()
+    public string GetProgressBarClass()
     {
         return TrackedChannels.Count switch
         {

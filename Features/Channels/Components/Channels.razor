@@ -11,6 +11,43 @@
         <!-- Recent Messages -->
         <MessageSidebar />
 
+        <!-- Channel Tracking Progress -->
+        @if (ChannelListComponent != null && ChannelListComponent.TrackedChannelCount > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">
+                            @ChannelListComponent.TrackedChannelCount of 50 channels tracked
+                        </small>
+                        @if (ChannelListComponent.TrackedChannelCount >= 45)
+                        {
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Approaching limit
+                            </small>
+                        }
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar @ChannelListComponent.GetProgressBarClass()"
+                             role="progressbar"
+                             style="width: @(ChannelListComponent.TrackedChannelCount * 2)%"
+                             aria-valuenow="@ChannelListComponent.TrackedChannelCount"
+                             aria-valuemin="0"
+                             aria-valuemax="50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Channel Search Component (moved to sidebar) -->
+        <div class="mb-4">
+            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
+        </div>
+
         <!-- Help and Tips -->
         <div class="card">
             <div class="card-header">
@@ -78,12 +115,7 @@
     </div>
 
     <div class="col-lg-9">
-        <!-- Channel List Component (moved to top) -->
-        <div class="mb-4">
-            <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
-        </div>
-
-        <!-- Channel Search Component (moved below list) -->
-        <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
+        <!-- Channel List Component -->
+        <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
     </div>
 </div>
