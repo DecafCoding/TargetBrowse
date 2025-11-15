@@ -28,13 +28,12 @@
                             disabled="@IsSearching">
                         @if (IsSearching)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         }
                         else
                         {
-                            <i class="bi bi-search me-2"></i>
+                            <i class="bi bi-search"></i>
                         }
-                        Search
                     </button>
                 </div>
                 <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
