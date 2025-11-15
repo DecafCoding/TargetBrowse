@@ -76,36 +76,55 @@
                             <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
                         </div>
                         <div class="col-lg-2 col-md-12">
-                            <div class="d-flex align-items-center">
-                                <InputSelect @bind-Value="SearchModel.SortOrder" class="form-select" id="sortOrder">
-                                    <option value="@VideoSortOrder.Relevance">Sort By</option>
-                                    <option value="@VideoSortOrder.Relevance">Relevance</option>
-                                    <option value="@VideoSortOrder.UploadDate">Upload Date</option>
-                                    <option value="@VideoSortOrder.ViewCount">View Count</option>
-                                    <option value="@VideoSortOrder.Rating">Rating</option>
-                                </InputSelect>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    @CurrentSortOrderText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Relevance)'>Relevance</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.UploadDate)'>Upload Date</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.ViewCount)'>View Count</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Rating)'>Rating</button></li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-lg-2 col-md-12">
-                            <div class="d-flex align-items-center">
-                                <InputSelect @bind-Value="SearchModel.DurationFilter" class="form-select" id="durationFilter">
-                                    <option value="@VideoDurationFilter.Any">Any Duration</option>
-                                    <option value="@VideoDurationFilter.Short">Short (&lt; 4 min)</option>
-                                    <option value="@VideoDurationFilter.Medium">Medium (4-20 min)</option>
-                                    <option value="@VideoDurationFilter.Long">Long (&gt; 20 min)</option>
-                                </InputSelect>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-hourglass-split me-1"></i>
+                                    @CurrentDurationText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Any)'>Any Duration</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Short)'>Short (&lt; 4 min)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Medium)'>Medium (4-20 min)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Long)'>Long (&gt; 20 min)</button></li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-lg-2 col-md-12">
-                            <div class="d-flex align-items-center">
-                                <InputSelect @bind-Value="SearchModel.DateFilter" class="form-select" id="dateFilter">
-                                    <option value="@VideoDateFilter.Any">Any Age</option>
-                                    <option value="@VideoDateFilter.LastHour">Last Hour</option>
-                                    <option value="@VideoDateFilter.Today">Today</option>
-                                    <option value="@VideoDateFilter.ThisWeek">This Week</option>
-                                    <option value="@VideoDateFilter.ThisMonth">This Month</option>
-                                    <option value="@VideoDateFilter.ThisYear">This Year</option>
-                                </InputSelect>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    @CurrentDateFilterText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Any)'>Any Age</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.LastHour)'>Last Hour</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Today)'>Today</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisWeek)'>This Week</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisMonth)'>This Month</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisYear)'>This Year</button></li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-lg-1 col-md-12">

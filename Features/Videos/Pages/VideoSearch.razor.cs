@@ -17,11 +17,68 @@ public partial class VideoSearch : ComponentBase
     private bool HasSearched = false;
     private string? CurrentUserId;
 
+    // Display text for dropdown filters
+    private string CurrentSortOrderText => SearchModel.SortOrder switch
+    {
+        VideoSortOrder.Relevance => "Relevance",
+        VideoSortOrder.UploadDate => "Upload Date",
+        VideoSortOrder.ViewCount => "View Count",
+        VideoSortOrder.Rating => "Rating",
+        _ => "Sort By"
+    };
+
+    private string CurrentDurationText => SearchModel.DurationFilter switch
+    {
+        VideoDurationFilter.Any => "Any Duration",
+        VideoDurationFilter.Short => "Short (< 4 min)",
+        VideoDurationFilter.Medium => "Medium (4-20 min)",
+        VideoDurationFilter.Long => "Long (> 20 min)",
+        _ => "Any Duration"
+    };
+
+    private string CurrentDateFilterText => SearchModel.DateFilter switch
+    {
+        VideoDateFilter.Any => "Any Age",
+        VideoDateFilter.LastHour => "Last Hour",
+        VideoDateFilter.Today => "Today",
+        VideoDateFilter.ThisWeek => "This Week",
+        VideoDateFilter.ThisMonth => "This Month",
+        VideoDateFilter.ThisYear => "This Year",
+        _ => "Any Age"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         // Get current user ID - this would come from authentication
         CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Sets the sort order filter.
+    /// </summary>
+    private void SetSortOrder(VideoSortOrder sortOrder)
+    {
+        SearchModel.SortOrder = sortOrder;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Sets the duration filter.
+    /// </summary>
+    private void SetDurationFilter(VideoDurationFilter durationFilter)
+    {
+        SearchModel.DurationFilter = durationFilter;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Sets the date filter.
+    /// </summary>
+    private void SetDateFilter(VideoDateFilter dateFilter)
+    {
+        SearchModel.DateFilter = dateFilter;
+        StateHasChanged();
     }
 
     /// <summary>
