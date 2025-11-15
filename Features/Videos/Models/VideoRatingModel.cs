@@ -1,6 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-
-using TargetBrowse.Services;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -8,13 +6,8 @@ namespace TargetBrowse.Features.Videos.Models;
 /// Display model for video rating information in the UI.
 /// Represents a user's rating for a specific video.
 /// </summary>
-public class VideoRatingModel
+public class VideoRatingModel : RatingModelBase
 {
-    /// <summary>
-    /// Unique identifier for the rating.
-    /// </summary>
-    public Guid Id { get; set; }
-
     /// <summary>
     /// ID of the video being rated.
     /// </summary>
@@ -31,82 +24,17 @@ public class VideoRatingModel
     public string VideoTitle { get; set; } = string.Empty;
 
     /// <summary>
-    /// User ID who created the rating.
+    /// Gets the entity ID (VideoId).
     /// </summary>
-    public string UserId { get; set; } = string.Empty;
+    public override Guid EntityId => VideoId;
 
     /// <summary>
-    /// Star rating from 1 to 5.
+    /// Gets the YouTube entity ID (YouTubeVideoId).
     /// </summary>
-    [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars")]
-    public int Stars { get; set; }
+    public override string YouTubeEntityId => YouTubeVideoId;
 
     /// <summary>
-    /// User's explanatory notes for the rating.
+    /// Gets the entity name (VideoTitle).
     /// </summary>
-    [Required(ErrorMessage = "Notes are required")]
-    [StringLength(1000, MinimumLength = 10, ErrorMessage = "Notes must be between 10 and 1000 characters")]
-    public string Notes { get; set; } = string.Empty;
-
-    /// <summary>
-    /// When the rating was created.
-    /// </summary>
-    public DateTime CreatedAt { get; set; }
-
-    /// <summary>
-    /// When the rating was last updated.
-    /// </summary>
-    public DateTime UpdatedAt { get; set; }
-
-    /// <summary>
-    /// Indicates if this is a new rating (not yet saved).
-    /// </summary>
-    public bool IsNew => Id == Guid.Empty;
-
-    /// <summary>
-    /// Gets display text for the star rating.
-    /// </summary>
-    public string StarDisplayText => Stars switch
-    {
-        1 => "1 star - Poor",
-        2 => "2 stars - Fair",
-        3 => "3 stars - Good",
-        4 => "4 stars - Very Good",
-        5 => "5 stars - Excellent",
-        _ => "No rating"
-    };
-
-    /// <summary>
-    /// Gets CSS class for star rating display.
-    /// </summary>
-    public string StarCssClass => Stars switch
-    {
-        1 => "text-danger",
-        2 => "text-warning",
-        3 => "text-info",
-        4 => "text-success",
-        5 => "text-success",
-        _ => "text-muted"
-    };
-
-    /// <summary>
-    /// Gets truncated notes for card display.
-    /// </summary>
-    public string ShortNotes => Notes.Length > 100 ? $"{Notes[..97]}..." : Notes;
-
-    /// <summary>
-    /// Gets user-friendly display of when the rating was created.
-    /// </summary>
-    public string CreatedAtDisplay => FormatHelper.FormatDateDisplay(CreatedAt);
-
-    /// <summary>
-    /// Gets user-friendly display of when the rating was updated.
-    /// </summary>
-    public string UpdatedAtDisplay => FormatHelper.FormatUpdateDateDisplay(UpdatedAt);
-
-    /// <summary>
-    /// Indicates if the rating has been modified since creation.
-    /// </summary>
-    public bool WasModified => UpdatedAt > CreatedAt.AddMinutes(1);
-
+    public override string EntityName => VideoTitle;
 }
