@@ -7,16 +7,13 @@ namespace TargetBrowse.Features.Channels.Data;
 /// <summary>
 /// Implementation of channel repository for database operations.
 /// Handles channel entities and user-channel relationships using Entity Framework Core.
+/// Inherits common database patterns from BaseRepository.
 /// </summary>
-public class ChannelRepository : IChannelRepository
+public class ChannelRepository : BaseRepository<ChannelEntity>, IChannelRepository
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<ChannelRepository> _logger;
-
     public ChannelRepository(ApplicationDbContext context, ILogger<ChannelRepository> logger)
+        : base(context, logger)
     {
-        _context = context;
-        _logger = logger;
     }
 
     /// <summary>
