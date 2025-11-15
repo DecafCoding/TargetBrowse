@@ -26,16 +26,27 @@ public partial class ChannelSearch : ComponentBase
     [Parameter]
     public EventCallback OnChannelAdded { get; set; }
 
+    [Parameter]
+    public EventCallback OnSearchCompleted { get; set; }
+
     #endregion
 
     #region Protected Properties
 
     protected ChannelSearchModel SearchModel { get; set; } = new();
-    protected List<ChannelDisplayModel> SearchResults { get; set; } = new();
     protected bool IsSearching { get; set; } = false;
     protected bool IsAdding { get; set; } = false;
     protected bool HasSearched { get; set; } = false;
     protected ChannelDisplayModel? _channelBeingAdded;
+
+    #endregion
+
+    #region Public Properties
+
+    /// <summary>
+    /// Gets the list of search results.
+    /// </summary>
+    public List<ChannelDisplayModel> SearchResults { get; set; } = new();
 
     #endregion
 
@@ -65,6 +76,12 @@ public partial class ChannelSearch : ComponentBase
             if (SearchResults.Any())
             {
                 SearchModel.Reset();
+            }
+
+            // Notify parent component that search is completed
+            if (OnSearchCompleted.HasDelegate)
+            {
+                await OnSearchCompleted.InvokeAsync();
             }
         }
         finally

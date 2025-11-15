@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using TargetBrowse.Features.Channels.Models;
 
 namespace TargetBrowse.Features.Channels.Components;
 
@@ -19,6 +20,15 @@ public partial class Channels : ComponentBase
     /// Reference to the channel list component for displaying tracked channels
     /// </summary>
     private ChannelList? ChannelListComponent;
+
+    #endregion
+
+    #region Private Fields
+
+    /// <summary>
+    /// The current search results to display in the channel list
+    /// </summary>
+    private List<ChannelDisplayModel> SearchResults { get; set; } = new();
 
     #endregion
 
@@ -48,6 +58,21 @@ public partial class Channels : ComponentBase
         {
             await ChannelListComponent.RefreshAsync();
         }
+    }
+
+    /// <summary>
+    /// Handles when a search is completed in the search component.
+    /// Updates the search results and triggers a state change to display them.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation</returns>
+    private async Task HandleSearchCompleted()
+    {
+        if (ChannelSearchComponent != null)
+        {
+            SearchResults = ChannelSearchComponent.SearchResults;
+            StateHasChanged();
+        }
+        await Task.CompletedTask;
     }
 
     /// <summary>
