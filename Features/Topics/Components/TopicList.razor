@@ -105,36 +105,6 @@
                 </table>
             </div>
         }
-
-        @if (Topics.Any())
-        {
-            <!-- Topic Limit Information -->
-            <div class="mt-3 pt-3 border-top">
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                        @Topics.Count of 10 topics used
-                    </small>
-                    @if (Topics.Count >= 8)
-                    {
-                        <small class="text-warning">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            Approaching limit
-                        </small>
-                    }
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="progress mt-2" style="height: 4px;">
-                    <div class="progress-bar @GetProgressBarClass()"
-                         role="progressbar"
-                         style="width: @(Topics.Count * 10)%"
-                         aria-valuenow="@Topics.Count"
-                         aria-valuemin="0"
-                         aria-valuemax="10">
-                    </div>
-                </div>
-            </div>
-        }
     </div>
 </div>
 

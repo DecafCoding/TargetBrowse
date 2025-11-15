@@ -8,6 +8,43 @@
 
 <div class="row">
     <div class="col-lg-3">
+        <!-- Topic Tracking Progress -->
+        @if (TopicListComponent != null && TopicListComponent.TopicCount > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">
+                            @TopicListComponent.TopicCount of 10 topics used
+                        </small>
+                        @if (TopicListComponent.TopicCount >= 8)
+                        {
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Approaching limit
+                            </small>
+                        }
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar @TopicListComponent.GetProgressBarClass()"
+                             role="progressbar"
+                             style="width: @(TopicListComponent.TopicCount * 10)%"
+                             aria-valuenow="@TopicListComponent.TopicCount"
+                             aria-valuemin="0"
+                             aria-valuemax="10">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Add Topic Component (moved to left side) -->
+        <div class="mb-4">
+            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
+        </div>
+
         <!-- Recent Messages -->
         <MessageSidebar />
 
@@ -64,10 +101,5 @@
     <div class="col-lg-9">
         <!-- Topic List Component (converted to table) -->
         <TopicList @ref="TopicListComponent" OnTopicsChanged="HandleTopicsChanged" />
-
-        <!-- Add Topic Component (moved below list) -->
-        <div class="mt-4">
-            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
-        </div>
     </div>
 </div>
