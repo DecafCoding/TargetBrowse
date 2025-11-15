@@ -116,3 +116,41 @@
     background-color: var(--bs-gray-800);
     color: var(--bs-gray-200);
 }
+
+/* Search result cards */
+.card.border {
+    border: 1px solid var(--bs-border-color) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+    .card.border:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-color: var(--bs-primary);
+    }
+
+/* Channel thumbnail styling for search results */
+.channel-thumbnail {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border: 1px solid var(--bs-border-color);
+}
+
+.channel-thumbnail-placeholder {
+    width: 60px;
+    height: 60px;
+}
+
+/* Dark theme adjustments for search results */
+[data-bs-theme="dark"] .card.border {
+    border-color: var(--bs-gray-600) !important;
+}
+
+    [data-bs-theme="dark"] .card.border:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    }
+
+[data-bs-theme="dark"] .channel-thumbnail {
+    border-color: var(--bs-gray-600);
+}

@@ -27,6 +27,9 @@ public partial class ChannelList : ComponentBase
     [Parameter]
     public EventCallback OnChannelsChanged { get; set; }
 
+    [Parameter]
+    public List<ChannelDisplayModel> SearchResults { get; set; } = new();
+
     #endregion
 
     #region Private Fields
@@ -280,6 +283,44 @@ public partial class ChannelList : ComponentBase
         else
         {
             ShowRatingModal(channel);
+        }
+    }
+
+    /// <summary>
+    /// Handles adding a channel to tracking from search results.
+    /// </summary>
+    private async Task HandleAddChannelToTracking(ChannelDisplayModel channel)
+    {
+        try
+        {
+            // Get current user
+            var authState = await AuthenticationStateTask!;
+            var userId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            // Convert to AddChannelModel and add to tracking
+            var addChannelModel = AddChannelModel.FromDisplayModel(channel);
+            var success = await ChannelService.AddChannelToTrackingAsync(userId, addChannelModel);
+
+            if (success)
+            {
+                // Refresh the tracked channels list
+                await LoadTrackedChannelsAsync();
+
+                // Notify parent component that a channel was added
+                if (OnChannelsChanged.HasDelegate)
+                {
+                    await OnChannelsChanged.InvokeAsync();
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error silently for now
         }
     }
 

@@ -8,6 +8,11 @@
 
 <div class="row">
     <div class="col-lg-3">
+        <!-- Channel Search Component (moved to sidebar) -->
+        <div class="mb-4">
+            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" OnSearchCompleted="HandleSearchCompleted" />
+        </div>
+
         <!-- Recent Messages -->
         <MessageSidebar />
 
@@ -42,11 +47,6 @@
                 </div>
             </div>
         }
-
-        <!-- Channel Search Component (moved to sidebar) -->
-        <div class="mb-4">
-            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" />
-        </div>
 
         <!-- Help and Tips -->
         <div class="card">
@@ -116,6 +116,8 @@
 
     <div class="col-lg-9">
         <!-- Channel List Component -->
-        <ChannelList @ref="ChannelListComponent" OnChannelsChanged="HandleChannelsChanged" />
+        <ChannelList @ref="ChannelListComponent"
+                     OnChannelsChanged="HandleChannelsChanged"
+                     SearchResults="@SearchResults" />
     </div>
 </div>
