@@ -2,6 +2,7 @@
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Topics.Models;
+using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 
@@ -9,17 +10,12 @@ namespace TargetBrowse.Features.Topics.Services;
 
 /// <summary>
 /// Handles topic onboarding workflows including initial video suggestions.
-/// Mirrors ChannelOnboardingService pattern for consistency and maintainability.
+/// Refactored to use BaseOnboardingService to eliminate duplication with ChannelOnboardingService.
 /// Provides immediate value to users by populating suggestions when they create new topics.
-/// Refactored to use ISuggestionDataService for better separation of concerns.
+/// Includes topic-specific relevance scoring to prioritize best matches.
 /// </summary>
-public class TopicOnboardingService : ITopicOnboardingService
+public class TopicOnboardingService : BaseOnboardingService, ITopicOnboardingService
 {
-    private readonly ISuggestionDataService _suggestionDataService;
-    private readonly ISharedYouTubeService _sharedYouTubeService;
-    private readonly ILogger<TopicOnboardingService> _logger;
-
-    private const int InitialVideosLimit = 100;
     private const int RelevanceThreshold = 5;
     private const int LookbackDays = 365; // Look back 365 days for initial topic videos
 
@@ -27,100 +23,53 @@ public class TopicOnboardingService : ITopicOnboardingService
         ISuggestionDataService suggestionDataService,
         ISharedYouTubeService sharedYouTubeService,
         ILogger<TopicOnboardingService> logger)
+        : base(suggestionDataService, sharedYouTubeService, logger)
     {
-        _suggestionDataService = suggestionDataService;
-        _sharedYouTubeService = sharedYouTubeService;
-        _logger = logger;
     }
 
     /// <summary>
     /// Adds initial videos from a newly created topic as suggestions.
-    /// Enhanced to use relevance scoring and prioritized selection.
+    /// Uses the common onboarding workflow from BaseOnboardingService with topic-specific relevance scoring.
     /// </summary>
     public async Task<int> AddInitialVideosAsync(string userId, string topicName, Guid topicId)
     {
-        try
-        {
-            _logger.LogInformation("Adding initial videos for topic {TopicName} ({TopicId}) for user {UserId}",
-                topicName, topicId, userId);
+        _logger.LogInformation("Adding initial videos for topic {TopicName} ({TopicId}) for user {UserId}",
+            topicName, topicId, userId);
 
-            // 1. Check if user can create more suggestions
-            if (!await _suggestionDataService.CanUserCreateSuggestionsAsync(userId))
-            {
-                _logger.LogWarning("User {UserId} cannot create more suggestions - at limit", userId);
-                return 0;
-            }
+        return await ExecuteOnboardingWorkflowAsync(
+            userId,
+            topicName,
+            fetchVideos: () => FetchTopicVideosAsync(topicName),
+            selectVideos: (videos) => SelectVideosByRelevance(videos, topicName),
+            createSuggestions: (videoEntities) => _suggestionDataService.CreateTopicOnboardingSuggestionsAsync(
+                userId, videoEntities, topicId, topicName));
+    }
 
-            // 2. Fetch videos from YouTube (already does dual medium+long search with deduplication)
-            var topicVideosResult = await FetchTopicVideosAsync(topicName);
+    /// <summary>
+    /// Selects videos based on relevance scoring.
+    /// Only includes videos with relevance score above the threshold.
+    /// </summary>
+    private List<VideoInfo> SelectVideosByRelevance(List<VideoInfo> videos, string topicName)
+    {
+        _logger.LogInformation("Found {VideoCount} total videos for topic {TopicName} before scoring",
+            videos.Count, topicName);
 
-            if (!topicVideosResult.IsSuccess || !topicVideosResult.Data?.Any() == true)
-            {
-                _logger.LogWarning("Failed to fetch initial videos for topic {TopicName}: {Error}",
-                    topicName, topicVideosResult.ErrorMessage);
-                return 0;
-            }
+        // Apply relevance scoring to all videos
+        var scoredVideos = ScoreVideosByRelevance(videos, topicName);
 
-            var allVideos = topicVideosResult.Data;
-            _logger.LogInformation("Found {VideoCount} total videos for topic {TopicName} before scoring",
-                allVideos.Count, topicName);
+        // Select videos above relevance threshold, ordered by score and recency
+        var selectedVideos = scoredVideos
+            .Where(v => v.RelevanceScore >= RelevanceThreshold)
+            .OrderByDescending(v => v.RelevanceScore)
+            .ThenByDescending(v => v.VideoInfo.PublishedAt)
+            .Take(InitialVideosLimit)
+            .ToList();
 
-            // 3. Apply relevance scoring to all videos
-            var scoredVideos = ScoreVideosByRelevance(allVideos, topicName);
+        _logger.LogInformation("Selected {Count} videos for topic {TopicName} (relevance >= {Threshold}, avg score: {AvgScore:F1})",
+            selectedVideos.Count, topicName, RelevanceThreshold,
+            selectedVideos.Any() ? selectedVideos.Average(v => v.RelevanceScore) : 0);
 
-            // 4. Apply prioritized selection algorithm
-            //var selectedVideos = ApplyPrioritizedSelection(scoredVideos, InitialVideosLimit);
-
-            // 4. New simpler selection: take top any above a relevance threshhold
-            // Only include videos with at least moderate relevance
-            var selectedVideos = scoredVideos.Where(v => v.RelevanceScore >= RelevanceThreshold) 
-                .OrderByDescending(v => v.RelevanceScore)
-                .ThenByDescending(v => v.VideoInfo.PublishedAt)
-                .Take(InitialVideosLimit)
-                .ToList();
-
-            _logger.LogInformation($"Selected {selectedVideos.Count} videos for topic {topicName} after relevance score above: {RelevanceThreshold})");
-
-            // 5. Ensure all selected videos exist in the database using shared service
-            var videoEntities = await _suggestionDataService.EnsureVideosExistAsync(selectedVideos.Select(sv => sv.VideoInfo).ToList());
-
-            // 6. Filter out videos that already have pending suggestions
-            var filteredVideoEntities = new List<VideoEntity>();
-            foreach (var videoEntity in videoEntities)
-            {
-                var hasPending = await _suggestionDataService.HasPendingSuggestionForVideoAsync(userId, videoEntity.Id);
-                if (!hasPending)
-                {
-                    filteredVideoEntities.Add(videoEntity);
-                }
-                else
-                {
-                    _logger.LogDebug("Skipping video {VideoId} - already has pending suggestion for user {UserId}",
-                        videoEntity.YouTubeVideoId, userId);
-                }
-            }
-
-            // 7. Create suggestions using shared data service
-            if (filteredVideoEntities.Any())
-            {
-                var createdSuggestions = await _suggestionDataService.CreateTopicOnboardingSuggestionsAsync(
-                    userId, filteredVideoEntities, topicId, topicName);
-
-                _logger.LogInformation("Created {SuggestionCount} initial suggestions for topic {TopicName} (avg relevance: {AvgRelevance:F1})",
-                    createdSuggestions.Count, topicName,
-                    selectedVideos.Any() ? selectedVideos.Where(v => filteredVideoEntities.Any(fv => fv.YouTubeVideoId == v.VideoInfo.YouTubeVideoId)).Average(v => v.RelevanceScore) : 0);
-
-                return createdSuggestions.Count;
-            }
-
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error adding initial videos for topic {TopicName} for user {UserId}",
-                topicName, userId);
-            return 0;
-        }
+        return selectedVideos.Select(sv => sv.VideoInfo).ToList();
     }
 
     /// <summary>
