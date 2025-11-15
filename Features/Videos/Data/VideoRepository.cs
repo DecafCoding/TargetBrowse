@@ -5,6 +5,7 @@ using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Videos.Data;
 
@@ -13,16 +14,19 @@ namespace TargetBrowse.Features.Videos.Data;
 /// Handles CRUD operations for user's video library with Entity Framework Core.
 /// Fixed to include rating information when loading user videos.
 /// Updated to include video type information for content classification.
+/// Inherits common database patterns from BaseRepository.
 /// </summary>
-public class VideoRepository : IVideoRepository
+public class VideoRepository : BaseRepository<VideoEntity>, IVideoRepository
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<VideoRepository> _logger;
+    private readonly IVideoDataService _videoDataService;
 
-    public VideoRepository(ApplicationDbContext context, ILogger<VideoRepository> logger)
+    public VideoRepository(
+        ApplicationDbContext context,
+        ILogger<VideoRepository> logger,
+        IVideoDataService videoDataService)
+        : base(context, logger)
     {
-        _context = context;
-        _logger = logger;
+        _videoDataService = videoDataService ?? throw new ArgumentNullException(nameof(videoDataService));
     }
 
     /// <summary>
@@ -189,10 +193,7 @@ public class VideoRepository : IVideoRepository
                 return false; // Already exists
             }
 
-            // Ensure channel exists
-            var channel = await EnsureChannelExistsAsync(video.ChannelId, video.ChannelTitle);
-
-            // Ensure video exists
+            // Ensure video exists (this also ensures channel exists)
             var videoInfo = new VideoInfo
             {
                 YouTubeVideoId = video.YouTubeVideoId,
@@ -201,14 +202,14 @@ public class VideoRepository : IVideoRepository
                 ChannelName = video.ChannelTitle,
                 PublishedAt = video.PublishedAt,
                 Duration = DurationParser.ParseToSeconds(video.Duration),
-                ViewCount = (int)(video.ViewCount ?? 0),        
-                LikeCount = (int)(video.LikeCount ?? 0),        
-                CommentCount = (int)(video.CommentCount ?? 0),  
+                ViewCount = (int)(video.ViewCount ?? 0),
+                LikeCount = (int)(video.LikeCount ?? 0),
+                CommentCount = (int)(video.CommentCount ?? 0),
                 Description = video.Description ?? string.Empty,
                 ThumbnailUrl = video.ThumbnailUrl ?? string.Empty
             };
 
-            var videoEntity = await EnsureVideoExistsAsync(videoInfo);
+            var videoEntity = await _videoDataService.EnsureVideoExistsAsync(videoInfo);
 
             // Create user-video relationship
             var userVideoEntity = new UserVideoEntity
@@ -362,187 +363,6 @@ public class VideoRepository : IVideoRepository
         }
     }
 
-    /// <summary>
-    /// Ensures a video entity exists in the database with complete metadata.
-    /// Creates new video and channel entities if they don't exist.
-    /// </summary>
-    public async Task<VideoEntity> EnsureVideoExistsAsync(VideoInfo video)
-    {
-        try
-        {
-            // First try to find existing video
-            var existingVideo = await _context.Videos
-                .Include(v => v.Channel)
-                .FirstOrDefaultAsync(v => v.YouTubeVideoId == video.YouTubeVideoId);
-
-            if (existingVideo != null)
-            {
-                return existingVideo;
-            }
-
-            // Ensure channel exists first
-            var channel = await EnsureChannelExistsAsync(video.ChannelId, video.ChannelName);
-
-            // Create new video entity
-            var videoEntity = new VideoEntity
-            {
-                YouTubeVideoId = video.YouTubeVideoId,
-                Title = video.Title,
-                ChannelId = channel.Id,
-                PublishedAt = video.PublishedAt,
-                ViewCount = video.ViewCount,
-                LikeCount = video.LikeCount,
-                CommentCount = video.CommentCount,
-                Duration = video.Duration,
-                ThumbnailUrl = video.ThumbnailUrl,
-                Description = video.Description,
-                RawTranscript = string.Empty // Will be populated later if needed
-            };
-
-            _context.Videos.Add(videoEntity);
-            await _context.SaveChangesAsync();
-
-            // Load the channel relationship for return
-            await _context.Entry(videoEntity)
-                .Reference(v => v.Channel)
-                .LoadAsync();
-
-            _logger.LogDebug("Created new video entity for {VideoId}: {Title}", video.YouTubeVideoId, video.Title);
-
-            return videoEntity;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error ensuring video {VideoId} exists", video.YouTubeVideoId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Ensures a channel entity exists in the database.
-    /// Creates new channel entity if it doesn't exist, updates if it does.
-    /// </summary>
-    public async Task<ChannelEntity> EnsureChannelExistsAsync(string channelId, string channelName)
-    {
-        try
-        {
-            var existingChannel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.YouTubeChannelId == channelId);
-
-            if (existingChannel != null)
-            {
-                // Update name if changed
-                if (existingChannel.Name != channelName)
-                {
-                    existingChannel.Name = channelName;
-                    existingChannel.LastModifiedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
-                return existingChannel;
-            }
-
-            // Create new channel
-            var channelEntity = new ChannelEntity
-            {
-                YouTubeChannelId = channelId,
-                Name = channelName,
-                ThumbnailUrl = string.Empty, // Will be populated later if needed
-                VideoCount = 0,
-                SubscriberCount = 0,
-                PublishedAt = DateTime.UtcNow // Default value, will be updated when we have real data
-            };
-
-            _context.Channels.Add(channelEntity);
-            await _context.SaveChangesAsync();
-
-            _logger.LogDebug("Created new channel entity for {ChannelId}: {Name}", channelId, channelName);
-
-            return channelEntity;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error ensuring channel {ChannelId} exists", channelId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets video entities by their YouTube video IDs.
-    /// Used for bulk operations and suggestion processing.
-    /// </summary>
-    public async Task<Dictionary<string, VideoEntity>> GetVideosByYouTubeIdsAsync(List<string> youTubeVideoIds)
-    {
-        try
-        {
-            if (!youTubeVideoIds.Any())
-            {
-                return new Dictionary<string, VideoEntity>();
-            }
-
-            var videos = await _context.Videos
-                .Include(v => v.Channel)
-                .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
-                .ToListAsync();
-
-            return videos.ToDictionary(v => v.YouTubeVideoId, v => v);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting videos by YouTube IDs");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Bulk creates video entities from VideoInfo objects.
-    /// Optimized for suggestion generation when processing many videos at once.
-    /// </summary>
-    public async Task<List<VideoEntity>> BulkCreateVideosAsync(List<VideoInfo> videos)
-    {
-        try
-        {
-            if (!videos.Any())
-            {
-                return new List<VideoEntity>();
-            }
-
-            var createdEntities = new List<VideoEntity>();
-
-            // Process in batches to avoid database timeout
-            const int batchSize = 50;
-            for (int i = 0; i < videos.Count; i += batchSize)
-            {
-                var batch = videos.Skip(i).Take(batchSize).ToList();
-                var batchEntities = new List<VideoEntity>();
-
-                foreach (var video in batch)
-                {
-                    try
-                    {
-                        var entity = await EnsureVideoExistsAsync(video);
-                        batchEntities.Add(entity);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to create video {VideoId} in bulk operation", video.YouTubeVideoId);
-                        // Continue with other videos
-                    }
-                }
-
-                createdEntities.AddRange(batchEntities);
-            }
-
-            _logger.LogInformation("Bulk created {CreatedCount} out of {TotalCount} videos",
-                createdEntities.Count, videos.Count);
-
-            return createdEntities;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in bulk create videos operation");
-            throw;
-        }
-    }
 
     /// <summary>
     /// Maps a UserVideoEntity to a VideoDisplayModel for presentation.

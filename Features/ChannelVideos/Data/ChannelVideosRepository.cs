@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
+using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.ChannelVideos.Models;
 
 namespace TargetBrowse.Features.ChannelVideos.Data;
@@ -7,18 +8,15 @@ namespace TargetBrowse.Features.ChannelVideos.Data;
 /// <summary>
 /// Repository implementation for channel video data access.
 /// Provides efficient database queries for channel information and user tracking status.
+/// Inherits common database patterns from BaseRepository.
 /// </summary>
-public class ChannelVideosRepository : IChannelVideosRepository
+public class ChannelVideosRepository : BaseRepository<VideoEntity>, IChannelVideosRepository
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<ChannelVideosRepository> _logger;
-
     public ChannelVideosRepository(
         ApplicationDbContext context,
         ILogger<ChannelVideosRepository> logger)
+        : base(context, logger)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

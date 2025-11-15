@@ -9,20 +9,17 @@ namespace TargetBrowse.Features.Suggestions.Data;
 /// Implementation of suggestion repository for data access operations.
 /// Handles database operations for suggestion entities using Entity Framework Core.
 /// Enhanced implementation with improved error handling, performance optimization, and business logic.
+/// Inherits common database patterns from BaseRepository.
 /// </summary>
-public class SuggestionRepository : ISuggestionRepository
+public class SuggestionRepository : BaseRepository<SuggestionEntity>, ISuggestionRepository
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<SuggestionRepository> _logger;
-
     private const int SuggestionExpiryDays = 30;
     private const int MAX_PENDING_SUGGESTIONS = 1000;
     private const int BATCH_SIZE = 50; // For bulk operations
 
     public SuggestionRepository(ApplicationDbContext context, ILogger<SuggestionRepository> logger)
+        : base(context, logger)
     {
-        _context = context;
-        _logger = logger;
     }
 
     /// <summary>
@@ -557,117 +554,4 @@ public class SuggestionRepository : ISuggestionRepository
         return suggestion;
     }
 
-    #region Private Helper Methods
-
-    /// <summary>
-    /// Internal helper method to ensure a video exists and return the VideoEntity.
-    /// Enhanced to properly populate ThumbnailUrl and Description from VideoInfo.
-    /// Used by CreateSuggestionsFromVideoSuggestionsAsync to get proper entity IDs.
-    /// </summary>
-    private async Task<VideoEntity> EnsureVideoExistsInternalAsync(VideoInfo video)
-    {
-        try
-        {
-            // First try to find existing video
-            var existingVideo = await _context.Videos
-                .Include(v => v.Channel)
-                .FirstOrDefaultAsync(v => v.YouTubeVideoId == video.YouTubeVideoId);
-
-            if (existingVideo != null)
-            {
-                // Update existing video with new metadata if needed
-                bool hasChanges = false;
-
-                // Update thumbnail URL if we have a better one and existing is empty
-                if (!string.IsNullOrEmpty(video.ThumbnailUrl) &&
-                    string.IsNullOrEmpty(existingVideo.ThumbnailUrl))
-                {
-                    existingVideo.ThumbnailUrl = GetOptimalThumbnailUrl(video.ThumbnailUrl);
-                    hasChanges = true;
-                }
-
-                // Update description if we have one and existing is empty
-                if (!string.IsNullOrEmpty(video.Description) &&
-                    string.IsNullOrEmpty(existingVideo.Description))
-                {
-                    existingVideo.Description = TruncateDescription(video.Description);
-                    hasChanges = true;
-                }
-
-                if (hasChanges)
-                {
-                    existingVideo.LastModifiedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogDebug("Updated metadata for existing video {VideoId}",
-                        video.YouTubeVideoId);
-                }
-
-                return existingVideo;
-            }
-
-            // Find or create the channel entity first
-            var channel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.YouTubeChannelId == video.ChannelId);
-
-            if (channel == null)
-            {
-                // Create channel if it doesn't exist
-                channel = new ChannelEntity
-                {
-                    Id = Guid.NewGuid(),
-                    YouTubeChannelId = video.ChannelId,
-                    Name = video.ChannelName,
-                    ThumbnailUrl = string.Empty,
-                    VideoCount = 0,
-                    SubscriberCount = 0,
-                    PublishedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Channels.Add(channel);
-                await _context.SaveChangesAsync(); // Save to get the ID
-
-                _logger.LogDebug("Created new channel entity {ChannelId} for {ChannelName}",
-                    channel.Id, channel.Name);
-            }
-
-            // Create new video entity with complete metadata
-            var videoEntity = new VideoEntity
-            {
-                Id = Guid.NewGuid(),
-                YouTubeVideoId = video.YouTubeVideoId,
-                Title = video.Title,
-                ChannelId = channel.Id,
-                PublishedAt = video.PublishedAt,
-                ViewCount = video.ViewCount,
-                LikeCount = video.LikeCount,
-                CommentCount = video.CommentCount,
-                Duration = video.Duration,
-                // Properly populate new fields from VideoInfo
-                ThumbnailUrl = GetOptimalThumbnailUrl(video.ThumbnailUrl),
-                Description = TruncateDescription(video.Description),
-                RawTranscript = string.Empty,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Videos.Add(videoEntity);
-            await _context.SaveChangesAsync();
-
-            // Load the channel relationship for return
-            videoEntity.Channel = channel;
-
-            _logger.LogDebug("Created new video entity {VideoId} for {VideoTitle} with thumbnail and description",
-                videoEntity.Id, videoEntity.Title);
-
-            return videoEntity;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error ensuring video {VideoId} exists internally", video.YouTubeVideoId);
-            throw;
-        }
-    }
-
-    #endregion
 }

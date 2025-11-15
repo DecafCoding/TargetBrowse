@@ -1,7 +1,6 @@
 using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
-using TargetBrowse.Features.Videos.Data;
 using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.ChannelVideos.Services;
@@ -15,7 +14,7 @@ public class ChannelVideosService : IChannelVideosService
     private readonly IChannelVideosRepository _repository;
     private readonly ISharedYouTubeService _youTubeService;
     private readonly IMessageCenterService _messageCenter;
-    private readonly IVideoRepository _videoRepository;
+    private readonly IVideoDataService _videoDataService;
     private readonly IChannelRepository _channelRepository;
     private readonly ILogger<ChannelVideosService> _logger;
 
@@ -24,14 +23,14 @@ public class ChannelVideosService : IChannelVideosService
         ISharedYouTubeService youTubeService,
         IMessageCenterService messageCenter,
         IChannelRepository channelRepository,
-        IVideoRepository videoRepository,
+        IVideoDataService videoDataService,
         ILogger<ChannelVideosService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _youTubeService = youTubeService ?? throw new ArgumentNullException(nameof(youTubeService));
         _messageCenter = messageCenter ?? throw new ArgumentNullException(nameof(messageCenter));
         _channelRepository = channelRepository ?? throw new ArgumentNullException(nameof(channelRepository));
-        _videoRepository = videoRepository ?? throw new ArgumentNullException(nameof(videoRepository));
+        _videoDataService = videoDataService ?? throw new ArgumentNullException(nameof(videoDataService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -192,12 +191,12 @@ public class ChannelVideosService : IChannelVideosService
 
             _logger.LogDebug("Storing {VideoCount} videos in database", videos.Count);
 
-            // Store each video in the database using the video repository
+            // Store each video in the database using the video data service
             foreach (var video in videos)
             {
                 try
                 {
-                    await _videoRepository.EnsureVideoExistsAsync(video);
+                    await _videoDataService.EnsureVideoExistsAsync(video);
                 }
                 catch (Exception ex)
                 {
