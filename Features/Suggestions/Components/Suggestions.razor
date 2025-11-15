@@ -14,6 +14,38 @@
         <div class="col-lg-3">
             <!-- Help and Tips Sidebar -->
             <div class="sidebar-content">
+                <!-- Progress Bar -->
+                @if (PendingSuggestionsCount > 0)
+                {
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="queue-progress">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Queue Usage</small>
+                                    <small class="text-muted">@PendingSuggestionsCount / 100</small>
+                                </div>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar @GetProgressBarClass()"
+                                         style="width: @(ProgressPercentage)%"></div>
+                                </div>
+                                @if (IsNearLimit)
+                                {
+                                    <small class="text-warning mt-1 d-block">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        @if (IsAtLimit)
+                                        {
+                                            @:Queue is full. Approve or remove suggestions to get new ones.
+                                        }
+                                        else
+                                        {
+                                            @:Approaching queue limit. Consider reviewing suggestions.
+                                        }
+                                    </small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
                 <!-- Recent Messages -->
                 <MessageSidebar />
                 <!-- Quick Stats -->

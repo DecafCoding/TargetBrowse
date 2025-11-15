@@ -258,19 +258,4 @@ private async Task LoadMoreSuggestions()
     }
 
     #endregion
-
-    #region Helper Methods
-
-    private string GetProgressBarClass()
-    {
-        return QueueModel.ProgressPercentage switch
-        {
-            >= 90 => "bg-danger",
-            >= 75 => "bg-warning",
-            >= 50 => "bg-info",
-            _ => "bg-success"
-        };
-    }
-
-    #endregion
 }

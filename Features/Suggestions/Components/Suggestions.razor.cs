@@ -41,6 +41,11 @@ public partial class Suggestions : ComponentBase
     protected int PendingSuggestionsCount { get; set; } = 0;
     protected int LastGeneratedDaysAgo { get; set; } = -1;
 
+    // Progress Bar Properties
+    protected int ProgressPercentage => Math.Min((PendingSuggestionsCount * 100) / 100, 100);
+    protected bool IsNearLimit => PendingSuggestionsCount >= 80;
+    protected bool IsAtLimit => PendingSuggestionsCount >= 100;
+
     // Generation History
     protected List<SuggestionGeneration> RecentGenerations { get; set; } = new();
 
@@ -245,6 +250,21 @@ public partial class Suggestions : ComponentBase
         {
             Logger.LogError(ex, "Failed to update suggestions count for user {UserId}", CurrentUserId);
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    protected string GetProgressBarClass()
+    {
+        return ProgressPercentage switch
+        {
+            >= 90 => "bg-danger",
+            >= 75 => "bg-warning",
+            >= 50 => "bg-info",
+            _ => "bg-success"
+        };
     }
 
     #endregion
