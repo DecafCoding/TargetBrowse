@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse.Services.DataServices;

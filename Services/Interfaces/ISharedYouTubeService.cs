@@ -1,4 +1,4 @@
-﻿using TargetBrowse.Features.Suggestions.Models;
+﻿using TargetBrowse.Services.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Services.Interfaces;

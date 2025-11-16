@@ -2,7 +2,7 @@ using Google.Apis.YouTube.v3.Data;
 using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Services.YouTube;
 using TargetBrowse.Services.Interfaces;

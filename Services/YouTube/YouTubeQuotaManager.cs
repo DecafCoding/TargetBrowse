@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;
 

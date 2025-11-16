@@ -2,6 +2,7 @@ using TargetBrowse.Features.Channels.Data;
 using TargetBrowse.Features.ChannelVideos.Data;
 using TargetBrowse.Features.ChannelVideos.Models;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.ChannelVideos.Services;
 
@@ -115,7 +116,7 @@ public class ChannelVideosService : IChannelVideosService
                     await _channelRepository.UpdateLastCheckDateAsync(youTubeChannelId, DateTime.UtcNow);
 
                     // Store videos in database for future use
-                    var videos = videosResult.Data ?? new List<Features.Suggestions.Models.VideoInfo>();
+                    var videos = videosResult.Data ?? new List<VideoInfo>();
                     await StoreVideosInDatabase(videos);
 
                     // Get videos from database to ensure consistency
@@ -183,7 +184,7 @@ public class ChannelVideosService : IChannelVideosService
     /// Stores YouTube API video results in the database for future use.
     /// Uses the video repository to ensure videos exist in the database.
     /// </summary>
-    private async Task StoreVideosInDatabase(List<Features.Suggestions.Models.VideoInfo> videos)
+    private async Task StoreVideosInDatabase(List<VideoInfo> videos)
     {
         try
         {
@@ -290,7 +291,7 @@ public class ChannelVideosService : IChannelVideosService
     /// <summary>
     /// Maps VideoInfo from shared YouTube service to ChannelVideoModel for display.
     /// </summary>
-    private static ChannelVideoModel MapToChannelVideoModel(Features.Suggestions.Models.VideoInfo video)
+    private static ChannelVideoModel MapToChannelVideoModel(VideoInfo video)
     {
         return new ChannelVideoModel
         {

@@ -2,7 +2,6 @@
 using System.Linq;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
 

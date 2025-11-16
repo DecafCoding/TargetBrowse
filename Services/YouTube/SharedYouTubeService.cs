@@ -2,8 +2,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
-using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Services.YouTube;

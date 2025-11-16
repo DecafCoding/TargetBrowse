@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Topics.Models;
 using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
