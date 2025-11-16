@@ -18,6 +18,9 @@
         <div class="col-lg-3">
             <!-- Search & Filter Bar -->
             <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Rating History</h5>
+                </div>
                 <div class="card-body p-3">
                     <div class="d-flex flex-column gap-3">
                         <!-- Search Input -->
@@ -153,9 +156,6 @@
         <div class="col-lg-9">
             <!-- Rating History Table -->
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Rating History</h5>
-                </div>
                 <div class="card-body">
             @if (isLoading)
             {
@@ -195,7 +195,7 @@
             {
                 <div class="table-responsive">
                     <table class="table table-hover align-middle table-sm">
-                        <thead class="table-light">
+                        <thead class="table"">
                             <tr>
                                 <th style="width: 100px;" class="d-none d-md-table-cell">Thumbnail</th>
                                 <th>Title</th>
@@ -214,8 +214,8 @@
                                     </td>
                                     <td>
                                         <div>
-                                            <a href="/watch/@rating.YouTubeVideoId" class="text-decoration-none text-white">
-                                                <strong>@((MarkupString)System.Net.WebUtility.HtmlDecode(rating.VideoTitle))</strong>
+                                            <a href="/watch/@rating.YouTubeVideoId" class="text-decoration-none video-text text-white">
+                                                @((MarkupString)System.Net.WebUtility.HtmlDecode(rating.VideoTitle))
                                             </a>
                                             <div class="d-md-none small text-muted mt-1">
                                                 <div style="cursor: pointer;" @onclick="() => EditRating(rating)">

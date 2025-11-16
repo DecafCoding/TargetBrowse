@@ -9,18 +9,6 @@
 @rendermode InteractiveServer
 
 <div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            @if (SearchResults.Any())
-            {
-                <text>Channel Results: @SearchResults.Count found</text>
-            }
-            else
-            {
-                <text>Channels</text>
-            }
-        </h5>
-    </div>
     <div class="card-body">
         @if (SearchResults.Any())
         {
