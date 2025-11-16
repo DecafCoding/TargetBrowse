@@ -20,63 +20,36 @@
     <!-- Stats Summary Cards -->
     @if (stats != null && stats.TotalRatings > 0)
     {
-        <div class="row mb-4 g-3">
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">Total Ratings</h6>
-                        <h3 class="mb-0">@stats.TotalRatings</h3>
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-3 align-items-center">
+                    <div class="flex-shrink-0" style="cursor: pointer;" @onclick='() => SetRatingFilter("", "All Ratings")'>
+                        <span class="fw-bold">Total: (@stats.TotalRatings)</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">Average</h6>
-                        <h3 class="mb-0">
-                            @stats.AverageStarsGiven.ToString("0.0")
-                            <i class="bi bi-star-fill text-warning" style="font-size: 0.7em;"></i>
-                        </h3>
+                    <div class="vr d-none d-md-block"></div>
+                    <div class="flex-shrink-0" style="cursor: pointer;" @onclick='() => SetRatingFilter("5", "⭐⭐⭐⭐⭐ 5 Stars")'>
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <span class="ms-1">5 Stars: (@GetStarCount(5))</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card border-warning">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">
-                            <i class="bi bi-star-fill text-warning"></i> 5 Stars
-                        </h6>
-                        <h3 class="mb-0">@GetStarCount(5)</h3>
+                    <div class="vr d-none d-md-block"></div>
+                    <div class="flex-shrink-0" style="cursor: pointer;" @onclick='() => SetRatingFilter("4", "⭐⭐⭐⭐ 4+ Stars")'>
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <span class="ms-1">4 Stars: (@GetStarCount(4))</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">
-                            <i class="bi bi-star-fill text-warning"></i> 4 Stars
-                        </h6>
-                        <h3 class="mb-0">@GetStarCount(4)</h3>
+                    <div class="vr d-none d-md-block"></div>
+                    <div class="flex-shrink-0" style="cursor: pointer;" @onclick='() => SetRatingFilter("3", "⭐⭐⭐ 3+ Stars")'>
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <span class="ms-1">3 Stars: (@GetStarCount(3))</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">
-                            <i class="bi bi-star-fill text-warning"></i> 3 Stars
-                        </h6>
-                        <h3 class="mb-0">@GetStarCount(3)</h3>
+                    <div class="vr d-none d-md-block"></div>
+                    <div class="flex-shrink-0" style="cursor: pointer;" @onclick='() => SetRatingFilter("1-2", "⭐⭐ 1-2 Stars")'>
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <span class="ms-1">1-2 Stars: (@(GetStarCount(2) + GetStarCount(1)))</span>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted mb-2 small">
-                            <i class="bi bi-star-fill text-warning"></i> 1-2 Stars
-                        </h6>
-                        <h3 class="mb-0">@(GetStarCount(2) + GetStarCount(1))</h3>
+                    <div class="vr d-none d-md-block"></div>
+                    <div class="flex-shrink-0 text-muted">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <span class="ms-1">Avg: @stats.AverageStarsGiven.ToString("0.0")</span>
                     </div>
                 </div>
             </div>
