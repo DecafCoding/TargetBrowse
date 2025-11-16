@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
+
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Services;
 using TargetBrowse.Services.Utilities;
