@@ -15,10 +15,15 @@
             <!-- Help and Tips Sidebar -->
             <div class="sidebar-content">
                 <!-- Progress Bar -->
-                @if (PendingSuggestionsCount > 0)
-                {
-                    <div class="card mb-4">
-                        <div class="card-body">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            Suggestions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (PendingSuggestionsCount > 0)
+                        {
                             <div class="queue-progress">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <small class="text-muted">Queue Usage</small>
@@ -43,9 +48,10 @@
                                     </small>
                                 }
                             </div>
-                        </div>
+                        }
                     </div>
-                }
+                </div>
+
                 <!-- Recent Messages -->
                 <MessageSidebar />
                 <!-- Quick Stats -->
