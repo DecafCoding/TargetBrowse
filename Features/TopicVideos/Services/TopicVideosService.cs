@@ -1,5 +1,6 @@
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Topics.Services;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Services.Interfaces;
@@ -100,7 +101,7 @@ public class TopicVideosService : ITopicVideosService
                 return new List<TopicVideoDisplayModel>();
             }
 
-            var videos = youTubeResult.Data ?? new List<Suggestions.Models.VideoInfo>();
+            var videos = youTubeResult.Data ?? new List<VideoInfo>();
 
             if (!videos.Any())
             {
