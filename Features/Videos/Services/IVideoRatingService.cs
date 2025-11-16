@@ -1,4 +1,5 @@
 using TargetBrowse.Features.Videos.Models;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Videos.Services;
 
@@ -216,50 +217,5 @@ public class VideoRatingSummary
         >= 2.0 => "text-warning",
         > 0 => "text-danger",
         _ => "text-muted"
-    };
-}
-
-/// <summary>
-/// Result of rating validation with any error messages.
-/// </summary>
-public class RatingValidationResult
-{
-    /// <summary>
-    /// Whether the user can rate the video.
-    /// </summary>
-    public bool CanRate { get; set; }
-
-    /// <summary>
-    /// List of validation error messages.
-    /// </summary>
-    public List<string> ErrorMessages { get; set; } = new();
-
-    /// <summary>
-    /// Additional context information.
-    /// </summary>
-    public string? Context { get; set; }
-
-    /// <summary>
-    /// Creates a successful validation result.
-    /// </summary>
-    public static RatingValidationResult Success() => new() { CanRate = true };
-
-    /// <summary>
-    /// Creates a failed validation result with error messages.
-    /// </summary>
-    public static RatingValidationResult Failure(params string[] errors) => new()
-    {
-        CanRate = false,
-        ErrorMessages = errors.ToList()
-    };
-
-    /// <summary>
-    /// Creates a failed validation result with a single error message.
-    /// </summary>
-    public static RatingValidationResult Failure(string error, string? context = null) => new()
-    {
-        CanRate = false,
-        ErrorMessages = new List<string> { error },
-        Context = context
     };
 }
