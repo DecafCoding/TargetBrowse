@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.Topics.Models;
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.TopicVideos.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.TopicVideos.Components;
 
@@ -34,7 +34,7 @@ public partial class TopicVideos : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask);
         await LoadTopicAsync();
     }
 
@@ -46,22 +46,6 @@ public partial class TopicVideos : ComponentBase
             IsLoading = true;
             HasError = false;
             await LoadTopicAsync();
-        }
-    }
-
-    /// <summary>
-    /// Gets the current authenticated user's ID.
-    /// </summary>
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            var authState = await AuthenticationStateTask!;
-            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-        catch (Exception)
-        {
-            CurrentUserId = null;
         }
     }
 

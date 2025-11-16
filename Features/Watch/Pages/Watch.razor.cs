@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.Watch.Models;
 using TargetBrowse.Features.Watch.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Utilities;
 using TargetBrowse.Data.Entities;
 
 namespace TargetBrowse.Features.Watch.Pages;
@@ -88,7 +88,7 @@ public partial class Watch : ComponentBase
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
         await LoadVideoData();
     }
 
@@ -101,30 +101,6 @@ public partial class Watch : ComponentBase
         if (Model.YouTubeVideoId != YouTubeVideoId)
         {
             await LoadVideoData();
-        }
-    }
-
-    #endregion
-
-    #region User Authentication
-
-    /// <summary>
-    /// Gets the current authenticated user's ID from the authentication state.
-    /// </summary>
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            if (AuthenticationStateTask != null)
-            {
-                var authState = await AuthenticationStateTask;
-                CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error getting current user ID");
-            CurrentUserId = null;
         }
     }
 
