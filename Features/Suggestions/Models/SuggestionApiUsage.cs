@@ -1,4 +1,6 @@
-﻿namespace TargetBrowse.Features.Suggestions.Models;
+﻿using TargetBrowse.Services.YouTube.Models;
+
+namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
 /// Enhanced API usage tracking with detailed metrics.
