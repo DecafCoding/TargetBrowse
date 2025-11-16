@@ -13,6 +13,91 @@
             <!-- Recent Messages -->
             <MessageSidebar />
 
+            <!-- Video Library Controls Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Video Library
+                    </h5>
+                    <p class="text-muted mb-0 small">
+                        Manage and organize your saved YouTube videos for focused content consumption. You have @Videos.Count in your library.
+                    </p>
+                </div>
+                <div class="card-body">
+                    @if (!IsLoading && !string.IsNullOrEmpty(LastError) == false && Videos.Any())
+                    {
+                        <!-- Search Input -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Search Library</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Search your library..."
+                                       @bind="LibrarySearchQuery"
+                                       @oninput="OnLibrarySearchInput" />
+                                @if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
+                                {
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            @onclick="ClearLibrarySearch">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Rating Filter Dropdown -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Filter by Rating</label>
+                            <div class="dropdown d-grid">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-star me-1"></i>
+                                    @CurrentRatingFilter
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("All Videos")'>All Videos</button></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Rated")'>Rated Videos</button></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Not Rated")'>Not Rated</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("5 Stars")'>5 Stars</button></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("4+ Stars")'>4+ Stars</button></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("3+ Stars")'>3+ Stars</button></li>
+                                    <li><button class="dropdown-item" @onclick='() => SetRatingFilter("1-2 Stars")'>1-2 Stars</button></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Sort Dropdown -->
+                        <div class="mb-0">
+                            <label class="form-label small text-muted">Sort By</label>
+                            <div class="dropdown d-grid">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    @CurrentSortOption
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    <li><button class="dropdown-item" @onclick="SortByDateAdded">Date Added</button></li>
+                                    <li><button class="dropdown-item" @onclick="SortByTitle">Title</button></li>
+                                    <li><button class="dropdown-item" @onclick="SortByDuration">Duration</button></li>
+                                    <li><button class="dropdown-item" @onclick="SortByViews">Views</button></li>
+                                    <li><button class="dropdown-item" @onclick="SortByPublished">Published Date</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" @onclick="SortByRating">Rating (High to Low)</button></li>
+                                    <li><button class="dropdown-item" @onclick="SortByRatingLowToHigh">Rating (Low to High)</button></li>
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
             <!-- Library Stats -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -41,14 +126,6 @@
     <div class="col-lg-9">
         <!-- My Video Library Section -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    Video Library
-                </h5>
-                <p class="text-muted mb-0">
-                    Manage and organize your saved YouTube videos for focused content consumption. You have @Videos.Count in your library.
-                </p>
-            </div>
             <div class="card-body">
                 @if (IsLoading)
                 {
@@ -109,71 +186,8 @@
                 }
                 else
                 {
-                    <!-- Library Controls - Search, Sort, Filter, and Count on same line -->
-                    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3 mb-4">
-                        <!-- Search Input (takes up remaining space) -->
-                        <div class="flex-grow-1" style="min-width: 200px;">
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control"
-                                       placeholder="Search your library..."
-                                       @bind="LibrarySearchQuery"
-                                       @oninput="OnLibrarySearchInput" />
-                                @if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
-                                {
-                                    <button class="btn btn-outline-secondary"
-                                            type="button"
-                                            @onclick="ClearLibrarySearch">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Rating Filter Dropdown -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle"
-                                    type="button"
-                                    data-bs-toggle="dropdown">
-                                <i class="bi bi-star me-1"></i>
-                                Filter: @CurrentRatingFilter
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("All Videos")'>All Videos</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Rated")'>Rated Videos</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("Not Rated")'>Not Rated</button></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("5 Stars")'>5 Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("4+ Stars")'>4+ Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("3+ Stars")'>3+ Stars</button></li>
-                                <li><button class="dropdown-item" @onclick='() => SetRatingFilter("1-2 Stars")'>1-2 Stars</button></li>
-                            </ul>
-                        </div>
-
-                        <!-- Sort Dropdown -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle"
-                                    type="button"
-                                    data-bs-toggle="dropdown">
-                                <i class="bi bi-funnel me-1"></i>
-                                Sort: @CurrentSortOption
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><button class="dropdown-item" @onclick="SortByDateAdded">Date Added</button></li>
-                                <li><button class="dropdown-item" @onclick="SortByTitle">Title</button></li>
-                                <li><button class="dropdown-item" @onclick="SortByDuration">Duration</button></li>
-                                <li><button class="dropdown-item" @onclick="SortByViews">Views</button></li>
-                                <li><button class="dropdown-item" @onclick="SortByPublished">Published Date</button></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><button class="dropdown-item" @onclick="SortByRating">Rating (High to Low)</button></li>
-                                <li><button class="dropdown-item" @onclick="SortByRatingLowToHigh">Rating (Low to High)</button></li>
-                            </ul>
-                        </div>
-
-                        <!-- Categorize Button (NEW) -->
+                    <!-- Categorize Button -->
+                    <div class="mb-4">
                         <button type="button"
                                 class="btn btn-outline-primary"
                                 @onclick="CategorizeVideosAsync"
@@ -188,20 +202,6 @@
                                 <i class="bi bi-tags me-1"></i>
                                 <span>Categorize (@UncategorizedCount)</span>
                             }
-                        </button>
-
-                        <!-- Rating History Link -->
-                        <a href="/rating-history" class="btn btn-outline-info">
-                            <i class="bi bi-clock-history me-1"></i>
-                            Rating History
-                        </a>
-
-                        <!-- Refresh Button (EXISTING - Keep as is) -->
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                @onclick="RefreshAsync">
-                            <i class="bi bi-arrow-clockwise me-1"></i>
-                            Refresh
                         </button>
                     </div>
 
