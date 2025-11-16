@@ -158,13 +158,15 @@ public partial class RatingHistory : ComponentBase, IDisposable
         };
     }
 
-    private async Task OnSearchChanged()
+    private void OnSearchInput(ChangeEventArgs e)
     {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+
         // Debounce search
         searchDebounceTimer?.Stop();
         searchDebounceTimer?.Dispose();
         searchDebounceTimer = new System.Timers.Timer(300);
-        searchDebounceTimer.Elapsed += async (s, e) =>
+        searchDebounceTimer.Elapsed += async (s, evt) =>
         {
             await InvokeAsync(async () =>
             {
