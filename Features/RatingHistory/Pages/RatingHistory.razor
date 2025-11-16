@@ -7,6 +7,7 @@
 @using TargetBrowse.Features.RatingHistory.Components
 @using TargetBrowse.Services
 @using TargetBrowse.Services.Utilities
+@using TargetBrowse.Components.Shared
 @attribute [Authorize]
 
 <PageTitle>My Rating History - TargetBrowse</PageTitle>
@@ -57,11 +58,7 @@
                     <div class="d-flex flex-column gap-3">
                         <!-- Search Input -->
                         <div>
-                            <label class="form-label small text-muted mb-1">Search</label>
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text">
-                                    <i class="bi bi-search"></i>
-                                </span>
                                 <input type="text"
                                        class="form-control"
                                        placeholder="Search by title or notes..."
@@ -75,18 +72,21 @@
                                         <i class="bi bi-x"></i>
                                     </button>
                                 }
+                                <button class="btn btn-primary"
+                                        type="button">
+                                    <i class="bi bi-search"></i>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Sort Dropdown -->
                         <div>
-                            <label class="form-label small text-muted mb-1">Sort</label>
                             <div class="dropdown d-grid">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
                                         type="button"
                                         data-bs-toggle="dropdown">
                                     <i class="bi bi-funnel me-1"></i>
-                                    @currentSortLabel
+                                    Sort By: @currentSortLabel
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><button class="dropdown-item" @onclick='() => SetSort("newest", "Newest First")'>Newest First</button></li>
@@ -100,6 +100,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Message Center -->
+            <MessageSidebar />
         </div>
 
         <!-- Right Content Area -->
@@ -164,12 +167,11 @@
                                     <td class="d-none d-md-table-cell">
                                         <img src="@GetThumbnailUrl(rating.YouTubeVideoId)"
                                              alt="@rating.VideoTitle"
-                                             class="img-thumbnail"
                                              style="width: 80px; height: 60px; object-fit: cover;" />
                                     </td>
                                     <td>
                                         <div>
-                                            <a href="/watch/@rating.YouTubeVideoId" class="text-decoration-none">
+                                            <a href="/watch/@rating.YouTubeVideoId" class="text-decoration-none text-white">
                                                 <strong>@rating.VideoTitle</strong>
                                             </a>
                                             <div class="d-md-none small text-muted mt-1">
