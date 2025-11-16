@@ -1,0 +1,307 @@
+@page "/rating-history"
+@using Microsoft.AspNetCore.Components.Authorization
+@using TargetBrowse.Features.Videos.Services
+@using TargetBrowse.Features.Videos.Models
+@using TargetBrowse.Features.Videos.Components
+@using TargetBrowse.Services
+@using TargetBrowse.Services.Utilities
+@attribute [Authorize]
+
+<PageTitle>My Rating History - TargetBrowse</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-clock-history me-2"></i>My Rating History</h2>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    @if (stats != null && stats.TotalRatings > 0)
+    {
+        <div class="row mb-4 g-3">
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">Total Ratings</h6>
+                        <h3 class="mb-0">@stats.TotalRatings</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">Average</h6>
+                        <h3 class="mb-0">
+                            @stats.AverageStarsGiven.ToString("0.0")
+                            <i class="bi bi-star-fill text-warning" style="font-size: 0.7em;"></i>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">
+                            <i class="bi bi-star-fill text-warning"></i> 5 Stars
+                        </h6>
+                        <h3 class="mb-0">@GetStarCount(5)</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">
+                            <i class="bi bi-star-fill text-warning"></i> 4 Stars
+                        </h6>
+                        <h3 class="mb-0">@GetStarCount(4)</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">
+                            <i class="bi bi-star-fill text-warning"></i> 3 Stars
+                        </h6>
+                        <h3 class="mb-0">@GetStarCount(3)</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2 small">
+                            <i class="bi bi-star-fill text-warning"></i> 1-2 Stars
+                        </h6>
+                        <h3 class="mb-0">@(GetStarCount(2) + GetStarCount(1))</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Search & Filter Bar -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input class="form-control"
+                               placeholder="Search by title or notes..."
+                               @bind="searchQuery"
+                               @bind:event="oninput"
+                               @bind:after="OnSearchChanged" />
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <select class="form-select" @bind="filterStars" @bind:after="OnFilterChanged">
+                        <option value="">All Ratings</option>
+                        <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                        <option value="4">⭐⭐⭐⭐ 4+ Stars</option>
+                        <option value="3">⭐⭐⭐ 3+ Stars</option>
+                        <option value="1-2">⭐⭐ 1-2 Stars</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <select class="form-select" @bind="sortOrder" @bind:after="OnSortChanged">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="highest">Highest Rated</option>
+                        <option value="lowest">Lowest Rated</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating History Table -->
+    <div class="card">
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-2">Loading your rating history...</p>
+                </div>
+            }
+            else if (totalRatings == 0 && string.IsNullOrEmpty(searchQuery) && string.IsNullOrEmpty(filterStars))
+            {
+                <!-- Empty State - No ratings at all -->
+                <div class="text-center py-5">
+                    <i class="bi bi-star display-1 text-muted"></i>
+                    <h4 class="mt-3">No Ratings Yet</h4>
+                    <p class="text-muted">Start rating videos to see your history here!</p>
+                    <a href="/videos" class="btn btn-primary mt-2">
+                        <i class="bi bi-collection-play me-2"></i>
+                        Go to Video Library
+                    </a>
+                </div>
+            }
+            else if (ratings.Count == 0)
+            {
+                <!-- Empty State - No results for current filter/search -->
+                <div class="text-center py-5">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                    <h4 class="mt-3">No Matching Ratings</h4>
+                    <p class="text-muted">Try adjusting your filters or search query.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 100px;" class="d-none d-md-table-cell">Thumbnail</th>
+                                <th>Title</th>
+                                <th style="width: 140px;">Rating</th>
+                                <th class="d-none d-lg-table-cell">Notes</th>
+                                <th style="width: 110px;" class="d-none d-md-table-cell">Date</th>
+                                <th style="width: 160px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rating in ratings)
+                            {
+                                <tr>
+                                    <td class="d-none d-md-table-cell">
+                                        <img src="@GetThumbnailUrl(rating.YouTubeVideoId)"
+                                             alt="@rating.VideoTitle"
+                                             class="img-thumbnail"
+                                             style="width: 80px; height: 60px; object-fit: cover;" />
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>@rating.VideoTitle</strong>
+                                            <div class="d-md-none small text-muted mt-1">
+                                                <StarRatingInput CurrentValue="@rating.Stars"
+                                                                Size="StarRatingInput.StarSize.Small"
+                                                                IsDisabled="true"
+                                                                ShowLabel="false"
+                                                                ShowHoverEffects="false" />
+                                                <span class="ms-2">
+                                                    @FormatHelper.FormatDateDisplay(rating.CreatedAt)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        <StarRatingInput CurrentValue="@rating.Stars"
+                                                        Size="StarRatingInput.StarSize.Small"
+                                                        IsDisabled="true"
+                                                        ShowLabel="false"
+                                                        ShowHoverEffects="false" />
+                                    </td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <div class="text-truncate"
+                                             style="max-width: 350px;"
+                                             title="@rating.Notes">
+                                            @rating.Notes
+                                        </div>
+                                    </td>
+                                    <td class="text-muted small d-none d-md-table-cell">
+                                        @FormatHelper.FormatDateDisplay(rating.CreatedAt)
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <a href="/watch/@rating.YouTubeVideoId"
+                                               target="_blank"
+                                               class="btn btn-outline-secondary btn-sm"
+                                               title="Watch video">
+                                                <i class="bi bi-play-circle"></i>
+                                                <span class="d-none d-sm-inline ms-1">Watch</span>
+                                            </a>
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    @onclick="() => EditRating(rating)"
+                                                    title="Edit rating">
+                                                <i class="bi bi-pencil"></i>
+                                                <span class="d-none d-sm-inline ms-1">Edit</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 gap-2">
+                    <div class="text-muted small">
+                        Showing @GetStartRecord() - @GetEndRecord() of @totalRatings
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <!-- Page Size Selector -->
+                        <select class="form-select form-select-sm"
+                                style="width: auto;"
+                                @bind="pageSize"
+                                @bind:after="OnPageSizeChanged">
+                            <option value="10">10 per page</option>
+                            <option value="20">20 per page</option>
+                            <option value="50">50 per page</option>
+                            <option value="100">100 per page</option>
+                        </select>
+
+                        <!-- Pagination Controls -->
+                        @if (totalPages > 1)
+                        {
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(currentPage == 1)">
+                                            <i class="bi bi-chevron-double-left"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </button>
+                                    </li>
+
+                                    @foreach (var page in GetVisiblePages())
+                                    {
+                                        <li class="page-item @(page == currentPage ? "active" : "")">
+                                            <button class="page-link" @onclick="() => ChangePage(page)">
+                                                @page
+                                            </button>
+                                        </li>
+                                    }
+
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == totalPages)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(totalPages)" disabled="@(currentPage == totalPages)">
+                                            <i class="bi bi-chevron-double-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Rating Edit Modal -->
+@if (selectedRating != null && currentRatingModel != null)
+{
+    <VideoRatingModal IsVisible="@showEditModal"
+                     Model="@currentRatingModel"
+                     OnClose="@OnModalClose"
+                     OnSubmit="@HandleRatingSubmit"
+                     OnDelete="@HandleRatingDelete" />
+}
