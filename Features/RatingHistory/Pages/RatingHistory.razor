@@ -1,4 +1,5 @@
 @page "/rating-history"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using TargetBrowse.Features.Videos.Services
 @using TargetBrowse.Features.Videos.Models
@@ -92,14 +93,13 @@
                         </span>
                         <input class="form-control"
                                placeholder="Search by title or notes..."
-                               @bind="searchQuery"
-                               @bind:event="oninput"
-                               @bind:after="OnSearchChanged" />
+                               @bind-value="searchQuery"
+                               @oninput="OnSearchInput" />
                     </div>
                 </div>
 
                 <div class="col-md-3">
-                    <select class="form-select" @bind="filterStars" @bind:after="OnFilterChanged">
+                    <select class="form-select" @bind="filterStars" @onchange="OnFilterChanged">
                         <option value="">All Ratings</option>
                         <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
                         <option value="4">⭐⭐⭐⭐ 4+ Stars</option>
@@ -109,7 +109,7 @@
                 </div>
 
                 <div class="col-md-4">
-                    <select class="form-select" @bind="sortOrder" @bind:after="OnSortChanged">
+                    <select class="form-select" @bind="sortOrder" @onchange="OnSortChanged">
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
                         <option value="highest">Highest Rated</option>
@@ -244,7 +244,7 @@
                         <select class="form-select form-select-sm"
                                 style="width: auto;"
                                 @bind="pageSize"
-                                @bind:after="OnPageSizeChanged">
+                                @onchange="OnPageSizeChanged">
                             <option value="10">10 per page</option>
                             <option value="20">20 per page</option>
                             <option value="50">50 per page</option>
@@ -271,7 +271,7 @@
                                     {
                                         <li class="page-item @(page == currentPage ? "active" : "")">
                                             <button class="page-link" @onclick="() => ChangePage(page)">
-                                                @page
+                                                @@page
                                             </button>
                                         </li>
                                     }
