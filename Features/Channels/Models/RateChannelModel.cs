@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TargetBrowse.Features.Channels.Components;
+using TargetBrowse.Features.Channels.Utilities;
 using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Channels.Models;
@@ -30,7 +31,7 @@ public class RateChannelModel
     /// Star rating from 1 to 5.
     /// </summary>
     [Required(ErrorMessage = "Star rating is required")]
-    [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars")]
+    [Range(RatingValidator.MinStars, RatingValidator.MaxStars, ErrorMessage = "Rating must be between 1 and 5 stars")]
     public int Stars { get; set; }
 
     /// <summary>
@@ -38,7 +39,7 @@ public class RateChannelModel
     /// Required with minimum length to ensure meaningful feedback.
     /// </summary>
     [Required(ErrorMessage = "Notes are required to explain your rating")]
-    [StringLength(1000, MinimumLength = 10,
+    [StringLength(RatingValidator.MaxNotesLength, MinimumLength = RatingValidator.MinNotesLength,
         ErrorMessage = "Notes must be between 10 and 1000 characters. Please explain why you gave this rating.")]
     public string Notes { get; set; } = string.Empty;
 
@@ -62,6 +63,9 @@ public class RateChannelModel
 
         if (ChannelId == Guid.Empty)
             errors.Add("Valid channel is required");
+
+        if (!string.IsNullOrWhiteSpace(YouTubeChannelId) && !YouTubeUrlParser.IsValidChannelId(YouTubeChannelId))
+            errors.Add("YouTube channel ID format is invalid");
 
         // Use shared rating validator for common validation logic
         errors.AddRange(RatingValidator.ValidateRating(Stars, Notes));
