@@ -19,10 +19,14 @@ public partial class RatingHistory : ComponentBase, IDisposable
     // State
     private List<VideoRatingModel> ratings = new();
     private UserRatingStats? stats;
-    private VideoRatingModel? selectedRating;
-    private RateVideoModel? currentRatingModel;
     private bool isLoading = true;
     private bool showEditModal = false;
+
+    // Selected rating for editing
+    private Guid selectedRatingId = Guid.Empty;
+    private string selectedVideoTitle = "";
+    private int selectedStars = 0;
+    private string selectedNotes = "";
 
     // Pagination
     private int currentPage = 1;
@@ -34,6 +38,10 @@ public partial class RatingHistory : ComponentBase, IDisposable
     private string searchQuery = string.Empty;
     private string filterStars = string.Empty;
     private string sortOrder = "newest";
+
+    // Filter/Sort labels
+    private string currentFilterLabel = "All Ratings";
+    private string currentSortLabel = "Newest First";
 
     // Debounce
     private System.Timers.Timer? searchDebounceTimer;
@@ -178,19 +186,31 @@ public partial class RatingHistory : ComponentBase, IDisposable
         searchDebounceTimer.Start();
     }
 
-    private async Task OnFilterChanged()
+    private async Task ClearSearch()
     {
+        searchQuery = string.Empty;
         currentPage = 1;
         await LoadRatings();
     }
 
-    private async Task OnSortChanged()
+    private async Task SetRatingFilter(string filter, string label)
     {
+        filterStars = filter;
+        currentFilterLabel = label;
+        currentPage = 1;
         await LoadRatings();
     }
 
-    private async Task OnPageSizeChanged()
+    private async Task SetSort(string sort, string label)
     {
+        sortOrder = sort;
+        currentSortLabel = label;
+        await LoadRatings();
+    }
+
+    private async Task SetPageSize(int size)
+    {
+        pageSize = size;
         currentPage = 1;
         await LoadRatings();
     }
@@ -202,49 +222,46 @@ public partial class RatingHistory : ComponentBase, IDisposable
         await LoadRatings();
     }
 
+    private async Task ClearFilters()
+    {
+        searchQuery = string.Empty;
+        filterStars = string.Empty;
+        currentFilterLabel = "All Ratings";
+        currentPage = 1;
+        await LoadRatings();
+    }
+
     private void EditRating(VideoRatingModel rating)
     {
-        selectedRating = rating;
-
-        // Create RateVideoModel from VideoRatingModel for editing
-        currentRatingModel = new RateVideoModel
-        {
-            RatingId = rating.Id,
-            VideoId = rating.VideoId,
-            YouTubeVideoId = rating.YouTubeVideoId,
-            VideoTitle = rating.VideoTitle,
-            Stars = rating.Stars,
-            Notes = rating.Notes
-        };
-
+        selectedRatingId = rating.Id;
+        selectedVideoTitle = rating.VideoTitle;
+        selectedStars = rating.Stars;
+        selectedNotes = rating.Notes;
         showEditModal = true;
         StateHasChanged();
     }
 
-    private async Task HandleRatingSubmit(RateVideoModel ratingModel)
+    private async Task HandleRatingSubmit((Guid RatingId, int Stars, string Notes) data)
     {
-        if (string.IsNullOrWhiteSpace(currentUserId) || ratingModel == null) return;
+        if (string.IsNullOrWhiteSpace(currentUserId)) return;
 
         try
         {
-            if (ratingModel.IsEditing && ratingModel.RatingId.HasValue)
+            var ratingModel = new RateVideoModel
             {
-                // Update existing rating
-                await VideoRatingService.UpdateRatingAsync(currentUserId, ratingModel.RatingId.Value, ratingModel);
-                await MessageCenter.ShowSuccessAsync("Rating updated successfully!");
-            }
-            else
-            {
-                // Create new rating (shouldn't happen in this context, but handle it anyway)
-                await VideoRatingService.CreateRatingAsync(currentUserId, ratingModel);
-                await MessageCenter.ShowSuccessAsync("Rating created successfully!");
-            }
+                RatingId = data.RatingId,
+                VideoId = Guid.Empty, // Will be retrieved from existing rating
+                YouTubeVideoId = "", // Will be retrieved from existing rating
+                VideoTitle = selectedVideoTitle,
+                Stars = data.Stars,
+                Notes = data.Notes
+            };
+
+            await VideoRatingService.UpdateRatingAsync(currentUserId, data.RatingId, ratingModel);
+            await MessageCenter.ShowSuccessAsync("Rating updated successfully!");
 
             // Close modal and refresh data
             showEditModal = false;
-            selectedRating = null;
-            currentRatingModel = null;
-
             await LoadStats();
             await LoadRatings();
         }
@@ -252,16 +269,17 @@ public partial class RatingHistory : ComponentBase, IDisposable
         {
             Logger.LogError(ex, "Error submitting rating");
             await MessageCenter.ShowErrorAsync("Error saving rating. Please try again.");
+            // Don't close modal on error so user can retry
         }
     }
 
-    private async Task HandleRatingDelete(RateVideoModel ratingModel)
+    private async Task HandleRatingDelete(Guid ratingId)
     {
-        if (string.IsNullOrWhiteSpace(currentUserId) || ratingModel == null || !ratingModel.RatingId.HasValue) return;
+        if (string.IsNullOrWhiteSpace(currentUserId)) return;
 
         try
         {
-            var success = await VideoRatingService.DeleteRatingAsync(currentUserId, ratingModel.RatingId.Value);
+            var success = await VideoRatingService.DeleteRatingAsync(currentUserId, ratingId);
 
             if (success)
             {
@@ -269,9 +287,6 @@ public partial class RatingHistory : ComponentBase, IDisposable
 
                 // Close modal and refresh data
                 showEditModal = false;
-                selectedRating = null;
-                currentRatingModel = null;
-
                 await LoadStats();
                 await LoadRatings();
             }
@@ -290,8 +305,6 @@ public partial class RatingHistory : ComponentBase, IDisposable
     private async Task OnModalClose()
     {
         showEditModal = false;
-        selectedRating = null;
-        currentRatingModel = null;
         StateHasChanged();
     }
 

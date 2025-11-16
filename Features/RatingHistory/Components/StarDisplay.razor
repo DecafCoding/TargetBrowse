@@ -1,0 +1,54 @@
+@* Simple read-only star display component *@
+
+<div class="star-display @CssClass">
+    @for (int i = 1; i <= 5; i++)
+    {
+        var starNumber = i;
+        if (starNumber <= Stars)
+        {
+            <i class="bi bi-star-fill text-warning"></i>
+        }
+        else
+        {
+            <i class="bi bi-star text-muted"></i>
+        }
+    }
+    @if (ShowLabel)
+    {
+        <span class="ms-2 text-muted small">@GetLabel()</span>
+    }
+</div>
+
+@code {
+    [Parameter] public int Stars { get; set; }
+    [Parameter] public bool ShowLabel { get; set; } = false;
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public string Size { get; set; } = "normal"; // small, normal, large
+
+    private string GetLabel()
+    {
+        return Stars switch
+        {
+            1 => "Poor",
+            2 => "Fair",
+            3 => "Good",
+            4 => "Very Good",
+            5 => "Excellent",
+            _ => ""
+        };
+    }
+}
+
+<style>
+    .star-display i {
+        font-size: 1rem;
+    }
+
+    .star-display.small i {
+        font-size: 0.875rem;
+    }
+
+    .star-display.large i {
+        font-size: 1.5rem;
+    }
+</style>
