@@ -1,4 +1,4 @@
-@@page "/rating-history"
+@page "/rating-history"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using TargetBrowse.Features.Videos.Services
@@ -271,7 +271,7 @@
                                     {
                                         <li class="page-item @(page == currentPage ? "active" : "")">
                                             <button class="page-link" @onclick="() => ChangePage(page)">
-                                                @page
+                                                @@page
                                             </button>
                                         </li>
                                     }
