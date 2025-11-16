@@ -10,27 +10,23 @@
 
 <div class="suggestion-queue-container">
     <!-- Queue Header with Controls -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <!-- Batch Actions Bar -->
-                @if (ShowBatchMode && QueueModel.ShowBatchActions)
-                {
-                    <div class="batch-actions-bar mt-3 p-3 bg-light rounded">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>@QueueModel.SelectedSuggestionIds.Count</strong> suggestions selected
-                                <button class="btn btn-link btn-sm p-0 ms-2" @onclick="SelectAll">Select All</button>
-                                <button class="btn btn-link btn-sm p-0 ms-2" @onclick="ClearSelection">Clear</button>
-                            </div>
-                            <SuggestionActions Mode="ActionMode.Batch"
-                                               SelectedSuggestionIds="@QueueModel.SelectedSuggestionIds"
-                                               OnBatchApproved="@HandleBatchApproved"
-                                               OnBatchDenied="@HandleBatchDenied" />
-                        </div>
-                    </div>
-                }
+    <!-- Batch Actions Bar -->
+    @if (ShowBatchMode && QueueModel.ShowBatchActions)
+    {
+        <div class="batch-actions-bar mb-4 p-3 bg-light rounded">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@QueueModel.SelectedSuggestionIds.Count</strong> suggestions selected
+                    <button class="btn btn-link btn-sm p-0 ms-2" @onclick="SelectAll">Select All</button>
+                    <button class="btn btn-link btn-sm p-0 ms-2" @onclick="ClearSelection">Clear</button>
+                </div>
+                <SuggestionActions Mode="ActionMode.Batch"
+                                   SelectedSuggestionIds="@QueueModel.SelectedSuggestionIds"
+                                   OnBatchApproved="@HandleBatchApproved"
+                                   OnBatchDenied="@HandleBatchDenied" />
             </div>
         </div>
+    }
 
 
     @if (QueueModel.IsLoading)
