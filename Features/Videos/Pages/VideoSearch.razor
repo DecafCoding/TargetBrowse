@@ -14,20 +14,96 @@
             <!-- Recent Messages -->
             <MessageSidebar />
 
-            <!-- Search Tips -->
+            <!-- Video Search Controls -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        Search Tips
-                    </h5>
+                    <h5 class="card-title mb-0">Video Search</h5>
+                    <p class="text-muted mb-0 small">
+                        Discover and add YouTube videos to your personal library for organized content consumption.
+                    </p>
                 </div>
                 <div class="card-body">
-                    <ul class="mb-0 small">
-                        <li class="mb-2">Use specific keywords for better results</li>
-                        <li class="mb-2">Combine filters to narrow your search</li>
-                        <li class="mb-2">Sort by upload date for latest content</li>
-                        <li>Try different search terms if you don't find what you're looking for</li>
-                    </ul>
+                    <!-- Search Form -->
+                    <EditForm Model="@SearchModel" OnValidSubmit="@HandleSearchSubmit">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <button type="submit"
+                                        class="btn btn-primary"
+                                        disabled="@IsSearching">
+                                    @if (IsSearching)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-search"></i>
+                                    }
+                                </button>
+                                <InputText @bind-Value="SearchModel.SearchQuery"
+                                           class="form-control"
+                                           id="searchQuery"
+                                           placeholder="Enter search term to search YouTube"
+                                           disabled="@IsSearching" />
+                            </div>
+                            <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Sort By</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    @CurrentSortOrderText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Relevance)'>Relevance</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.UploadDate)'>Upload Date</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.ViewCount)'>View Count</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Rating)'>Rating</button></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Duration</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-hourglass-split me-1"></i>
+                                    @CurrentDurationText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Any)'>Any Duration</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Short)'>Short (&lt; 4 min)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Medium)'>Medium (4-20 min)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Long)'>Long (&gt; 20 min)</button></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-muted">Upload Date</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
+                                        type="button"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    @CurrentDateFilterText
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Any)'>Any Age</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.LastHour)'>Last Hour</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Today)'>Today</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisWeek)'>This Week</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisMonth)'>This Month</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisYear)'>This Year</button></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </EditForm>
                 </div>
             </div>
 
@@ -53,94 +129,9 @@
     </div>
 
     <div class="col-lg-9">
-        <!-- Video Search Section -->
+        <!-- Search Results Section -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Video Search</h5>
-                <p class="text-muted mb-0">
-                    Discover and add YouTube videos to your personal library for organized content consumption.
-                </p>
-            </div>
             <div class="card-body">
-                <!-- Search Form -->
-                <EditForm Model="@SearchModel" OnValidSubmit="@HandleSearchSubmit">
-                    <DataAnnotationsValidator />
-                    <!-- Advanced Options (Always Expanded, Single Row) -->
-                    <div class="row g-3">
-                        <div class="col-lg-5 col-md-12">
-                            <InputText @bind-Value="SearchModel.SearchQuery"
-                                       class="form-control"
-                                       id="searchQuery"
-                                       placeholder="Enter search term to search YouTube"
-                                       disabled="@IsSearching" />
-                            <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
-                        </div>
-                        <div class="col-lg-2 col-md-12">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
-                                        type="button"
-                                        data-bs-toggle="dropdown">
-                                    <i class="bi bi-funnel me-1"></i>
-                                    @CurrentSortOrderText
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Relevance)'>Relevance</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.UploadDate)'>Upload Date</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.ViewCount)'>View Count</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Rating)'>Rating</button></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-12">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
-                                        type="button"
-                                        data-bs-toggle="dropdown">
-                                    <i class="bi bi-hourglass-split me-1"></i>
-                                    @CurrentDurationText
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Any)'>Any Duration</button></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Short)'>Short (&lt; 4 min)</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Medium)'>Medium (4-20 min)</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDurationFilter(VideoDurationFilter.Long)'>Long (&gt; 20 min)</button></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-lg-2 col-md-12">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle w-100"
-                                        type="button"
-                                        data-bs-toggle="dropdown">
-                                    <i class="bi bi-calendar3 me-1"></i>
-                                    @CurrentDateFilterText
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Any)'>Any Age</button></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.LastHour)'>Last Hour</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.Today)'>Today</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisWeek)'>This Week</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisMonth)'>This Month</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetDateFilter(VideoDateFilter.ThisYear)'>This Year</button></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-lg-1 col-md-12">
-                            <button type="submit"
-                                    class="btn btn-primary"
-                                    disabled="@IsSearching">
-                                @if (IsSearching)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                }
-                                Search
-                            </button>
-                        </div>
-                    </div>
-                </EditForm>
-
                 <!-- Search Results -->
                 @if (SearchResults.Any())
                 {
