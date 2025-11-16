@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -108,15 +109,12 @@ public class RateVideoModel
     /// <summary>
     /// Gets display text for the selected star rating.
     /// </summary>
-    public string StarDisplayText => Stars switch
-    {
-        1 => "1 star - Poor",
-        2 => "2 stars - Fair",
-        3 => "3 stars - Good",
-        4 => "4 stars - Very Good",
-        5 => "5 stars - Excellent",
-        _ => "Select a rating"
-    };
+    public string StarDisplayText => RatingValidator.GetStarDisplayText(Stars);
+
+    /// <summary>
+    /// Gets CSS class for star rating display.
+    /// </summary>
+    public string StarCssClass => RatingValidator.GetStarCssClass(Stars);
 
     /// <summary>
     /// Validates the model and returns validation errors.
@@ -135,15 +133,8 @@ public class RateVideoModel
         if (string.IsNullOrWhiteSpace(VideoTitle))
             errors.Add("Video title is required");
 
-        if (Stars < 1 || Stars > 5)
-            errors.Add("Rating must be between 1 and 5 stars");
-
-        if (string.IsNullOrWhiteSpace(Notes))
-            errors.Add("Notes are required");
-        else if (Notes.Length < 10)
-            errors.Add("Notes must be at least 10 characters");
-        else if (Notes.Length > 1000)
-            errors.Add("Notes cannot exceed 1000 characters");
+        // Use shared rating validator for common validation logic
+        errors.AddRange(RatingValidator.ValidateRating(Stars, Notes));
 
         return errors;
     }

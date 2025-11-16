@@ -1,5 +1,6 @@
 using TargetBrowse.Features.Channels.Components;
 using TargetBrowse.Features.Channels.Models;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Channels.Services;
 
@@ -100,7 +101,7 @@ public interface IChannelRatingService
     /// <param name="userId">User ID to validate rating permission for</param>
     /// <param name="channelId">Channel ID to validate rating for</param>
     /// <returns>Validation result with success status and error messages</returns>
-    Task<ChannelRatingValidationResult> ValidateCanRateChannelAsync(string userId, Guid channelId);
+    Task<RatingValidationResult> ValidateCanRateChannelAsync(string userId, Guid channelId);
 
     /// <summary>
     /// Searches user's ratings by notes content and rating range.
