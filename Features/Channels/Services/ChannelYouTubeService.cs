@@ -2,8 +2,9 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Extensions.Options;
-using TargetBrowse.Services.Models;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Features.Channels.Services;

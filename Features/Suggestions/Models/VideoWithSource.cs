@@ -1,4 +1,6 @@
-﻿namespace TargetBrowse.Features.Suggestions.Models;
+﻿using TargetBrowse.Services.Models;
+
+namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
 /// Represents a video with information about how it was discovered.
