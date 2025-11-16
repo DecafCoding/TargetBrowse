@@ -5,6 +5,8 @@ using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
+using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse.Features.Videos.Components;
 
@@ -136,14 +138,25 @@ public partial class VideoCard : ComponentBase
 
         try
         {
-            // OPTIMIZATION: Use existing video data instead of making redundant API call
-            var addModel = AddVideoModel.FromExistingVideo(
-                Video,
-                $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
+            // Convert VideoDisplayModel to VideoInfo (shared DTO)
+            var videoInfo = new VideoInfo
+            {
+                YouTubeVideoId = Video.YouTubeVideoId,
+                ChannelId = Video.ChannelId,
+                ChannelName = Video.ChannelTitle,
+                Title = Video.Title,
+                Description = Video.Description,
+                ThumbnailUrl = Video.ThumbnailUrl ?? string.Empty,
+                Duration = DurationParser.ParseToSeconds(Video.Duration),
+                ViewCount = (int)(Video.ViewCount ?? 0),
+                LikeCount = (int)(Video.LikeCount ?? 0),
+                CommentCount = (int)(Video.CommentCount ?? 0),
+                PublishedAt = Video.PublishedAt
+            };
 
-            var success = await LibraryDataService.AddVideoDisplayToLibraryAsync(
+            var success = await LibraryDataService.AddVideoToLibraryAsync(
                 CurrentUserId,
-                Video, // VideoDisplayModel directly - no conversion needed!
+                videoInfo,
                 $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
 
 

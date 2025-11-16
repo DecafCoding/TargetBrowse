@@ -195,6 +195,8 @@ public class ChannelVideosRepository : BaseRepository<VideoEntity>, IChannelVide
                 .Select(v => new ChannelVideoModel
                 {
                     YouTubeVideoId = v.YouTubeVideoId,
+                    ChannelId = v.Channel.YouTubeChannelId,
+                    ChannelName = v.Channel.Name,
                     Title = v.Title,
                     Description = v.Description ?? string.Empty,
                     ThumbnailUrl = v.ThumbnailUrl ?? string.Empty,

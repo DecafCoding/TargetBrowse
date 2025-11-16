@@ -1,7 +1,5 @@
 ﻿using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Videos.Models;
-using TargetBrowse.Features.ChannelVideos.Models;
-using TargetBrowse.Features.TopicVideos.Models;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Services.Interfaces;
 
@@ -19,7 +17,7 @@ public interface ILibraryDataService
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <returns>List of videos in the user's library</returns>
-    Task<List<VideoDisplayModel>> GetUserVideosAsync(string userId);
+    Task<List<UserLibraryVideoDto>> GetUserVideosAsync(string userId);
 
     /// <summary>
     /// Gets a specific video by its YouTube video ID for a user.
@@ -28,7 +26,7 @@ public interface ILibraryDataService
     /// <param name="userId">User identifier</param>
     /// <param name="youTubeVideoId">YouTube video ID</param>
     /// <returns>Video if found in user's library, null otherwise</returns>
-    Task<VideoDisplayModel?> GetVideoByYouTubeIdAsync(string userId, string youTubeVideoId);
+    Task<UserLibraryVideoDto?> GetVideoByYouTubeIdAsync(string userId, string youTubeVideoId);
 
     /// <summary>
     /// Checks if a video is already in the user's library.
@@ -61,41 +59,21 @@ public interface ILibraryDataService
     /// <param name="userId">User identifier</param>
     /// <param name="searchQuery">Search term</param>
     /// <returns>List of matching videos from user's library</returns>
-    Task<List<VideoDisplayModel>> SearchUserVideosAsync(string userId, string searchQuery);
+    Task<List<UserLibraryVideoDto>> SearchUserVideosAsync(string userId, string searchQuery);
 
     #endregion
 
     #region Feature-Specific Library Operations
 
     /// <summary>
-    /// Adds a video from channel browsing to the user's library.
-    /// Handles conversion from ChannelVideoModel and includes channel context.
+    /// Adds a video to the user's library.
+    /// Accepts domain-neutral VideoInfo DTO - features handle their own model conversions.
     /// </summary>
     /// <param name="userId">User identifier</param>
-    /// <param name="video">Channel video model</param>
+    /// <param name="video">Video information (shared DTO)</param>
     /// <param name="notes">Optional notes about adding the video</param>
     /// <returns>True if added successfully, false if already exists or error occurred</returns>
-    Task<bool> AddChannelVideoToLibraryAsync(string userId, ChannelVideoModel video, string notes = "");
-
-    /// <summary>
-    /// Adds a video from topic search to the user's library.
-    /// Handles conversion from TopicVideoDisplayModel and includes topic context.
-    /// </summary>
-    /// <param name="userId">User identifier</param>
-    /// <param name="video">Topic video model with relevance information</param>
-    /// <param name="notes">Optional notes about adding the video</param>
-    /// <returns>True if added successfully, false if already exists or error occurred</returns>
-    Task<bool> AddTopicVideoToLibraryAsync(string userId, TopicVideoDisplayModel video, string notes = "");
-
-    /// <summary>
-    /// Adds a video from general video display to the user's library.
-    /// Handles VideoDisplayModel directly - used by video search results.
-    /// </summary>
-    /// <param name="userId">User identifier</param>
-    /// <param name="video">Video display model</param>
-    /// <param name="notes">Optional notes about adding the video</param>
-    /// <returns>True if added successfully, false if already exists or error occurred</returns>
-    Task<bool> AddVideoDisplayToLibraryAsync(string userId, VideoDisplayModel video, string notes = "");
+    Task<bool> AddVideoToLibraryAsync(string userId, VideoInfo video, string notes = "");
 
     /// <summary>
     /// Adds an existing video entity to the user's library.
