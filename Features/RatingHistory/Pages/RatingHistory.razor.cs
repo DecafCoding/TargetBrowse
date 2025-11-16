@@ -346,6 +346,29 @@ public partial class RatingHistory : ComponentBase, IDisposable
         return stats.RatingDistribution.TryGetValue(stars, out var count) ? count : 0;
     }
 
+    private string GetCurrentFilterDisplay()
+    {
+        if (string.IsNullOrEmpty(filterStars))
+        {
+            return $"All Ratings ({stats?.TotalRatings ?? 0})";
+        }
+
+        return currentFilterLabel;
+    }
+
+    private string GetFilterLabel(int stars)
+    {
+        // stars parameter: 5 = 5 stars, 4 = 4 stars, 3 = 3 stars, 12 = 1-2 stars
+        return stars switch
+        {
+            5 => "5 Stars",
+            4 => "4 Stars",
+            3 => "3 Stars",
+            12 => "1-2 Stars",
+            _ => "All Ratings"
+        };
+    }
+
     public void Dispose()
     {
         searchDebounceTimer?.Dispose();
