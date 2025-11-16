@@ -1,4 +1,6 @@
-﻿namespace TargetBrowse.Features.Suggestions.Models;
+﻿using TargetBrowse.Services.Models;
+
+namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
 /// Display model for showing suggestions in the UI.

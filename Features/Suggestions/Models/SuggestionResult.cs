@@ -1,5 +1,7 @@
 using TargetBrowse.Data.Entities;
 
+using TargetBrowse.Services.Models;
+
 namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>

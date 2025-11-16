@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.Suggestions.Data;

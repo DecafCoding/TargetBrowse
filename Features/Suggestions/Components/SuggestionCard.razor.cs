@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.Suggestions.Components;

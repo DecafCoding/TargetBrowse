@@ -1,11 +1,12 @@
 ﻿using System.Diagnostics;
-using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Suggestions.Data;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Features.Channels.Services;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.Suggestions.Services;
 
