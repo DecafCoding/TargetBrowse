@@ -28,6 +28,11 @@
                         <DataAnnotationsValidator />
                         <div class="mb-3">
                             <div class="input-group">
+                                <InputText @bind-Value="SearchModel.SearchQuery"
+                                           class="form-control"
+                                           id="searchQuery"
+                                           placeholder="Enter search term to search YouTube"
+                                           disabled="@IsSearching" />
                                 <button type="submit"
                                         class="btn btn-primary"
                                         disabled="@IsSearching">
@@ -40,16 +45,10 @@
                                         <i class="bi bi-search"></i>
                                     }
                                 </button>
-                                <InputText @bind-Value="SearchModel.SearchQuery"
-                                           class="form-control"
-                                           id="searchQuery"
-                                           placeholder="Enter search term to search YouTube"
-                                           disabled="@IsSearching" />
                             </div>
                             <ValidationMessage For="@(() => SearchModel.SearchQuery)" class="text-danger" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Sort By</label>
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary dropdown-toggle w-100"
                                         type="button"
@@ -66,7 +65,6 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Duration</label>
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary dropdown-toggle w-100"
                                         type="button"
@@ -84,7 +82,6 @@
                             </div>
                         </div>
                         <div class="mb-0">
-                            <label class="form-label small text-muted">Upload Date</label>
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary dropdown-toggle w-100"
                                         type="button"
@@ -135,7 +132,6 @@
                 <!-- Search Results -->
                 @if (SearchResults.Any())
                 {
-                    <hr>
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h6 class="mb-0">
                             <i class="bi bi-collection-play me-2"></i>
@@ -169,7 +165,6 @@
                 }
                 else if (HasSearched && !IsSearching)
                 {
-                    <hr>
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-search" style="font-size: 3rem;"></i>
                         <div class="mt-3 h5">No videos found matching your search criteria</div>

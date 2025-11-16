@@ -14,7 +14,7 @@
         <div class="col-lg-3">
             <!-- Help and Tips Sidebar -->
             <div class="sidebar-content">
-                <!-- Progress Bar -->
+                <!-- Progress Bar and Filters -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
@@ -22,6 +22,39 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Filter and Sort Controls -->
+                        <div class="queue-controls d-flex flex-wrap gap-2 mb-3">
+                            <!-- Filter Dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="suggestionFilter" data-bs-toggle="dropdown">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    Filter
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="suggestionFilter">
+                                    <li><button class="dropdown-item" type="button">All Suggestions</button></li>
+                                    <li><button class="dropdown-item" type="button">⭐ High Priority</button></li>
+                                    <li><button class="dropdown-item" type="button">📺 Channel Updates</button></li>
+                                    <li><button class="dropdown-item" type="button">🔍 Topic Matches</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item" type="button">⏰ Expiring Soon</button></li>
+                                </ul>
+                            </div>
+
+                            <!-- Sort Dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="suggestionSort" data-bs-toggle="dropdown">
+                                    <i class="bi bi-sort-down me-1"></i>
+                                    Sort
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="suggestionSort">
+                                    <li><button class="dropdown-item" type="button">Newest First</button></li>
+                                    <li><button class="dropdown-item" type="button">Oldest First</button></li>
+                                    <li><button class="dropdown-item" type="button">Highest Score</button></li>
+                                    <li><button class="dropdown-item" type="button">Expiring Soon</button></li>
+                                </ul>
+                            </div>
+                        </div>
+
                         @if (PendingSuggestionsCount > 0)
                         {
                             <div class="queue-progress">
