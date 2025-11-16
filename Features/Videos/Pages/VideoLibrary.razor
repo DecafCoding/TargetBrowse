@@ -28,7 +28,6 @@
                     {
                         <!-- Search Input -->
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Search Library</label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">
                                     <i class="bi bi-search"></i>
@@ -51,13 +50,12 @@
 
                         <!-- Rating Filter Dropdown -->
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Filter by Rating</label>
                             <div class="dropdown d-grid">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
                                         type="button"
                                         data-bs-toggle="dropdown">
                                     <i class="bi bi-star me-1"></i>
-                                    @CurrentRatingFilter
+                                    Filter By: @CurrentRatingFilter
                                 </button>
                                 <ul class="dropdown-menu w-100">
                                     <li><button class="dropdown-item" @onclick='() => SetRatingFilter("All Videos")'>All Videos</button></li>
@@ -74,13 +72,12 @@
 
                         <!-- Sort Dropdown -->
                         <div class="mb-0">
-                            <label class="form-label small text-muted">Sort By</label>
                             <div class="dropdown d-grid">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
                                         type="button"
                                         data-bs-toggle="dropdown">
                                     <i class="bi bi-funnel me-1"></i>
-                                    @CurrentSortOption
+                                    Sort By: @CurrentSortOption
                                 </button>
                                 <ul class="dropdown-menu w-100">
                                     <li><button class="dropdown-item" @onclick="SortByDateAdded">Date Added</button></li>
@@ -94,6 +91,35 @@
                                 </ul>
                             </div>
                         </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Categorize Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Categorize Videos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!IsLoading && !string.IsNullOrEmpty(LastError) == false && Videos.Any())
+                    {
+                        <button type="button"
+                                class="btn btn-outline-primary w-100"
+                                @onclick="CategorizeVideosAsync"
+                                disabled="@(IsCategorizing || UncategorizedCount == 0)">
+                            @if (IsCategorizing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                <span>Categorizing...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-tags me-1"></i>
+                                <span>Categorize (@UncategorizedCount)</span>
+                            }
+                        </button>
                     }
                 </div>
             </div>
@@ -186,25 +212,6 @@
                 }
                 else
                 {
-                    <!-- Categorize Button -->
-                    <div class="mb-4">
-                        <button type="button"
-                                class="btn btn-outline-primary"
-                                @onclick="CategorizeVideosAsync"
-                                disabled="@(IsCategorizing || UncategorizedCount == 0)">
-                            @if (IsCategorizing)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                <span>Categorizing...</span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-tags me-1"></i>
-                                <span>Categorize (@UncategorizedCount)</span>
-                            }
-                        </button>
-                    </div>
-
                     <!-- Video Grid using VideoCard Component -->
                     <div class="row">
                         @foreach (var video in FilteredVideos)
