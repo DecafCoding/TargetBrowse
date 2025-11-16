@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
-using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.YouTube.Models;

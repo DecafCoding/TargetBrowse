@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Services.YouTube.Models;
 
 namespace TargetBrowse.Services;

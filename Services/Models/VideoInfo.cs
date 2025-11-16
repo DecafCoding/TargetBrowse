@@ -1,6 +1,6 @@
 using TargetBrowse.Services;
 
-namespace TargetBrowse.Features.Suggestions.Models;
+namespace TargetBrowse.Services.Models;
 
 /// <summary>
 /// Represents basic video information from YouTube API.

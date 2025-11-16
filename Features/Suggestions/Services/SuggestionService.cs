@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using TargetBrowse.Features.Suggestions.Models;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Suggestions.Data;
 using TargetBrowse.Features.Topics.Services;
 using TargetBrowse.Features.Videos.Services;
