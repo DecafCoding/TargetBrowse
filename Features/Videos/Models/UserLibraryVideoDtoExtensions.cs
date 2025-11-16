@@ -52,7 +52,7 @@ public static class UserLibraryVideoDtoExtensions
                 Stars = dto.Rating.Stars,
                 Notes = dto.Rating.Notes,
                 CreatedAt = dto.Rating.CreatedAt,
-                UpdatedAt = dto.Rating.UpdatedAt
+                UpdatedAt = dto.Rating.UpdatedAt ?? DateTime.Now
             };
         }
 
