@@ -61,6 +61,17 @@ public static class RatingValidator
     }
 
     /// <summary>
+    /// Cleans and trims notes text.
+    /// Removes leading and trailing whitespace.
+    /// </summary>
+    /// <param name="notes">The notes text to clean</param>
+    /// <returns>Cleaned notes text</returns>
+    public static string CleanNotes(string? notes)
+    {
+        return notes?.Trim() ?? string.Empty;
+    }
+
+    /// <summary>
     /// Validates both stars and notes, returning all validation errors.
     /// </summary>
     /// <param name="stars">The star rating to validate</param>
