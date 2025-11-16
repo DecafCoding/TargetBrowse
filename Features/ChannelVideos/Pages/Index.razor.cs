@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.ChannelVideos.Models;
 using TargetBrowse.Features.ChannelVideos.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.ChannelVideos.Pages;
 
@@ -56,7 +56,7 @@ public partial class Index : ComponentBase
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
         await LoadChannelVideos();
     }
 
@@ -69,30 +69,6 @@ public partial class Index : ComponentBase
         if (Model.Channel.YouTubeChannelId != ChannelId)
         {
             await LoadChannelVideos();
-        }
-    }
-
-    #endregion
-
-    #region User Authentication
-
-    /// <summary>
-    /// Gets the current authenticated user's ID from the authentication state.
-    /// </summary>
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            if (AuthenticationStateTask != null)
-            {
-                var authState = await AuthenticationStateTask;
-                CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error getting current user ID");
-            CurrentUserId = null;
         }
     }
 

@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
+using TargetBrowse.Services.Utilities;
 using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse.Features.TopicVideos.Components;
@@ -30,23 +30,7 @@ public partial class TopicVideoCard : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
-    }
-
-    /// <summary>
-    /// Gets the current authenticated user's ID.
-    /// </summary>
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            var authState = await AuthenticationStateTask!;
-            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-        catch (Exception)
-        {
-            CurrentUserId = null;
-        }
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
     }
 
     /// <summary>

@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Features.Channels.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Channels.Components;
 
@@ -51,27 +51,7 @@ public partial class ChannelCard : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
-    }
-
-    #endregion
-
-    #region Authentication Methods
-
-    /// <summary>
-    /// Gets the current authenticated user's ID.
-    /// </summary>
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            var authState = await AuthenticationStateTask!;
-            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-        catch (Exception)
-        {
-            CurrentUserId = null;
-        }
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
     }
 
     #endregion

@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Suggestions.Components;
 
@@ -45,7 +45,7 @@ public partial class SuggestionQueue : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetCurrentUserIdAsync();
+        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
         await LoadSuggestionsAsync();
     }
 
@@ -59,24 +59,6 @@ public partial class SuggestionQueue : ComponentBase
     public async Task RefreshSuggestionsAsync()
     {
         await LoadSuggestionsAsync();
-    }
-
-    #endregion
-
-    #region Private Methods - Authentication
-
-    private async Task GetCurrentUserIdAsync()
-    {
-        try
-        {
-            var authState = await AuthenticationStateTask!;
-            CurrentUserId = authState?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to get current user ID");
-            CurrentUserId = null;
-        }
     }
 
     #endregion
