@@ -5,6 +5,7 @@ using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Videos.Services;
 
