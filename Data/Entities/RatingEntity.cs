@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using TargetBrowse.Data.Common;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Data.Entities
 {
@@ -10,11 +11,11 @@ namespace TargetBrowse.Data.Entities
     public class RatingEntity : BaseEntity
     {
         [Required]
-        [Range(1, 5)]
+        [Range(RatingValidator.MinStars, RatingValidator.MaxStars)]
         public int Stars { get; set; }
 
         [Required]
-        [StringLength(1000, MinimumLength = 10)]
+        [StringLength(RatingValidator.MaxNotesLength, MinimumLength = RatingValidator.MinNotesLength)]
         public string Notes { get; set; } = string.Empty;
 
         [Required]

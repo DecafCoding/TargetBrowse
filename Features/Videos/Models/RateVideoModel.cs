@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TargetBrowse.Services.Validation;
+using TargetBrowse.Features.Videos.Utilities;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -63,7 +64,7 @@ public class RateVideoModel
     /// Star rating from 1 to 5.
     /// </summary>
     [Required(ErrorMessage = "Please select a star rating")]
-    [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars")]
+    [Range(RatingValidator.MinStars, RatingValidator.MaxStars, ErrorMessage = "Rating must be between 1 and 5 stars")]
     public int Stars { get; set; }
 
     /// <summary>
@@ -71,7 +72,7 @@ public class RateVideoModel
     /// Required with minimum length validation.
     /// </summary>
     [Required(ErrorMessage = "Please provide notes explaining your rating")]
-    [StringLength(1000, MinimumLength = 10,
+    [StringLength(RatingValidator.MaxNotesLength, MinimumLength = RatingValidator.MinNotesLength,
         ErrorMessage = "Notes must be between 10 and 1000 characters")]
     public string Notes { get; set; } = string.Empty;
 
@@ -129,6 +130,8 @@ public class RateVideoModel
 
         if (string.IsNullOrWhiteSpace(YouTubeVideoId))
             errors.Add("YouTube video ID is required");
+        else if (!YouTubeVideoParser.IsValidVideoId(YouTubeVideoId))
+            errors.Add("YouTube video ID format is invalid");
 
         if (string.IsNullOrWhiteSpace(VideoTitle))
             errors.Add("Video title is required");

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TargetBrowse.Features.Channels.Utilities;
 
 namespace TargetBrowse.Features.Channels.Models;
 
@@ -49,6 +50,7 @@ public class AddChannelModel
     public bool IsValid()
     {
         return !string.IsNullOrWhiteSpace(YouTubeChannelId) &&
+               YouTubeUrlParser.IsValidChannelId(YouTubeChannelId) &&
                !string.IsNullOrWhiteSpace(Name) &&
                PublishedAt != default;
     }
