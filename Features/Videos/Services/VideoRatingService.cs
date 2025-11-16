@@ -133,13 +133,6 @@ public class VideoRatingService : RatingServiceBase<VideoRatingModel, RateVideoM
         return (errors.Count == 0, errors);
     }
 
-    protected override void CleanNotes(RateVideoModel ratingModel)
-    {
-        ratingModel.CleanNotes();
-    }
-
-    protected override int GetStars(RateVideoModel ratingModel) => ratingModel.Stars;
-
     protected override Task OnRatingCreatedAsync(string userId, RateVideoModel ratingModel, int stars)
     {
         // No additional operations needed for video ratings on creation

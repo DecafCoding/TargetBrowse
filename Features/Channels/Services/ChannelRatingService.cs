@@ -134,13 +134,6 @@ public class ChannelRatingService : RatingServiceBase<ChannelRatingModel, RateCh
         return (errors.Count == 0, errors);
     }
 
-    protected override void CleanNotes(RateChannelModel ratingModel)
-    {
-        ratingModel.CleanNotes();
-    }
-
-    protected override int GetStars(RateChannelModel ratingModel) => ratingModel.Stars;
-
     protected override async Task OnRatingCreatedAsync(string userId, RateChannelModel ratingModel, int stars)
     {
         // Handle 1-star rating cleanup

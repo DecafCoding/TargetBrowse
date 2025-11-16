@@ -8,7 +8,7 @@ namespace TargetBrowse.Features.Videos.Models;
 /// Model for rating a video through the UI form.
 /// Used for both creating new ratings and editing existing ones.
 /// </summary>
-public class RateVideoModel
+public class RateVideoModel : IRatingModel
 {
     /// <summary>
     /// Rating ID for editing existing ratings. Null for new ratings.
@@ -152,7 +152,7 @@ public class RateVideoModel
     /// </summary>
     public void CleanNotes()
     {
-        Notes = Notes?.Trim() ?? string.Empty;
+        Notes = RatingValidator.CleanNotes(Notes);
     }
 
     /// <summary>

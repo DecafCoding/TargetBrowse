@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Services;
 
@@ -14,7 +15,7 @@ namespace TargetBrowse.Services;
 /// <typeparam name="TRateModel">The type of rate input model (e.g., RateChannelModel, RateVideoModel)</typeparam>
 public abstract class RatingServiceBase<TRatingModel, TRateModel>
     where TRatingModel : class
-    where TRateModel : class
+    where TRateModel : class, IRatingModel
 {
     protected readonly ApplicationDbContext Context;
     protected readonly IMessageCenterService MessageCenterService;
@@ -83,14 +84,20 @@ public abstract class RatingServiceBase<TRatingModel, TRateModel>
     protected abstract Task<(bool CanRate, List<string> ErrorMessages)> ValidateCanRateAsync(string userId, Guid entityId);
 
     /// <summary>
-    /// Cleans the notes field in the rate model.
+    /// Cleans the notes field in the rate model using the IRatingModel interface.
     /// </summary>
-    protected abstract void CleanNotes(TRateModel ratingModel);
+    protected void CleanNotes(TRateModel ratingModel)
+    {
+        ratingModel.CleanNotes();
+    }
 
     /// <summary>
-    /// Gets the star rating from the rate model.
+    /// Gets the star rating from the rate model using the IRatingModel interface.
     /// </summary>
-    protected abstract int GetStars(TRateModel ratingModel);
+    protected int GetStars(TRateModel ratingModel)
+    {
+        return ratingModel.Stars;
+    }
 
     /// <summary>
     /// Performs any additional operations after creating a rating (e.g., cleanup for 1-star ratings).

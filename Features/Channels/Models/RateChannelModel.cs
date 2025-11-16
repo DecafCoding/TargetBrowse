@@ -9,7 +9,7 @@ namespace TargetBrowse.Features.Channels.Models;
 /// Input model for creating or updating channel ratings.
 /// Used in forms and API endpoints for rating operations.
 /// </summary>
-public class RateChannelModel
+public class RateChannelModel : IRatingModel
 {
     /// <summary>
     /// ID of the channel being rated.
@@ -127,6 +127,6 @@ public class RateChannelModel
     /// </summary>
     public void CleanNotes()
     {
-        Notes = Notes?.Trim() ?? string.Empty;
+        Notes = RatingValidator.CleanNotes(Notes);
     }
 }
