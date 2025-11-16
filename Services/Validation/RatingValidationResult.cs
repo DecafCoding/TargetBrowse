@@ -1,10 +1,11 @@
-namespace TargetBrowse.Features.Channels.Models;
+namespace TargetBrowse.Services.Validation;
 
 /// <summary>
-/// Represents the result of channel rating validation operations.
+/// Represents the result of rating validation operations.
 /// Provides success/failure status and detailed error messaging.
+/// Used by both channel and video rating validation.
 /// </summary>
-public class ChannelRatingValidationResult
+public class RatingValidationResult
 {
     /// <summary>
     /// Indicates if the validation passed.
@@ -29,7 +30,7 @@ public class ChannelRatingValidationResult
     /// <summary>
     /// Private constructor to enforce factory methods.
     /// </summary>
-    private ChannelRatingValidationResult(bool canRate, List<string> errorMessages)
+    private RatingValidationResult(bool canRate, List<string> errorMessages)
     {
         CanRate = canRate;
         ErrorMessages = errorMessages ?? new List<string>();
@@ -38,47 +39,47 @@ public class ChannelRatingValidationResult
     /// <summary>
     /// Creates a successful validation result.
     /// </summary>
-    public static ChannelRatingValidationResult Success()
+    public static RatingValidationResult Success()
     {
-        return new ChannelRatingValidationResult(true, new List<string>());
+        return new RatingValidationResult(true, new List<string>());
     }
 
     /// <summary>
     /// Creates a failed validation result with a single error message.
     /// </summary>
-    public static ChannelRatingValidationResult Failure(string errorMessage)
+    public static RatingValidationResult Failure(string errorMessage)
     {
-        return new ChannelRatingValidationResult(false, new List<string> { errorMessage });
+        return new RatingValidationResult(false, new List<string> { errorMessage });
     }
 
     /// <summary>
     /// Creates a failed validation result with multiple error messages.
     /// </summary>
-    public static ChannelRatingValidationResult Failure(params string[] errorMessages)
+    public static RatingValidationResult Failure(params string[] errorMessages)
     {
-        return new ChannelRatingValidationResult(false, errorMessages.ToList());
+        return new RatingValidationResult(false, errorMessages.ToList());
     }
 
     /// <summary>
     /// Creates a failed validation result with a primary error and additional details.
     /// </summary>
-    public static ChannelRatingValidationResult Failure(string primaryError, string detailError)
+    public static RatingValidationResult Failure(string primaryError, string detailError)
     {
-        return new ChannelRatingValidationResult(false, new List<string> { primaryError, detailError });
+        return new RatingValidationResult(false, new List<string> { primaryError, detailError });
     }
 
     /// <summary>
     /// Creates a failed validation result from a list of error messages.
     /// </summary>
-    public static ChannelRatingValidationResult Failure(List<string> errorMessages)
+    public static RatingValidationResult Failure(List<string> errorMessages)
     {
-        return new ChannelRatingValidationResult(false, errorMessages);
+        return new RatingValidationResult(false, errorMessages);
     }
 
     /// <summary>
     /// Adds an additional error message to an existing result.
     /// </summary>
-    public ChannelRatingValidationResult AddError(string errorMessage)
+    public RatingValidationResult AddError(string errorMessage)
     {
         ErrorMessages.Add(errorMessage);
         CanRate = false;
@@ -88,14 +89,14 @@ public class ChannelRatingValidationResult
     /// <summary>
     /// Combines this result with another validation result.
     /// </summary>
-    public ChannelRatingValidationResult Combine(ChannelRatingValidationResult other)
+    public RatingValidationResult Combine(RatingValidationResult other)
     {
         if (other == null) return this;
 
         var combinedErrors = ErrorMessages.Concat(other.ErrorMessages).ToList();
         var combinedCanRate = CanRate && other.CanRate;
 
-        return new ChannelRatingValidationResult(combinedCanRate, combinedErrors);
+        return new RatingValidationResult(combinedCanRate, combinedErrors);
     }
 
     /// <summary>
@@ -111,7 +112,7 @@ public class ChannelRatingValidationResult
     /// <summary>
     /// Creates a validation result from model validation errors.
     /// </summary>
-    public static ChannelRatingValidationResult FromModelErrors(List<string> modelErrors)
+    public static RatingValidationResult FromModelErrors(List<string> modelErrors)
     {
         if (!modelErrors.Any())
             return Success();
@@ -122,7 +123,7 @@ public class ChannelRatingValidationResult
     /// <summary>
     /// Implicitly converts boolean to validation result.
     /// </summary>
-    public static implicit operator bool(ChannelRatingValidationResult result)
+    public static implicit operator bool(RatingValidationResult result)
     {
         return result?.CanRate ?? false;
     }

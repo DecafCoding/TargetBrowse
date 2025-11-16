@@ -5,6 +5,7 @@ using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Channels.Models;
 using TargetBrowse.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Channels.Services;
 
@@ -268,19 +269,19 @@ public class ChannelRatingService : RatingServiceBase<ChannelRatingModel, RateCh
         }
     }
 
-    public async Task<ChannelRatingValidationResult> ValidateCanRateChannelAsync(string userId, Guid channelId)
+    public async Task<RatingValidationResult> ValidateCanRateChannelAsync(string userId, Guid channelId)
     {
         try
         {
             var (canRate, errors) = await ValidateCanRateAsync(userId, channelId);
             return canRate
-                ? ChannelRatingValidationResult.Success()
-                : ChannelRatingValidationResult.Failure(errors.ToArray());
+                ? RatingValidationResult.Success()
+                : RatingValidationResult.Failure(errors.ToArray());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating rating permission for user {UserId} and channel {ChannelId}", userId, channelId);
-            return ChannelRatingValidationResult.Failure("Unable to validate rating permission", "System error occurred");
+            return RatingValidationResult.Failure("Unable to validate rating permission", "System error occurred");
         }
     }
 

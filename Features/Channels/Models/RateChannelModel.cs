@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TargetBrowse.Features.Channels.Components;
+using TargetBrowse.Services.Validation;
 
 namespace TargetBrowse.Features.Channels.Models;
 
@@ -52,58 +53,36 @@ public class RateChannelModel
     public Guid? ExistingRatingId { get; set; }
 
     /// <summary>
-    /// Gets validation summary for display.
+    /// Validates the model and returns validation errors.
     /// </summary>
-    public List<string> GetValidationErrors()
+    /// <returns>List of validation error messages</returns>
+    public List<string> Validate()
     {
         var errors = new List<string>();
 
         if (ChannelId == Guid.Empty)
             errors.Add("Valid channel is required");
 
-        if (Stars < 1 || Stars > 5)
-            errors.Add("Rating must be between 1 and 5 stars");
-
-        if (string.IsNullOrWhiteSpace(Notes))
-            errors.Add("Notes are required");
-        else if (Notes.Trim().Length < 10)
-            errors.Add("Notes must be at least 10 characters long");
-        else if (Notes.Length > 1000)
-            errors.Add("Notes must be less than 1000 characters");
+        // Use shared rating validator for common validation logic
+        errors.AddRange(RatingValidator.ValidateRating(Stars, Notes));
 
         return errors;
     }
 
     /// <summary>
-    /// Validates the model and returns true if valid.
+    /// Indicates if the model is valid for submission.
     /// </summary>
-    public bool IsValid => !GetValidationErrors().Any();
+    public bool IsValid => !Validate().Any();
 
     /// <summary>
     /// Gets display text for the selected star rating.
     /// </summary>
-    public string StarDisplayText => Stars switch
-    {
-        1 => "1 star - Poor quality content",
-        2 => "2 stars - Below average content",
-        3 => "3 stars - Average content",
-        4 => "4 stars - Good quality content",
-        5 => "5 stars - Excellent content",
-        _ => "Select a rating"
-    };
+    public string StarDisplayText => RatingValidator.GetStarDisplayText(Stars);
 
     /// <summary>
     /// Gets CSS class for star rating display.
     /// </summary>
-    public string StarCssClass => Stars switch
-    {
-        1 => "text-danger",
-        2 => "text-warning",
-        3 => "text-info",
-        4 => "text-success",
-        5 => "text-success",
-        _ => "text-muted"
-    };
+    public string StarCssClass => RatingValidator.GetStarCssClass(Stars);
 
     /// <summary>
     /// Creates a new rating model for a channel.
