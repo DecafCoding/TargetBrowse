@@ -1,0 +1,276 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+@* Modal for editing video ratings *@
+
+@if (IsVisible)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);"
+         @onclick="HandleBackdropClick" @onclick:stopPropagation="false">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-star me-2"></i>
+                        Edit Rating
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger">@ErrorMessage</div>
+                    }
+
+                    <!-- Video Information -->
+                    <div class="mb-4">
+                        <h6>@VideoTitle</h6>
+                    </div>
+
+                    <!-- Star Rating Input -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            Rating <span class="text-danger">*</span>
+                        </label>
+                        <div class="rating-input-container">
+                            <div class="star-input d-flex gap-1 mb-2">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    var starNumber = i;
+                                    var isSelected = starNumber <= CurrentStars;
+                                    <button type="button"
+                                            class="btn @(isSelected ? "btn-warning" : "btn-outline-secondary") btn-sm"
+                                            @onclick="() => SetStars(starNumber)">
+                                        <i class="bi bi-star-fill"></i>
+                                    </button>
+                                }
+                            </div>
+                            @if (CurrentStars > 0)
+                            {
+                                <div class="text-muted small">@GetStarLabel(CurrentStars)</div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Notes Input -->
+                    <div class="mb-4">
+                        <label for="rating-notes" class="form-label">
+                            Notes <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control"
+                                  id="rating-notes"
+                                  rows="4"
+                                  maxlength="1000"
+                                  placeholder="Please explain your rating. What did you like or dislike? (minimum 10 characters)"
+                                  value="@CurrentNotes"
+                                  @oninput="OnNotesInput"></textarea>
+
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            @if (!string.IsNullOrEmpty(ValidationError))
+                            {
+                                <small class="text-danger">@ValidationError</small>
+                            }
+                            else
+                            {
+                                <small>&nbsp;</small>
+                            }
+                            <small class="@GetCharCountClass()">
+                                @CurrentNotes.Length / 1000 characters
+                                @if (CurrentNotes.Length < 10)
+                                {
+                                    <span class="text-danger">(minimum 10)</span>
+                                }
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                @onclick="CloseModal"
+                                disabled="@IsSubmitting">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-danger"
+                                @onclick="HandleDelete"
+                                disabled="@IsSubmitting">
+                            @if (IsDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-trash me-1"></i>
+                            }
+                            Delete
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="HandleSubmit"
+                                disabled="@(IsSubmitting || !IsValid())">
+                            @if (IsSubmitting && !IsDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check me-1"></i>
+                            }
+                            Update Rating
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public Guid RatingId { get; set; }
+    [Parameter] public string VideoTitle { get; set; } = "";
+    [Parameter] public int Stars { get; set; }
+    [Parameter] public string Notes { get; set; } = "";
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<(Guid RatingId, int Stars, string Notes)> OnSubmit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+
+    private int CurrentStars { get; set; }
+    private string CurrentNotes { get; set; } = "";
+    private bool IsSubmitting { get; set; }
+    private bool IsDeleting { get; set; }
+    private string ErrorMessage { get; set; } = "";
+    private string ValidationError { get; set; } = "";
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            CurrentStars = Stars;
+            CurrentNotes = Notes ?? "";
+            ErrorMessage = "";
+            ValidationError = "";
+            IsSubmitting = false;
+            IsDeleting = false;
+        }
+    }
+
+    private void SetStars(int stars)
+    {
+        CurrentStars = stars;
+        ValidationError = "";
+    }
+
+    private void OnNotesInput(ChangeEventArgs e)
+    {
+        CurrentNotes = e.Value?.ToString() ?? "";
+        ValidationError = "";
+    }
+
+    private bool IsValid()
+    {
+        if (CurrentStars < 1 || CurrentStars > 5)
+        {
+            ValidationError = "Please select a star rating";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentNotes))
+        {
+            ValidationError = "Notes are required";
+            return false;
+        }
+
+        if (CurrentNotes.Length < 10)
+        {
+            ValidationError = "Notes must be at least 10 characters";
+            return false;
+        }
+
+        if (CurrentNotes.Length > 1000)
+        {
+            ValidationError = "Notes cannot exceed 1000 characters";
+            return false;
+        }
+
+        ValidationError = "";
+        return true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!IsValid()) return;
+
+        IsSubmitting = true;
+        ErrorMessage = "";
+
+        try
+        {
+            await OnSubmit.InvokeAsync((RatingId, CurrentStars, CurrentNotes.Trim()));
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving rating: {ex.Message}";
+            IsSubmitting = false;
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        IsDeleting = true;
+        IsSubmitting = true;
+        ErrorMessage = "";
+
+        try
+        {
+            await OnDelete.InvokeAsync(RatingId);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error deleting rating: {ex.Message}";
+            IsDeleting = false;
+            IsSubmitting = false;
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        if (!IsSubmitting)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await CloseModal();
+    }
+
+    private string GetStarLabel(int stars)
+    {
+        return stars switch
+        {
+            1 => "1 star - Poor",
+            2 => "2 stars - Fair",
+            3 => "3 stars - Good",
+            4 => "4 stars - Very Good",
+            5 => "5 stars - Excellent",
+            _ => ""
+        };
+    }
+
+    private string GetCharCountClass()
+    {
+        return CurrentNotes.Length switch
+        {
+            < 10 => "text-danger",
+            >= 10 and < 900 => "text-muted",
+            >= 900 and < 1000 => "text-warning",
+            _ => "text-danger"
+        };
+    }
+}
