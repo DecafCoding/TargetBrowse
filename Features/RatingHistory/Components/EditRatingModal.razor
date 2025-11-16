@@ -252,25 +252,20 @@
 
     private string GetStarLabel(int stars)
     {
-        return stars switch
-        {
-            1 => "1 star - Poor",
-            2 => "2 stars - Fair",
-            3 => "3 stars - Good",
-            4 => "4 stars - Very Good",
-            5 => "5 stars - Excellent",
-            _ => ""
-        };
+        if (stars == 1) return "1 star - Poor";
+        if (stars == 2) return "2 stars - Fair";
+        if (stars == 3) return "3 stars - Good";
+        if (stars == 4) return "4 stars - Very Good";
+        if (stars == 5) return "5 stars - Excellent";
+        return "";
     }
 
     private string GetCharCountClass()
     {
-        return CurrentNotes.Length switch
-        {
-            < 10 => "text-danger",
-            >= 10 and < 900 => "text-muted",
-            >= 900 and < 1000 => "text-warning",
-            _ => "text-danger"
-        };
+        var length = CurrentNotes.Length;
+        if (length < 10) return "text-danger";
+        if (length >= 900 && length < 1000) return "text-warning";
+        if (length >= 1000) return "text-danger";
+        return "text-muted";
     }
 }
