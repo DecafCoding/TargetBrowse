@@ -83,7 +83,7 @@ public class VideoService : IVideoService
                     var libraryVideo = await _libraryDataService.GetVideoByYouTubeIdAsync(userId, video.YouTubeVideoId);
                     if (libraryVideo != null)
                     {
-                        video.AddedToLibrary = libraryVideo.AddedToLibrary;
+                        video.AddedToLibrary = libraryVideo.AddedToLibraryAt;
                     }
                 }
 
@@ -110,11 +110,11 @@ public class VideoService : IVideoService
     {
         try
         {
-            // First check if video is in user's library using VideoDataService
+            // First check if video is in user's library using LibraryDataService
             var libraryVideo = await _libraryDataService.GetVideoByYouTubeIdAsync(userId, youTubeVideoId);
             if (libraryVideo != null)
             {
-                return libraryVideo;
+                return libraryVideo.ToVideoDisplayModel();
             }
 
             // Get video details from YouTube API
@@ -140,13 +140,14 @@ public class VideoService : IVideoService
 
     /// <summary>
     /// Gets all videos in the user's library.
-    /// Delegates to VideoDataService.
+    /// Delegates to LibraryDataService and maps to VideoDisplayModel.
     /// </summary>
     public async Task<List<VideoDisplayModel>> GetUserLibraryAsync(string userId)
     {
         try
         {
-            return await _libraryDataService.GetUserVideosAsync(userId);
+            var libraryVideos = await _libraryDataService.GetUserVideosAsync(userId);
+            return libraryVideos.ToVideoDisplayModels();
         }
         catch (Exception ex)
         {

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using TargetBrowse.Features.ChannelVideos.Models;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.ChannelVideos.Components;
 
@@ -96,9 +97,25 @@ public partial class ChannelVideoCard : ComponentBase
 
         try
         {
-            var success = await LibraryDataService.AddChannelVideoToLibraryAsync(
+            // Convert ChannelVideoModel to VideoInfo (shared DTO)
+            var videoInfo = new VideoInfo
+            {
+                YouTubeVideoId = Video.YouTubeVideoId,
+                ChannelId = Video.ChannelId,
+                ChannelName = Video.ChannelName,
+                Title = Video.Title,
+                Description = Video.Description,
+                ThumbnailUrl = Video.ThumbnailUrl ?? string.Empty,
+                Duration = Video.Duration,
+                ViewCount = Video.ViewCount,
+                LikeCount = Video.LikeCount,
+                CommentCount = Video.CommentCount,
+                PublishedAt = Video.PublishedAt
+            };
+
+            var success = await LibraryDataService.AddVideoToLibraryAsync(
                 CurrentUserId,
-                Video, // ChannelVideoModel directly - no conversion needed!
+                videoInfo,
                 $"Added from channel videos on {DateTime.Now:yyyy-MM-dd}");
 
             if (success)

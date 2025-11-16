@@ -5,6 +5,8 @@ using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Videos.Models;
 using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
+using TargetBrowse.Services.YouTube;
 
 namespace TargetBrowse.Features.TopicVideos.Components;
 
@@ -108,14 +110,25 @@ public partial class TopicVideoCard : ComponentBase
 
         try
         {
-            // Create add model with topic context
-            var addModel = AddVideoModel.FromExistingVideo(
-                Video,
-                $"Added from topic search '{Video.TopicName}' on {DateTime.Now:yyyy-MM-dd}. Match reason: {Video.MatchReason}");
+            // Convert TopicVideoDisplayModel to VideoInfo (shared DTO)
+            var videoInfo = new VideoInfo
+            {
+                YouTubeVideoId = Video.YouTubeVideoId,
+                ChannelId = Video.ChannelId,
+                ChannelName = Video.ChannelTitle,
+                Title = Video.Title,
+                Description = Video.Description,
+                ThumbnailUrl = Video.ThumbnailUrl ?? string.Empty,
+                Duration = DurationParser.ParseToSeconds(Video.Duration),
+                ViewCount = (int)(Video.ViewCount ?? 0),
+                LikeCount = (int)(Video.LikeCount ?? 0),
+                CommentCount = (int)(Video.CommentCount ?? 0),
+                PublishedAt = Video.PublishedAt
+            };
 
-            var success = await LibraryDataService.AddTopicVideoToLibraryAsync(
+            var success = await LibraryDataService.AddVideoToLibraryAsync(
                 CurrentUserId,
-                Video, // TopicVideoDisplayModel directly - no conversion needed!
+                videoInfo,
                 $"Added from topic search '{Video.TopicName}' on {DateTime.Now:yyyy-MM-dd}. Match reason: {Video.MatchReason}");
 
 

@@ -14,6 +14,16 @@ public class ChannelVideoModel
     public string YouTubeVideoId { get; set; } = string.Empty;
 
     /// <summary>
+    /// YouTube channel ID for this video.
+    /// </summary>
+    public string ChannelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Channel name/title.
+    /// </summary>
+    public string ChannelName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Video title.
     /// </summary>
     public string Title { get; set; } = string.Empty;
