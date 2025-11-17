@@ -1,0 +1,20 @@
+/* Home page background styling */
+.home-background {
+    /* Full viewport height to cover the entire visible area */
+    min-height: 100vh;
+    
+    /* Set the background image */
+    background-image: url('/images/AlienYouTubeUp.png');
+    
+    /* Cover the entire container while maintaining aspect ratio */
+    background-size: cover;
+    
+    /* Center the background image */
+    background-position: center center;
+    
+    /* Prevent background from repeating */
+    background-repeat: no-repeat;
+    
+    /* Fix background during scroll for a parallax-like effect */
+    background-attachment: fixed;
+}
