@@ -33,6 +33,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AICallEntity> AICalls { get; set; }
     public DbSet<VideoTypeEntity> VideoTypes { get; set; }
 
+    // Project DbSets
+    public DbSet<ProjectEntity> Projects { get; set; }
+    public DbSet<ProjectVideoEntity> ProjectVideos { get; set; }
+    public DbSet<ProjectGuideEntity> ProjectGuides { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -54,6 +59,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new PromptEntityConfiguration());
         builder.ApplyConfiguration(new AICallEntityConfiguration());
         builder.ApplyConfiguration(new VideoTypeEntityConfiguration());
+
+        // Apply Project configurations
+        builder.ApplyConfiguration(new ProjectEntityConfiguration());
+        builder.ApplyConfiguration(new ProjectVideoEntityConfiguration());
+        builder.ApplyConfiguration(new ProjectGuideEntityConfiguration());
 
         // Configure Identity tables to avoid conflicts
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers");

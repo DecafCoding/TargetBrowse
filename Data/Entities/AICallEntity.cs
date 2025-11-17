@@ -69,5 +69,6 @@ namespace TargetBrowse.Data.Entities
         public virtual PromptEntity Prompt { get; set; } = null!;
         public virtual ApplicationUser? User { get; set; }
         public virtual ICollection<SummaryEntity> Summaries { get; set; } = new List<SummaryEntity>();
+        public virtual ICollection<ProjectGuideEntity> ProjectGuides { get; set; } = new List<ProjectGuideEntity>();
     }
 }
