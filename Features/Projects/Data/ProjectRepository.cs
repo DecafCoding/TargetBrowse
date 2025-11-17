@@ -309,7 +309,7 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         {
             return await _context.ProjectGuides
                 .Include(pg => pg.AICall)
-                    .ThenInclude(ac => ac.Model)
+                    .ThenInclude(ac => ac.Prompt.Model)
                 .Include(pg => pg.AICall)
                     .ThenInclude(ac => ac.Prompt)
                 .Where(pg => pg.ProjectId == projectId && !pg.IsDeleted)
