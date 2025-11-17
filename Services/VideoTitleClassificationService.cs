@@ -263,7 +263,8 @@ public class VideoTitleClassificationService : IVideoTitleClassificationService
                 // Capture response content if available
                 if (response.Choices?.Any() == true)
                 {
-                    responseContent = response.Choices.First().Message.Content ?? string.Empty;
+                    var content = response.Choices.First().Message.Content;
+                    responseContent = content is string str ? str : JsonConvert.SerializeObject(content);
                 }
             }
             else
@@ -394,13 +395,25 @@ public class VideoTitleClassificationService : IVideoTitleClassificationService
 
             var messageContent = response.Choices.First().Message.Content;
 
-            if (string.IsNullOrWhiteSpace(messageContent))
+            // Content could be string or object, handle both cases
+            string? contentText = null;
+            if (messageContent is string textContent)
+            {
+                contentText = textContent;
+            }
+            else
+            {
+                _logger.LogWarning("Unexpected response content format from OpenAI API");
+                return CreateFailedResult("Unexpected response content format from OpenAI API");
+            }
+
+            if (string.IsNullOrWhiteSpace(contentText))
             {
                 return CreateFailedResult("Empty response content from OpenAI API");
             }
 
             // Parse the JSON response
-            var classificationData = JsonConvert.DeserializeObject<ClassificationResult>(messageContent);
+            var classificationData = JsonConvert.DeserializeObject<ClassificationResult>(contentText);
 
             if (classificationData == null || classificationData.Classifications == null)
             {
