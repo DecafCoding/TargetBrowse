@@ -140,6 +140,8 @@ public class Program
 
         // Projects Feature Services
         builder.Services.AddScoped<Features.Projects.Data.IProjectRepository, Features.Projects.Data.ProjectRepository>();
+        builder.Services.AddScoped<Features.Projects.Services.IProjectService, Features.Projects.Services.ProjectService>();
+        builder.Services.AddScoped<Features.Projects.Services.IProjectGuideService, Features.Projects.Services.ProjectGuideService>();
 
         #endregion
 
