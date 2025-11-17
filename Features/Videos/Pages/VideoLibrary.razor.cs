@@ -206,6 +206,9 @@ public partial class VideoLibrary : ComponentBase
     {
         var query = Videos.AsEnumerable();
 
+        // Filter out skipped videos
+        query = query.Where(v => v.WatchStatus != WatchStatus.Skipped);
+
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
         {
