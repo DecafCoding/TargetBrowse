@@ -65,6 +65,7 @@ namespace TargetBrowse.Data.Entities
         public virtual ICollection<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; } = new List<SummaryGenerationRequestEntity>();
         public virtual ICollection<SuggestionEntity> Suggestions { get; set; } = new List<SuggestionEntity>();
         public virtual ICollection<UserVideoEntity> UserVideos { get; set; } = new List<UserVideoEntity>();
+        public virtual ICollection<ProjectVideoEntity> ProjectVideos { get; set; } = new List<ProjectVideoEntity>();
 
         /// <summary>
         /// Video type classification (Tutorial, Podcast, Vlog, etc.).

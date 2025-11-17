@@ -452,4 +452,106 @@ namespace TargetBrowse.Data.Configurations
                    .OnDelete(DeleteBehavior.SetNull); // Preserve video if type is deleted
         }
     }
+
+    /// <summary>
+    /// Entity configuration for ProjectEntity.
+    /// Configures user projects for organizing videos and generating guides.
+    /// </summary>
+    public class ProjectEntityConfiguration : IEntityTypeConfiguration<ProjectEntity>
+    {
+        public void Configure(EntityTypeBuilder<ProjectEntity> builder)
+        {
+            builder.ToTable("Projects");
+
+            // Primary key and indexes
+            builder.HasKey(p => p.Id);
+            builder.HasIndex(p => p.UserId);
+            builder.HasIndex(p => p.Name);
+            builder.HasIndex(p => p.CreatedAt);
+
+            // Properties
+            builder.Property(p => p.UserId).IsRequired();
+            builder.Property(p => p.Name).IsRequired().HasMaxLength(200);
+            builder.Property(p => p.Description).HasMaxLength(2000);
+            builder.Property(p => p.UserGuidance).HasMaxLength(1000);
+
+            // Relationships
+            builder.HasOne(p => p.User)
+                   .WithMany(u => u.Projects)
+                   .HasForeignKey(p => p.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for ProjectVideoEntity junction table.
+    /// Configures many-to-many relationship between Projects and Videos.
+    /// </summary>
+    public class ProjectVideoEntityConfiguration : IEntityTypeConfiguration<ProjectVideoEntity>
+    {
+        public void Configure(EntityTypeBuilder<ProjectVideoEntity> builder)
+        {
+            builder.ToTable("ProjectVideos");
+
+            // Primary key and indexes
+            builder.HasKey(pv => pv.Id);
+            builder.HasIndex(pv => new { pv.ProjectId, pv.VideoId }).IsUnique(); // Prevent duplicate videos in same project
+            builder.HasIndex(pv => pv.ProjectId);
+            builder.HasIndex(pv => pv.VideoId);
+            builder.HasIndex(pv => new { pv.ProjectId, pv.Order }); // For ordered retrieval
+
+            // Properties
+            builder.Property(pv => pv.ProjectId).IsRequired();
+            builder.Property(pv => pv.VideoId).IsRequired();
+            builder.Property(pv => pv.Order).IsRequired();
+            builder.Property(pv => pv.AddedAt).IsRequired();
+
+            // Relationships
+            builder.HasOne(pv => pv.Project)
+                   .WithMany(p => p.ProjectVideos)
+                   .HasForeignKey(pv => pv.ProjectId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(pv => pv.Video)
+                   .WithMany(v => v.ProjectVideos)
+                   .HasForeignKey(pv => pv.VideoId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for ProjectGuideEntity.
+    /// Configures AI-generated guides for projects with 1-to-1 relationship.
+    /// </summary>
+    public class ProjectGuideEntityConfiguration : IEntityTypeConfiguration<ProjectGuideEntity>
+    {
+        public void Configure(EntityTypeBuilder<ProjectGuideEntity> builder)
+        {
+            builder.ToTable("ProjectGuides");
+
+            // Primary key and indexes
+            builder.HasKey(pg => pg.Id);
+            builder.HasIndex(pg => pg.ProjectId).IsUnique(); // One guide per project
+            builder.HasIndex(pg => pg.AICallId);
+            builder.HasIndex(pg => pg.GeneratedAt);
+
+            // Properties
+            builder.Property(pg => pg.ProjectId).IsRequired();
+            builder.Property(pg => pg.Content).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(pg => pg.UserGuidanceSnapshot).HasMaxLength(1000);
+            builder.Property(pg => pg.VideoCount).IsRequired();
+            builder.Property(pg => pg.GeneratedAt).IsRequired();
+
+            // Relationships
+            builder.HasOne(pg => pg.Project)
+                   .WithOne(p => p.ProjectGuide)
+                   .HasForeignKey<ProjectGuideEntity>(pg => pg.ProjectId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(pg => pg.AICall)
+                   .WithMany(a => a.ProjectGuides)
+                   .HasForeignKey(pg => pg.AICallId)
+                   .OnDelete(DeleteBehavior.SetNull); // Keep guide even if AI call is deleted
+        }
+    }
 }
