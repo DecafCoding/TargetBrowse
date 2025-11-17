@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using Microsoft.AspNetCore.Authorization
 @using TargetBrowse.Services.Interfaces
 @inject IMessageCenterService MessageCenterService
@@ -7,110 +7,9 @@
 
 <AuthorizeView>
     <Authorized>
-        <h1>Welcome to Your YouTube Video Tracker</h1>
-        <p>Discover personalized content through intelligent curation.</p>
-
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Quick Start</h5>
-                        <p class="card-text">Set up your interests and start tracking channels.</p>
-                        <a href="topics" class="btn btn-primary">Manage Topics</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Track Channels</h5>
-                        <p class="card-text">Follow your favorite YouTube channels for updates.</p>
-                        <a href="channels" class="btn btn-primary">Add Channels</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Get Suggestions</h5>
-                        <p class="card-text">Discover new content based on your preferences.</p>
-                        <a href="suggestions" class="btn btn-primary">View Suggestions</a>
-                    </div>
-                </div>
-            </div>
+        <div class="home-background">
+            <!-- Content can be overlaid here if needed in the future -->
         </div>
-
-        <!-- Video Features Section -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-search me-2"></i>
-                            Search Videos
-                        </h5>
-                        <p class="card-text">Discover and add YouTube videos to your personal library.</p>
-                        <a href="video-search" class="btn btn-outline-primary">Search Videos</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-collection-play me-2"></i>
-                            My Video Library
-                        </h5>
-                        <p class="card-text">Manage and organize your saved videos for focused viewing.</p>
-                        <a href="video-library" class="btn btn-outline-primary">View Library</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Message Center Demo Section (for development/testing) -->
-        @if (showMessageDemo)
-        {
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Message Center Demo</h5>
-                            <small class="text-muted">Test the message center functionality</small>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-auto">
-                                    <button class="btn btn-success btn-sm" @onclick="ShowSuccessMessage">
-                                        Show Success
-                                    </button>
-                                </div>
-                                <div class="col-auto">
-                                    <button class="btn btn-danger btn-sm" @onclick="ShowErrorMessage">
-                                        Show Error
-                                    </button>
-                                </div>
-                                <div class="col-auto">
-                                    <button class="btn btn-warning btn-sm" @onclick="ShowWarningMessage">
-                                        Show Warning
-                                    </button>
-                                </div>
-                                <div class="col-auto">
-                                    <button class="btn btn-info btn-sm" @onclick="ShowInfoMessage">
-                                        Show Info
-                                    </button>
-                                </div>
-                                <div class="col-auto">
-                                    <button class="btn btn-secondary btn-sm" @onclick="ShowApiLimitMessage">
-                                        Show API Limit
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
     </Authorized>
     <NotAuthorized>
         <h1>YouTube Video Tracker</h1>
