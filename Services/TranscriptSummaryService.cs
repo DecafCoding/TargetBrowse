@@ -322,13 +322,19 @@ public class TranscriptSummaryService : ITranscriptSummaryService
 
             var messageContent = response.Choices.First().Message.Content;
 
-            if (string.IsNullOrWhiteSpace(messageContent))
+            // Content could be string or object, handle both cases
+            if (messageContent is string textContent)
             {
-                _logger.LogWarning("Empty response content from OpenAI API");
-                return null;
+                if (string.IsNullOrWhiteSpace(textContent))
+                {
+                    _logger.LogWarning("Empty response content from OpenAI API");
+                    return null;
+                }
+                return textContent;
             }
 
-            return messageContent;
+            _logger.LogWarning("Unexpected response content format from OpenAI API");
+            return null;
         }
         catch (Exception ex)
         {
@@ -370,7 +376,8 @@ public class TranscriptSummaryService : ITranscriptSummaryService
                 // Capture response content if available
                 if (response.Choices?.Any() == true)
                 {
-                    responseContent = response.Choices.First().Message.Content ?? string.Empty;
+                    var content = response.Choices.First().Message.Content;
+                    responseContent = content is string str ? str : JsonConvert.SerializeObject(content);
                 }
             }
             else
