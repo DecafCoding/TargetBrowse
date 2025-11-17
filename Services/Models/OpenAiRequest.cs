@@ -26,7 +26,35 @@ internal class OpenAiMessage
     public string Role { get; set; } = string.Empty;
 
     [JsonProperty("content")]
-    public string Content { get; set; } = string.Empty;
+    public object Content { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents a content part in a multimodal message (text or image).
+/// Used for vision API calls that include images.
+/// </summary>
+internal class OpenAiContentPart
+{
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty; // "text" or "image_url"
+
+    [JsonProperty("text", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Text { get; set; }
+
+    [JsonProperty("image_url", NullValueHandling = NullValueHandling.Ignore)]
+    public OpenAiImageUrl? ImageUrl { get; set; }
+}
+
+/// <summary>
+/// Represents an image URL in an OpenAI vision request.
+/// </summary>
+internal class OpenAiImageUrl
+{
+    [JsonProperty("url")]
+    public string Url { get; set; } = string.Empty;
+
+    [JsonProperty("detail", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Detail { get; set; } // "low", "high", or "auto"
 }
 
 internal class OpenAiResponseFormat
