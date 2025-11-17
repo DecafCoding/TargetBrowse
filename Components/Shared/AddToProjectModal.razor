@@ -1,0 +1,181 @@
+@using TargetBrowse.Services.ProjectServices.Models
+
+@* Modal for adding a video to one or more projects *@
+
+@if (IsVisible)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);"
+         @onclick="HandleBackdropClick" @onclick:stopPropagation="false">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-folder-plus me-2"></i>
+                        Add to Project
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (IsLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading projects...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Loading your projects...</p>
+                        </div>
+                    }
+                    else if (Projects == null || !Projects.Any())
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            You don't have any projects yet. Create a project first to add videos.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <p class="text-muted">
+                                Select one or more projects to add this video to:
+                            </p>
+                        </div>
+
+                        <div class="projects-list">
+                            @foreach (var project in Projects)
+                            {
+                                var isDisabled = project.IsFull || project.ContainsVideo;
+                                var checkboxId = $"project-{project.Id}";
+
+                                <div class="form-check project-item @(isDisabled ? "disabled" : "")">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="@checkboxId"
+                                           value="@project.Id"
+                                           checked="@SelectedProjectIds.Contains(project.Id)"
+                                           disabled="@isDisabled"
+                                           @onchange="@(e => ToggleProjectSelection(project.Id, e))" />
+
+                                    <label class="form-check-label w-100" for="@checkboxId">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong>@project.Name</strong>
+                                                @if (!string.IsNullOrEmpty(project.Description))
+                                                {
+                                                    <br />
+                                                    <small class="text-muted">@project.Description</small>
+                                                }
+                                            </div>
+                                            <div class="text-end ms-3">
+                                                <small class="@(project.IsFull ? "text-danger" : "text-muted")">
+                                                    @project.CurrentVideoCount / @MaxVideosPerProject videos
+                                                </small>
+                                                @if (project.ContainsVideo)
+                                                {
+                                                    <br />
+                                                    <small class="badge bg-info">
+                                                        <i class="bi bi-check-circle me-1"></i>Already added
+                                                    </small>
+                                                }
+                                                @if (project.IsFull)
+                                                {
+                                                    <br />
+                                                    <small class="badge bg-danger">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>Full
+                                                    </small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(ErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                @ErrorMessage
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseModal"
+                            disabled="@IsSubmitting">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="HandleSubmit"
+                            disabled="@(IsSubmitting || IsLoading || !SelectedProjectIds.Any())">
+                        @if (IsSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg me-1"></i>
+                        }
+                        Add to @(SelectedProjectIds.Count > 0 ? $"{SelectedProjectIds.Count} Project{(SelectedProjectIds.Count > 1 ? "s" : "")}" : "Project")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .projects-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.375rem;
+        padding: 0.5rem;
+    }
+
+    .project-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.375rem;
+        transition: all 0.15s ease-in-out;
+    }
+
+        .project-item:not(.disabled):hover {
+            background-color: var(--bs-secondary-bg);
+            border-color: var(--bs-primary);
+        }
+
+        .project-item.disabled {
+            opacity: 0.6;
+            background-color: var(--bs-light);
+            cursor: not-allowed;
+        }
+
+            .project-item.disabled label {
+                cursor: not-allowed;
+            }
+
+        .project-item .form-check-input:checked + .form-check-label {
+            color: var(--bs-primary);
+        }
+
+        .project-item .form-check-input {
+            margin-top: 0.25rem;
+            cursor: pointer;
+        }
+
+            .project-item .form-check-input:disabled {
+                cursor: not-allowed;
+            }
+
+        .project-item .form-check-label {
+            cursor: pointer;
+            margin-left: 0.25rem;
+        }
+</style>

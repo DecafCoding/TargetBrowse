@@ -92,6 +92,8 @@ public class Program
         builder.Services.AddScoped<ILibraryVideoClassificationService, LibraryVideoClassificationService>();
         builder.Services.AddScoped<ITranscriptSummaryService, TranscriptSummaryService>();
 
+        // Project Services (Shared across features)
+        builder.Services.AddScoped<Services.ProjectServices.IAddToProjectService, Services.ProjectServices.AddToProjectService>();
 
         #endregion
 
@@ -265,6 +267,15 @@ public class Program
                 provider.GetRequiredService<ILogger<QuotaResetBackgroundService>>()
             );
         });
+
+        #endregion
+
+        #region Project Configuration
+
+        // Project Settings Configuration
+        // Bind configuration from appsettings.json "ProjectSettings" section
+        builder.Services.Configure<Services.ProjectServices.Models.ProjectSettings>(
+            builder.Configuration.GetSection("ProjectSettings"));
 
         #endregion
 
