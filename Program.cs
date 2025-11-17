@@ -138,6 +138,8 @@ public class Program
         builder.Services.AddScoped<IWatchRepository, WatchRepository>();
         builder.Services.AddScoped<ITranscriptRetrievalService, TranscriptRetrievalService>();
 
+        // Projects Feature Services
+        builder.Services.AddScoped<Features.Projects.Data.IProjectRepository, Features.Projects.Data.ProjectRepository>();
 
         #endregion
 
