@@ -106,20 +106,20 @@ else
                     <div class="col-auto">
                         <small class="text-muted">
                             <i class="bi bi-calendar-check me-1"></i>
-                            Generated on @Guide.GeneratedAt.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt")
+                            Generated on @* @Guide.GeneratedAt.ToLocalTime().ToString("MMM d, yyyy 'at' h:mm tt") *@
                         </small>
                     </div>
                     <div class="col-auto">
                         <small class="text-muted">
                             <i class="bi bi-camera-video me-1"></i>
-                            Based on @Guide.VideoCount @(Guide.VideoCount == 1 ? "video" : "videos")
+                            Based on @* @Guide.VideoCount @(Guide.VideoCount == 1 ? "video" : "videos") *@
                         </small>
                     </div>
                 </div>
             </div>
 
             <!-- Warning Indicators -->
-            @if (NeedsRegeneration())
+            @if (NeedsRegeneration)
             {
                 <div class="alert alert-warning mb-4">
                     <h6 class="alert-heading">
@@ -127,12 +127,12 @@ else
                         Guide may be outdated
                     </h6>
                     <ul class="mb-0 small">
-                        @if (Guide.VideoCount != CurrentVideoCount)
+@*                         @if (Guide.VideoCount != CurrentVideoCount)
                         {
                             <li>
                                 Videos changed since last generation (was @Guide.VideoCount, now @CurrentVideoCount)
                             </li>
-                        }
+                        } *@
                         @if (HasUserGuidanceChanged())
                         {
                             <li>
@@ -153,7 +153,7 @@ else
             <!-- Guide Content -->
             <div class="guide-content">
                 <div class="content-display">
-                    @((MarkupString)Guide.Content)
+                    @((MarkupString)Guide)
                 </div>
             </div>
         </div>
@@ -226,7 +226,7 @@ else
 
 @code {
     [Parameter]
-    public ProjectGuideEntity? Guide { get; set; }
+    public string? Guide { get; set; }
 
     [Parameter]
     public int CurrentVideoCount { get; set; }
@@ -241,6 +241,9 @@ else
     public bool CanGenerate { get; set; } = true;
 
     [Parameter]
+    public bool NeedsRegeneration { get; set; } = true;
+
+    [Parameter]
     public bool AllVideosHaveSummaries { get; set; } = false;
 
     [Parameter]
@@ -251,29 +254,22 @@ else
         return CanGenerate && AllVideosHaveSummaries && MeetsMinimumVideoCount;
     }
 
-    private bool NeedsRegeneration()
-    {
-        if (Guide == null)
-            return false;
-
-        return Guide.VideoCount != CurrentVideoCount || HasUserGuidanceChanged();
-    }
-
     private bool HasUserGuidanceChanged()
     {
-        if (Guide == null)
-            return false;
+        return false;
+        // if (Guide == null)
+        //     return false;
 
-        // Both null or empty - no change
-        if (string.IsNullOrWhiteSpace(CurrentUserGuidance) && string.IsNullOrWhiteSpace(Guide.UserGuidanceSnapshot))
-            return false;
+        // // Both null or empty - no change
+        // if (string.IsNullOrWhiteSpace(CurrentUserGuidance) && string.IsNullOrWhiteSpace(Guide.UserGuidanceSnapshot))
+        //     return false;
 
-        // One is null/empty, other is not - changed
-        if (string.IsNullOrWhiteSpace(CurrentUserGuidance) != string.IsNullOrWhiteSpace(Guide.UserGuidanceSnapshot))
-            return true;
+        // // One is null/empty, other is not - changed
+        // if (string.IsNullOrWhiteSpace(CurrentUserGuidance) != string.IsNullOrWhiteSpace(Guide.UserGuidanceSnapshot))
+        //     return true;
 
-        // Compare actual values
-        return !string.Equals(CurrentUserGuidance?.Trim(), Guide.UserGuidanceSnapshot?.Trim(), StringComparison.Ordinal);
+        // // Compare actual values
+        // return !string.Equals(CurrentUserGuidance?.Trim(), Guide.UserGuidanceSnapshot?.Trim(), StringComparison.Ordinal);
     }
 
     private async Task HandleGenerate()

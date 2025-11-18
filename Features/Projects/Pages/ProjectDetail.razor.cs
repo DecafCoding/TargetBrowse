@@ -278,9 +278,9 @@ public partial class ProjectDetail : ComponentBase
 
             // Pre-check if guide can be generated
             var canGenerateResult = await GuideService.CanGenerateGuideAsync(Id, CurrentUserId);
-            if (!canGenerateResult.CanGenerate)
+            if (!canGenerateResult)
             {
-                await MessageCenter.ShowWarningAsync(canGenerateResult.Reason ?? "Cannot generate guide at this time.");
+                await MessageCenter.ShowWarningAsync("Cannot generate guide at this time.");
                 return;
             }
 

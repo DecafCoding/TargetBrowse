@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Text.RegularExpressions;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Projects.Data;
@@ -142,8 +144,9 @@ namespace TargetBrowse.Features.Projects.Services
                         Title = pv.Video.Title,
                         ThumbnailUrl = pv.Video.ThumbnailUrl,
                         Duration = pv.Video.Duration,
-                        ChannelName = pv.Video.ChannelName,
+                        ChannelName = pv.Video.Channel.Name,
                         HasSummary = pv.Video.Summary != null && !pv.Video.Summary.IsDeleted,
+                        SummaryPreview = GetSummaryPreview(pv?.Video?.Summary?.Content),
                         Order = pv.Order,
                         AddedAt = pv.CreatedAt
                     })
@@ -165,7 +168,7 @@ namespace TargetBrowse.Features.Projects.Services
                     HasGuide = project.ProjectGuide != null && !project.ProjectGuide.IsDeleted,
                     GuideContent = project.ProjectGuide?.Content,
                     GuideGeneratedAt = project.ProjectGuide?.CreatedAt,
-                    NeedsRegeneration = project.ProjectGuide?.NeedsRegeneration ?? false,
+                    NeedsRegeneration = false,
                     AllVideosHaveSummaries = allVideosHaveSummaries,
                     MeetsMinimumVideoCount = meetsMinimumVideoCount,
                     CreatedAt = project.CreatedAt,
@@ -527,6 +530,57 @@ namespace TargetBrowse.Features.Projects.Services
                 _logger.LogError(ex, "Error getting videos without summaries for project {ProjectId}", projectId);
                 throw;
             }
+        }
+
+        private string GetSummaryPreview(string htmlContent)
+        {
+            if (string.IsNullOrEmpty(htmlContent))
+                return string.Empty;
+
+            // Extract first paragraph from HTML
+            var firstParagraph = GetFirstParagraph(htmlContent);
+
+            // Truncate to max length
+            const int maxLength = 200;
+            if (firstParagraph.Length <= maxLength)
+                return firstParagraph;
+
+            return firstParagraph.Substring(0, maxLength) + "...";
+        }
+
+        private string GetFirstParagraph(string htmlContent)
+        {
+            // Try to extract content from first <p> tag
+            var paragraphMatch = Regex.Match(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+            if (paragraphMatch.Success)
+            {
+                // Strip HTML tags from the paragraph content
+                var content = paragraphMatch.Groups[1].Value;
+                return StripHtmlTags(content);
+            }
+
+            // If no <p> tag found, strip all HTML and take first chunk
+            var stripped = StripHtmlTags(htmlContent);
+            var firstSentences = stripped.Split('.').Take(2);
+            return string.Join(". ", firstSentences).Trim();
+        }
+
+        private string StripHtmlTags(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+                return string.Empty;
+
+            // Remove HTML tags
+            var withoutTags = Regex.Replace(html, @"<[^>]+>", " ");
+
+            // Decode HTML entities
+            var decoded = WebUtility.HtmlDecode(withoutTags);
+
+            // Clean up whitespace
+            var cleaned = Regex.Replace(decoded, @"\s+", " ").Trim();
+
+            return cleaned;
         }
     }
 }

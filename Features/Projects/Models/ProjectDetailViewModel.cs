@@ -112,6 +112,11 @@ namespace TargetBrowse.Features.Projects.Models
         public bool HasSummary { get; set; }
 
         /// <summary>
+        /// Channel name.
+        /// </summary>
+        public string SummaryPreview { get; set; } = string.Empty;
+
+        /// <summary>
         /// Order in the project.
         /// </summary>
         public int Order { get; set; }

@@ -14,7 +14,7 @@
         @foreach (var video in Videos.OrderBy(v => GetVideoOrder(v)))
         {
             var order = GetVideoOrder(video);
-            var hasSummary = video.Summary != null && !string.IsNullOrEmpty(video.Summary.Content);
+            //var hasSummary = video.Summary != null && !string.IsNullOrEmpty(video.Summary.Content);
 
             <div class="video-item card mb-3">
                 <div class="card-body">
@@ -61,13 +61,13 @@
                             <div class="mb-2">
                                 <small class="text-muted">
                                     <i class="bi bi-person-circle me-1"></i>
-                                    @video.Channel?.Name
+                                    @video.ChannelName
                                 </small>
                             </div>
 
                             <!-- Summary Status -->
                             <div class="mb-2">
-                                @if (hasSummary)
+                                @if (video.HasSummary)
                                 {
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle me-1"></i>
@@ -84,11 +84,11 @@
                             </div>
 
                             <!-- Summary Preview -->
-                            @if (ShowSummaryPreview && hasSummary)
+                            @if (ShowSummaryPreview && video.HasSummary)
                             {
                                 <div class="summary-preview mt-2 p-2 bg-light rounded">
                                     <small class="text-muted">
-                                        @((MarkupString)GetSummaryPreview(video.Summary!.Content))
+                                        @video.SummaryPreview
                                     </small>
                                 </div>
                             }
@@ -145,7 +145,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public List<VideoEntity> Videos { get; set; } = new();
+    public List<ProjectVideoViewModel> Videos { get; set; } = new();
 
     [Parameter]
     public bool ShowSummaryPreview { get; set; } = false;
@@ -156,11 +156,12 @@
     [Parameter]
     public Guid ProjectId { get; set; }
 
-    private int GetVideoOrder(VideoEntity video)
+    private int GetVideoOrder(ProjectVideoViewModel video)
     {
         // Get order from ProjectVideos navigation property
-        var projectVideo = video.ProjectVideos?.FirstOrDefault(pv => pv.ProjectId == ProjectId);
-        return projectVideo?.Order ?? 0;
+        //var projectVideo = video.ProjectVideos?.FirstOrDefault(pv => pv.ProjectId == ProjectId);
+        //return projectVideo?.Order ?? 0;
+        return 0;
     }
 
     private async Task HandleRemove(Guid videoId)
@@ -168,54 +169,54 @@
         await OnRemove.InvokeAsync(videoId);
     }
 
-    private string GetSummaryPreview(string htmlContent)
-    {
-        if (string.IsNullOrEmpty(htmlContent))
-            return string.Empty;
+    // private string GetSummaryPreview(string htmlContent)
+    // {
+    //     if (string.IsNullOrEmpty(htmlContent))
+    //         return string.Empty;
 
-        // Extract first paragraph from HTML
-        var firstParagraph = GetFirstParagraph(htmlContent);
+    //     // Extract first paragraph from HTML
+    //     var firstParagraph = GetFirstParagraph(htmlContent);
 
-        // Truncate to max length
-        const int maxLength = 200;
-        if (firstParagraph.Length <= maxLength)
-            return firstParagraph;
+    //     // Truncate to max length
+    //     const int maxLength = 200;
+    //     if (firstParagraph.Length <= maxLength)
+    //         return firstParagraph;
 
-        return firstParagraph.Substring(0, maxLength) + "...";
-    }
+    //     return firstParagraph.Substring(0, maxLength) + "...";
+    // }
 
-    private string GetFirstParagraph(string htmlContent)
-    {
-        // Try to extract content from first <p> tag
-        var paragraphMatch = Regex.Match(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    // private string GetFirstParagraph(string htmlContent)
+    // {
+    //     // Try to extract content from first <p> tag
+    //     var paragraphMatch = Regex.Match(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-        if (paragraphMatch.Success)
-        {
-            // Strip HTML tags from the paragraph content
-            var content = paragraphMatch.Groups[1].Value;
-            return StripHtmlTags(content);
-        }
+    //     if (paragraphMatch.Success)
+    //     {
+    //         // Strip HTML tags from the paragraph content
+    //         var content = paragraphMatch.Groups[1].Value;
+    //         return StripHtmlTags(content);
+    //     }
 
-        // If no <p> tag found, strip all HTML and take first chunk
-        var stripped = StripHtmlTags(htmlContent);
-        var firstSentences = stripped.Split('.').Take(2);
-        return string.Join(". ", firstSentences).Trim();
-    }
+    //     // If no <p> tag found, strip all HTML and take first chunk
+    //     var stripped = StripHtmlTags(htmlContent);
+    //     var firstSentences = stripped.Split('.').Take(2);
+    //     return string.Join(". ", firstSentences).Trim();
+    // }
 
-    private string StripHtmlTags(string html)
-    {
-        if (string.IsNullOrEmpty(html))
-            return string.Empty;
+    // private string StripHtmlTags(string html)
+    // {
+    //     if (string.IsNullOrEmpty(html))
+    //         return string.Empty;
 
-        // Remove HTML tags
-        var withoutTags = Regex.Replace(html, @"<[^>]+>", " ");
+    //     // Remove HTML tags
+    //     var withoutTags = Regex.Replace(html, @"<[^>]+>", " ");
 
-        // Decode HTML entities
-        var decoded = WebUtility.HtmlDecode(withoutTags);
+    //     // Decode HTML entities
+    //     var decoded = WebUtility.HtmlDecode(withoutTags);
 
-        // Clean up whitespace
-        var cleaned = Regex.Replace(decoded, @"\s+", " ").Trim();
+    //     // Clean up whitespace
+    //     var cleaned = Regex.Replace(decoded, @"\s+", " ").Trim();
 
-        return cleaned;
-    }
+    //     return cleaned;
+    // }
 }
