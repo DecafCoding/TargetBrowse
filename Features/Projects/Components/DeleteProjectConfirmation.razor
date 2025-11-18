@@ -103,9 +103,6 @@
     public ProjectEntity Project { get; set; } = null!;
 
     [Parameter]
-    public int VideoCount { get; set; }
-
-    [Parameter]
     public EventCallback OnConfirm { get; set; }
 
     [Parameter]
@@ -113,6 +110,7 @@
 
     private bool IsDeleting { get; set; }
     private string ErrorMessage { get; set; } = string.Empty;
+    private int VideoCount => Project?.ProjectVideos?.Count(pv => !pv.IsDeleted) ?? 0;
 
     protected override void OnParametersSet()
     {

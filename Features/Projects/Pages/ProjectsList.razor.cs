@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Projects.Models;
 using TargetBrowse.Features.Projects.Services;
 using TargetBrowse.Services.Interfaces;
@@ -38,8 +39,8 @@ public partial class ProjectsList : ComponentBase
     // Modal states
     private bool ShowEditModalState = false;
     private bool ShowDeleteModalState = false;
-    private ProjectListViewModel? ProjectToEdit = null;
-    private ProjectListViewModel? ProjectToDelete = null;
+    private ProjectEntity? ProjectToEdit = null;
+    private ProjectEntity? ProjectToDelete = null;
 
     #endregion
 
@@ -103,18 +104,62 @@ public partial class ProjectsList : ComponentBase
         StateHasChanged();
     }
 
-    private void HandleEdit(Guid projectId)
+    private async Task HandleEdit(Guid projectId)
     {
-        ProjectToEdit = Projects.FirstOrDefault(p => p.Id == projectId);
-        ShowEditModalState = true;
-        StateHasChanged();
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                await MessageCenter.ShowErrorAsync("User not authenticated.");
+                return;
+            }
+
+            // Fetch the full project entity for editing
+            ProjectToEdit = await ProjectService.GetProjectByIdAsync(projectId, CurrentUserId);
+
+            if (ProjectToEdit == null)
+            {
+                await MessageCenter.ShowErrorAsync("Project not found or you don't have permission to edit it.");
+                return;
+            }
+
+            ShowEditModalState = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading project {ProjectId} for edit", projectId);
+            await MessageCenter.ShowErrorAsync("Failed to load project details.");
+        }
     }
 
-    private void HandleDelete(Guid projectId)
+    private async Task HandleDelete(Guid projectId)
     {
-        ProjectToDelete = Projects.FirstOrDefault(p => p.Id == projectId);
-        ShowDeleteModalState = true;
-        StateHasChanged();
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                await MessageCenter.ShowErrorAsync("User not authenticated.");
+                return;
+            }
+
+            // Fetch the full project entity for deletion
+            ProjectToDelete = await ProjectService.GetProjectByIdAsync(projectId, CurrentUserId);
+
+            if (ProjectToDelete == null)
+            {
+                await MessageCenter.ShowErrorAsync("Project not found or you don't have permission to delete it.");
+                return;
+            }
+
+            ShowDeleteModalState = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading project {ProjectId} for delete", projectId);
+            await MessageCenter.ShowErrorAsync("Failed to load project details.");
+        }
     }
 
     private void HandleView(Guid projectId)
@@ -193,7 +238,7 @@ public partial class ProjectsList : ComponentBase
         }
     }
 
-    private async Task HandleDeleteConfirm(Guid projectId)
+    private async Task HandleDeleteConfirm()
     {
         try
         {
@@ -203,7 +248,13 @@ public partial class ProjectsList : ComponentBase
                 return;
             }
 
-            await ProjectService.DeleteProjectAsync(projectId, CurrentUserId);
+            if (ProjectToDelete == null)
+            {
+                await MessageCenter.ShowErrorAsync("No project selected for deletion.");
+                return;
+            }
+
+            await ProjectService.DeleteProjectAsync(ProjectToDelete.Id, CurrentUserId);
             await MessageCenter.ShowSuccessAsync("Project deleted successfully!");
 
             ShowDeleteModalState = false;
@@ -214,12 +265,12 @@ public partial class ProjectsList : ComponentBase
         {
             // Business logic errors (e.g., project not found, not owned by user)
             await MessageCenter.ShowErrorAsync(ex.Message);
-            Logger.LogError(ex, "Business logic error deleting project {ProjectId} for user {UserId}", projectId, CurrentUserId);
+            Logger.LogError(ex, "Business logic error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
         }
         catch (Exception ex)
         {
             // Unexpected errors
-            Logger.LogError(ex, "Error deleting project {ProjectId} for user {UserId}", projectId, CurrentUserId);
+            Logger.LogError(ex, "Error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred while deleting the project. Please try again.");
         }
     }

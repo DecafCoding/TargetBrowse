@@ -1,4 +1,5 @@
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Features.Projects.Models;
 
 namespace TargetBrowse.Features.Projects.Services
 {
@@ -21,8 +22,8 @@ namespace TargetBrowse.Features.Projects.Services
         /// Gets all projects for a user with video counts.
         /// </summary>
         /// <param name="userId">User ID</param>
-        /// <returns>List of user's projects</returns>
-        Task<List<ProjectEntity>> GetUserProjectsAsync(string userId);
+        /// <returns>List of user's projects as view models</returns>
+        Task<List<ProjectListViewModel>> GetUserProjectsAsync(string userId);
 
         /// <summary>
         /// Creates a new project with validation.
