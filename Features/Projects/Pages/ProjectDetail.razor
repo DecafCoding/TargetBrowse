@@ -217,7 +217,7 @@
 @if (ShowEditModalState)
 {
     <EditProjectModal IsVisible="@ShowEditModalState"
-                      Project="@Project"
+                      Project="@ProjectToEdit"
                       OnSave="@HandleUpdateProject"
                       OnCancel="@CloseModals" />
 }

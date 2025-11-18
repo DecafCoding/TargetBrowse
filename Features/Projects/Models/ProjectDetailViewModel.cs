@@ -1,5 +1,3 @@
-using TargetBrowse.Data.Entities;
-
 namespace TargetBrowse.Features.Projects.Models
 {
     /// <summary>

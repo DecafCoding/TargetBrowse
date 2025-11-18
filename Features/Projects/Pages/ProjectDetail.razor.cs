@@ -53,6 +53,7 @@ public partial class ProjectDetail : ComponentBase
     private bool ShowRemoveConfirmation = false;
     private ProjectVideoViewModel? VideoToRemove = null;
     private bool IsRemovingVideo = false;
+    private ProjectEditViewModel? ProjectToEdit = null;
 
     #endregion
 
@@ -92,7 +93,7 @@ public partial class ProjectDetail : ComponentBase
             }
 
             // Load project details
-            Project = await ProjectService.GetProjectByIdAsync(Id, CurrentUserId);
+            Project = await ProjectService.GetProjectDetailAsync(Id, CurrentUserId);
 
             // Check daily limit
             DailyCallCount = await GuideService.GetDailyAICallCountAsync(CurrentUserId);
@@ -129,13 +130,25 @@ public partial class ProjectDetail : ComponentBase
 
     private void ShowEditModal()
     {
-        ShowEditModalState = true;
-        StateHasChanged();
+        if (Project != null)
+        {
+            // Convert ProjectDetailViewModel to ProjectEditViewModel
+            ProjectToEdit = new ProjectEditViewModel
+            {
+                Id = Project.Id,
+                Name = Project.Name,
+                Description = Project.Description,
+                UserGuidance = Project.UserGuidance
+            };
+            ShowEditModalState = true;
+            StateHasChanged();
+        }
     }
 
     private void CloseModals()
     {
         ShowEditModalState = false;
+        ProjectToEdit = null;
         StateHasChanged();
     }
 

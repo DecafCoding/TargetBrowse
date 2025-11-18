@@ -117,6 +117,69 @@ namespace TargetBrowse.Features.Projects.Services
         }
 
         /// <summary>
+        /// Gets detailed project information for the detail page.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        public async Task<ProjectDetailViewModel?> GetProjectDetailAsync(Guid id, string userId)
+        {
+            try
+            {
+                var project = await _projectRepository.GetByIdAsync(id, userId);
+
+                if (project == null || project.UserId != userId)
+                {
+                    return null;
+                }
+
+                // Map videos
+                var videos = project.ProjectVideos?
+                    .Where(pv => !pv.IsDeleted)
+                    .OrderBy(pv => pv.Order)
+                    .Select(pv => new ProjectVideoViewModel
+                    {
+                        Id = pv.Video.Id,
+                        YouTubeVideoId = pv.Video.YouTubeVideoId,
+                        Title = pv.Video.Title,
+                        ThumbnailUrl = pv.Video.ThumbnailUrl,
+                        Duration = pv.Video.Duration,
+                        ChannelName = pv.Video.ChannelName,
+                        HasSummary = pv.Video.Summary != null && !pv.Video.Summary.IsDeleted,
+                        Order = pv.Order,
+                        AddedAt = pv.CreatedAt
+                    })
+                    .ToList() ?? new List<ProjectVideoViewModel>();
+
+                // Check if all videos have summaries
+                var allVideosHaveSummaries = videos.Count > 0 && videos.All(v => v.HasSummary);
+
+                // Check minimum video count (assuming 1 as minimum, adjust if needed)
+                var meetsMinimumVideoCount = videos.Count >= 1;
+
+                return new ProjectDetailViewModel
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    UserGuidance = project.UserGuidance,
+                    Videos = videos,
+                    HasGuide = project.ProjectGuide != null && !project.ProjectGuide.IsDeleted,
+                    GuideContent = project.ProjectGuide?.Content,
+                    GuideGeneratedAt = project.ProjectGuide?.CreatedAt,
+                    NeedsRegeneration = project.ProjectGuide?.NeedsRegeneration ?? false,
+                    AllVideosHaveSummaries = allVideosHaveSummaries,
+                    MeetsMinimumVideoCount = meetsMinimumVideoCount,
+                    CreatedAt = project.CreatedAt,
+                    LastModifiedAt = project.LastModifiedAt
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting project detail {ProjectId} for user {UserId}", id, userId);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets all projects for a user with video counts.
         /// </summary>
         public async Task<List<ProjectListViewModel>> GetUserProjectsAsync(string userId)
