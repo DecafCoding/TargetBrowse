@@ -52,84 +52,84 @@ else
         <div class="col-lg-3">
             <div class="sidebar-content">
                 <!-- Channel Header -->
-                <div class="channel-header mb-4">
-                    <div class="card-header bg-primary text-white mb-3">
+                <div class="card mb-4">
+                    <div class="card-header mb-3">
                         <h5 class="mb-0">Recent Videos</h5>
                     </div>
-                    <!-- Channel Avatar and Info -->
-                    <div class="d-flex flex-column align-items-center text-center mb-3">
-                        <!-- Channel Thumbnail -->
-                        <div class="channel-avatar mb-3">
-                            <img src="@GetChannelThumbnailUrl()"
-                                 class="rounded-circle"
-                                 alt="@Model.Channel.Name"
-                                 loading="lazy"
-                                 onerror="handleChannelThumbnailError(this)" />
-                        </div>
-
-                        <!-- Channel Details -->
-                        <div class="channel-info">
-                            <h1 class="channel-name h4 mb-1">
-                                @Model.Channel.Name
-                            </h1>
-                            @* Star Rating Display *@
-                            <div class="mb-2">
-                                @for (int i = 1; i <= 5; i++)
-                                {
-                                    <i class="bi bi-star@(GetStarFill(i)) @GetStarClass(i)"></i>
-                                }
+                    <div class="card-body">
+                        <!-- Channel Avatar and Info -->
+                        <div class="d-flex flex-column align-items-center text-center mb-3">
+                            <!-- Channel Thumbnail -->
+                            <div class="channel-avatar mb-3">
+                                <img src="@GetChannelThumbnailUrl()"
+                                     class="rounded-circle"
+                                     alt="@Model.Channel.Name"
+                                     loading="lazy"
+                                     onerror="handleChannelThumbnailError(this)" />
                             </div>
 
-                            <div class="channel-stats text-muted small">
-                                @if (!string.IsNullOrEmpty(Model.Channel.SubscriberCountDisplay) && Model.Channel.SubscriberCountDisplay != "N/A")
-                                {
-                                    <div class="mb-2">
-                                        <i class="bi bi-people me-1"></i>
-                                        @Model.Channel.SubscriberCountDisplay subscribers
-                                    </div>
-                                }
-
-                                @if (!string.IsNullOrEmpty(Model.Channel.VideoCountDisplay) && Model.Channel.VideoCountDisplay != "N/A")
-                                {
-                                    <div class="mb-2">
-                                        <i class="bi bi-play-circle me-1"></i>
-                                        @Model.Channel.VideoCountDisplay videos
-                                        @if (!string.IsNullOrEmpty(Model.Channel.DatabaseVideoCountDisplay))
-                                        {
-                                            <span class="text-muted"> @Model.Channel.DatabaseVideoCountDisplay</span>
-                                        }
-                                    </div>
-                                }
-
-                                <!-- Add LastCheckDate display -->
+                            <!-- Channel Details -->
+                            <div class="channel-info">
+                                <h1 class="channel-name h4 mb-1">
+                                    @Model.Channel.Name
+                                </h1>
+                                @* Star Rating Display *@
                                 <div class="mb-2">
-                                    <i class="bi bi-clock-history me-1"></i>
-                                    Last checked: @Model.Channel.LastCheckDateDisplay
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi bi-star@(GetStarFill(i)) @GetStarClass(i)"></i>
+                                    }
                                 </div>
 
-                                @if (Model.IsTrackedByUser)
-                                {
-                                    <div>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            Tracking
-                                        </span>
+                                <div class="channel-stats text-muted small">
+                                    @if (!string.IsNullOrEmpty(Model.Channel.SubscriberCountDisplay) && Model.Channel.SubscriberCountDisplay != "N/A")
+                                    {
+                                        <div class="mb-2">
+                                            <i class="bi bi-people me-1"></i>
+                                            @Model.Channel.SubscriberCountDisplay subscribers
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(Model.Channel.VideoCountDisplay) && Model.Channel.VideoCountDisplay != "N/A")
+                                    {
+                                        <div class="mb-2">
+                                            <i class="bi bi-play-circle me-1"></i>
+                                            @Model.Channel.VideoCountDisplay videos
+                                            @if (!string.IsNullOrEmpty(Model.Channel.DatabaseVideoCountDisplay))
+                                            {
+                                                <span class="text-muted"> @Model.Channel.DatabaseVideoCountDisplay</span>
+                                            }
+                                        </div>
+                                    }
+
+                                    <!-- Add LastCheckDate display -->
+                                    <div class="mb-2">
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        Last checked: @Model.Channel.LastCheckDateDisplay
                                     </div>
-                                }
+
+                                    @if (Model.IsTrackedByUser)
+                                    {
+                                        <div>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Tracking
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Actions -->
-                    <div class="d-grid">
-                        <a href="@Model.Channel.ChannelUrl"
-                           target="_blank"
-                           class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-youtube me-1"></i>
-                            View on YouTube
-                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                        </a>
-                    </div>
+                    <a href="@Model.Channel.ChannelUrl"
+                       target="_blank"
+                       class="btn btn-outline-primary btn-sm mb-3 mx-3">
+                        <i class="bi bi-youtube me-1"></i>
+                        View on YouTube
+                        <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                    </a>
                 </div>
 
                 <!-- Message Center -->
@@ -139,39 +139,36 @@ else
 
         <!-- Main Content -->
         <div class="col-lg-9">
-            <!-- Videos Section -->
-            <div class="videos-section">
-                <!-- Channel Video Grid -->
-                <div class="channel-video-grid">
-                    @if (Model.Videos.Any())
-                    {
-                        <div class="row g-2">
-                            @foreach (var video in Model.Videos)
-                            {
-                                <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-                                    <ChannelVideoCard Video="@video" />
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state text-center py-5">
-                            <div class="empty-state-icon mb-3">
-                                <i class="bi bi-play-circle display-1 text-muted"></i>
+            <!-- Channel Video Grid -->
+            <div class="channel-video-grid">
+                @if (Model.Videos.Any())
+                {
+                    <div class="row g-2">
+                        @foreach (var video in Model.Videos)
+                        {
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                                <ChannelVideoCard Video="@video" />
                             </div>
-                            <h5 class="text-muted mb-2">No Recent Videos Found</h5>
-                            <p class="text-muted">
-                                This channel hasn't published any videos in the last year,
-                                or the videos may not be available.
-                            </p>
-                            <a href="@Model.Channel.ChannelUrl" target="_blank" class="btn btn-outline-primary">
-                                <i class="bi bi-youtube me-1"></i>
-                                Check Channel on YouTube
-                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-state-icon mb-3">
+                            <i class="bi bi-play-circle display-1 text-muted"></i>
                         </div>
-                    }
-                </div>
+                        <h5 class="text-muted mb-2">No Recent Videos Found</h5>
+                        <p class="text-muted">
+                            This channel hasn't published any videos in the last year,
+                            or the videos may not be available.
+                        </p>
+                        <a href="@Model.Channel.ChannelUrl" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-youtube me-1"></i>
+                            Check Channel on YouTube
+                        </a>
+                    </div>
+                }
             </div>
         </div>
     </div>
