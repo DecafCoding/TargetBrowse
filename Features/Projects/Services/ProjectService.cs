@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Projects.Data;
+using TargetBrowse.Features.Projects.Models;
 using TargetBrowse.Services.ProjectServices.Models;
 
 namespace TargetBrowse.Features.Projects.Services
@@ -55,9 +56,70 @@ namespace TargetBrowse.Features.Projects.Services
         }
 
         /// <summary>
+        /// Gets a project for editing.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        public async Task<ProjectEditViewModel?> GetProjectForEditAsync(Guid id, string userId)
+        {
+            try
+            {
+                var project = await _projectRepository.GetByIdAsync(id, userId);
+
+                if (project == null || project.UserId != userId)
+                {
+                    return null;
+                }
+
+                return new ProjectEditViewModel
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    UserGuidance = project.UserGuidance
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting project {ProjectId} for edit for user {UserId}", id, userId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets a project for deletion confirmation.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        public async Task<ProjectDeleteViewModel?> GetProjectForDeleteAsync(Guid id, string userId)
+        {
+            try
+            {
+                var project = await _projectRepository.GetByIdAsync(id, userId);
+
+                if (project == null || project.UserId != userId)
+                {
+                    return null;
+                }
+
+                return new ProjectDeleteViewModel
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    VideoCount = project.ProjectVideos?.Count(pv => !pv.IsDeleted) ?? 0,
+                    HasGuide = project.ProjectGuide != null && !project.ProjectGuide.IsDeleted
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting project {ProjectId} for delete for user {UserId}", id, userId);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets all projects for a user with video counts.
         /// </summary>
-        public async Task<List<ProjectEntity>> GetUserProjectsAsync(string userId)
+        public async Task<List<ProjectListViewModel>> GetUserProjectsAsync(string userId)
         {
             try
             {
@@ -66,7 +128,21 @@ namespace TargetBrowse.Features.Projects.Services
                     throw new ArgumentException("User ID is required", nameof(userId));
                 }
 
-                return await _projectRepository.GetUserProjectsAsync(userId);
+                var projects = await _projectRepository.GetUserProjectsAsync(userId);
+
+                // Map to view models
+                return projects.Select(p => new ProjectListViewModel
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    DescriptionPreview = p.Description?.Length > 100
+                        ? p.Description.Substring(0, 100) + "..."
+                        : p.Description,
+                    VideoCount = p.ProjectVideos?.Count(pv => !pv.IsDeleted) ?? 0,
+                    HasGuide = p.ProjectGuide != null && !p.ProjectGuide.IsDeleted,
+                    LastModifiedAt = p.LastModifiedAt,
+                    CreatedAt = p.CreatedAt
+                }).ToList();
             }
             catch (Exception ex)
             {

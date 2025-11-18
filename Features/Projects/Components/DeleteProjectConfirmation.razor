@@ -35,9 +35,9 @@
                             <div>
                                 <span class="badge bg-primary">
                                     <i class="bi bi-camera-video me-1"></i>
-                                    @VideoCount @(VideoCount == 1 ? "video" : "videos")
+                                    @Project.VideoCount @(Project.VideoCount == 1 ? "video" : "videos")
                                 </span>
-                                @if (Project.ProjectGuide != null)
+                                @if (Project.HasGuide)
                                 {
                                     <span class="badge bg-success ms-2">
                                         <i class="bi bi-book me-1"></i>
@@ -51,12 +51,12 @@
                     <div class="alert alert-warning mb-3">
                         <h6 class="alert-heading">
                             <i class="bi bi-info-circle me-2"></i>
-                            This will remove @VideoCount @(VideoCount == 1 ? "video" : "videos") from the project
+                            This will remove @Project.VideoCount @(Project.VideoCount == 1 ? "video" : "videos") from the project
                         </h6>
                         <ul class="mb-0 small">
                             <li>Videos will be removed from this project only</li>
                             <li>The videos themselves will remain in your library</li>
-                            @if (Project.ProjectGuide != null)
+                            @if (Project.HasGuide)
                             {
                                 <li><strong>The generated guide will be permanently deleted</strong></li>
                             }
@@ -100,10 +100,7 @@
     public bool IsVisible { get; set; }
 
     [Parameter, EditorRequired]
-    public ProjectEntity Project { get; set; } = null!;
-
-    [Parameter]
-    public int VideoCount { get; set; }
+    public ProjectDeleteViewModel Project { get; set; } = null!;
 
     [Parameter]
     public EventCallback OnConfirm { get; set; }
