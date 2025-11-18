@@ -47,93 +47,95 @@ else if (!string.IsNullOrEmpty(Model.ErrorMessage))
 }
 else
 {
-    <!-- Channel Header -->
-    <div class="channel-header mb-4">
-        <div class="row align-items-center">
-            <!-- Channel Avatar and Info -->
-            <div class="col-md-8">
-                <div class="d-flex align-items-center">
-                    <!-- Channel Thumbnail -->
-                    <div class="channel-avatar me-3">
-                        <img src="@GetChannelThumbnailUrl()"
-                             class="rounded-circle"
-                             alt="@Model.Channel.Name"
-                             loading="lazy"
-                             onerror="handleChannelThumbnailError(this)" />
-                    </div>
+    <div class="row">
+        <!-- Left Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar-content">
+                <!-- Channel Header -->
+                <div class="channel-header mb-4">
+                    <!-- Channel Avatar and Info -->
+                    <div class="d-flex flex-column align-items-center text-center mb-3">
+                        <!-- Channel Thumbnail -->
+                        <div class="channel-avatar mb-3">
+                            <img src="@GetChannelThumbnailUrl()"
+                                 class="rounded-circle"
+                                 alt="@Model.Channel.Name"
+                                 loading="lazy"
+                                 onerror="handleChannelThumbnailError(this)" />
+                        </div>
 
-                    <!-- Channel Details -->
-                    <div class="channel-info">
-                        <h1 class="channel-name h4 mb-1">
-                            @Model.Channel.Name
+                        <!-- Channel Details -->
+                        <div class="channel-info">
+                            <h1 class="channel-name h4 mb-1">
+                                @Model.Channel.Name
+                            </h1>
                             @* Star Rating Display *@
-                            <span class="ms-2 h6">
+                            <div class="mb-2">
                                 @for (int i = 1; i <= 5; i++)
                                 {
                                     <i class="bi bi-star@(GetStarFill(i)) @GetStarClass(i)"></i>
                                 }
-                            </span>
-                        </h1>
+                            </div>
 
-                        <div class="channel-stats text-muted">
-                            @if (!string.IsNullOrEmpty(Model.Channel.SubscriberCountDisplay) && Model.Channel.SubscriberCountDisplay != "N/A")
-                            {
-                                <span class="me-3">
-                                    <i class="bi bi-people me-1"></i>
-                                    @Model.Channel.SubscriberCountDisplay subscribers
-                                </span>
-                            }
+                            <div class="channel-stats text-muted small">
+                                @if (!string.IsNullOrEmpty(Model.Channel.SubscriberCountDisplay) && Model.Channel.SubscriberCountDisplay != "N/A")
+                                {
+                                    <div class="mb-2">
+                                        <i class="bi bi-people me-1"></i>
+                                        @Model.Channel.SubscriberCountDisplay subscribers
+                                    </div>
+                                }
 
-                            @if (!string.IsNullOrEmpty(Model.Channel.VideoCountDisplay) && Model.Channel.VideoCountDisplay != "N/A")
-                            {
-                                <span class="me-3">
-                                    <i class="bi bi-play-circle me-1"></i>
-                                    @Model.Channel.VideoCountDisplay videos
-                                    @if (!string.IsNullOrEmpty(Model.Channel.DatabaseVideoCountDisplay))
-                                    {
-                                        <span class="text-muted"> @Model.Channel.DatabaseVideoCountDisplay</span>
-                                    }
-                                </span>
-                            }
+                                @if (!string.IsNullOrEmpty(Model.Channel.VideoCountDisplay) && Model.Channel.VideoCountDisplay != "N/A")
+                                {
+                                    <div class="mb-2">
+                                        <i class="bi bi-play-circle me-1"></i>
+                                        @Model.Channel.VideoCountDisplay videos
+                                        @if (!string.IsNullOrEmpty(Model.Channel.DatabaseVideoCountDisplay))
+                                        {
+                                            <span class="text-muted"> @Model.Channel.DatabaseVideoCountDisplay</span>
+                                        }
+                                    </div>
+                                }
 
-                            <!-- Add LastCheckDate display -->
-                            <span class="me-3">
-                                <i class="bi bi-clock-history me-1"></i>
-                                Last checked: @Model.Channel.LastCheckDateDisplay
-                            </span>
+                                <!-- Add LastCheckDate display -->
+                                <div class="mb-2">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    Last checked: @Model.Channel.LastCheckDateDisplay
+                                </div>
 
-                            @if (Model.IsTrackedByUser)
-                            {
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check-circle me-1"></i>
-                                    Tracking
-                                </span>
-                            }
+                                @if (Model.IsTrackedByUser)
+                                {
+                                    <div>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>
+                                            Tracking
+                                        </span>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="col-md-4 text-md-end">
-                <a href="@Model.Channel.ChannelUrl"
-                   target="_blank"
-                   class="btn btn-outline-primary">
-                    <i class="bi bi-youtube me-1"></i>
-                    View on YouTube
-                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                </a>
+                    <!-- Actions -->
+                    <div class="d-grid">
+                        <a href="@Model.Channel.ChannelUrl"
+                           target="_blank"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-youtube me-1"></i>
+                            View on YouTube
+                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Message Center -->
+                <MessageSidebar />
             </div>
         </div>
-    </div>
 
-    <div class="row">
-
-        @* <div class="col-lg-3">
-            <!-- Help and Tips Sidebar -->
-        </div> *@
-
-        <div class="col-lg-12">
+        <!-- Main Content -->
+        <div class="col-lg-9">
             <!-- Videos Section -->
             <div class="videos-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
