@@ -1,0 +1,287 @@
+@if (IsVisible)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);"
+         @onclick="HandleBackdropClick" @onclick:stopPropagation="false">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi @(IsEditMode ? "bi-pencil" : "bi-plus-circle") me-2"></i>
+                        @(IsEditMode ? "Edit Project" : "Create New Project")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    <!-- Name Input -->
+                    <div class="mb-3">
+                        <label for="project-name" class="form-label">
+                            Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control @GetValidationClass("Name")"
+                               id="project-name"
+                               maxlength="200"
+                               placeholder="Enter project name"
+                               value="@CurrentName"
+                               @oninput="OnNameInput" />
+
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-danger">@GetFieldError("Name")</small>
+                            <small class="@GetCharCountClass(CurrentName.Length, 200)">
+                                @CurrentName.Length / 200
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Description Input -->
+                    <div class="mb-3">
+                        <label for="project-description" class="form-label">
+                            Description
+                        </label>
+                        <textarea class="form-control @GetValidationClass("Description")"
+                                  id="project-description"
+                                  rows="4"
+                                  maxlength="2000"
+                                  placeholder="Describe the purpose or topic of this project (optional)"
+                                  value="@CurrentDescription"
+                                  @oninput="OnDescriptionInput"></textarea>
+
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-danger">@GetFieldError("Description")</small>
+                            <small class="@GetCharCountClass(CurrentDescription.Length, 2000)">
+                                @CurrentDescription.Length / 2,000
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- User Guidance Input -->
+                    <div class="mb-3">
+                        <label for="project-guidance" class="form-label">
+                            User Guidance for AI Guide
+                        </label>
+                        <textarea class="form-control @GetValidationClass("UserGuidance")"
+                                  id="project-guidance"
+                                  rows="3"
+                                  maxlength="1000"
+                                  placeholder="Provide guidance to focus the AI guide (e.g., 'Focus on error handling')"
+                                  value="@CurrentUserGuidance"
+                                  @oninput="OnUserGuidanceInput"></textarea>
+
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Help the AI focus on specific aspects when generating the guide
+                                </small>
+                                <small class="text-danger d-block">@GetFieldError("UserGuidance")</small>
+                            </div>
+                            <small class="@GetCharCountClass(CurrentUserGuidance.Length, 1000)">
+                                @CurrentUserGuidance.Length / 1,000
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseModal"
+                            disabled="@IsSubmitting">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="HandleSubmit"
+                            disabled="@(IsSubmitting || !IsValid())">
+                        @if (IsSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi @(IsEditMode ? "bi-check-lg" : "bi-plus-lg") me-1"></i>
+                        }
+                        @(IsEditMode ? "Save Changes" : "Create Project")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public ProjectEntity? Project { get; set; }
+
+    [Parameter]
+    public EventCallback<UpdateProjectRequest> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private bool IsEditMode => Project != null;
+
+    private string CurrentName { get; set; } = string.Empty;
+    private string CurrentDescription { get; set; } = string.Empty;
+    private string CurrentUserGuidance { get; set; } = string.Empty;
+    private bool IsSubmitting { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+    private Dictionary<string, string> ValidationErrors { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            // Initialize form with project data or defaults
+            if (Project != null)
+            {
+                CurrentName = Project.Name ?? string.Empty;
+                CurrentDescription = Project.Description ?? string.Empty;
+                CurrentUserGuidance = Project.UserGuidance ?? string.Empty;
+            }
+            else
+            {
+                CurrentName = string.Empty;
+                CurrentDescription = string.Empty;
+                CurrentUserGuidance = string.Empty;
+            }
+
+            ErrorMessage = string.Empty;
+            ValidationErrors.Clear();
+            IsSubmitting = false;
+        }
+    }
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        CurrentName = e.Value?.ToString() ?? string.Empty;
+        ClearFieldError("Name");
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        CurrentDescription = e.Value?.ToString() ?? string.Empty;
+        ClearFieldError("Description");
+    }
+
+    private void OnUserGuidanceInput(ChangeEventArgs e)
+    {
+        CurrentUserGuidance = e.Value?.ToString() ?? string.Empty;
+        ClearFieldError("UserGuidance");
+    }
+
+    private bool IsValid()
+    {
+        ValidationErrors.Clear();
+
+        // Name is required
+        if (string.IsNullOrWhiteSpace(CurrentName))
+        {
+            ValidationErrors["Name"] = "Project name is required";
+            return false;
+        }
+
+        // Name length validation
+        if (CurrentName.Length > 200)
+        {
+            ValidationErrors["Name"] = "Project name cannot exceed 200 characters";
+            return false;
+        }
+
+        // Description length validation
+        if (CurrentDescription.Length > 2000)
+        {
+            ValidationErrors["Description"] = "Description cannot exceed 2,000 characters";
+            return false;
+        }
+
+        // User guidance length validation
+        if (CurrentUserGuidance.Length > 1000)
+        {
+            ValidationErrors["UserGuidance"] = "User guidance cannot exceed 1,000 characters";
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!IsValid())
+            return;
+
+        IsSubmitting = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            var request = new UpdateProjectRequest
+            {
+                Id = Project?.Id ?? Guid.Empty,
+                Name = CurrentName.Trim(),
+                Description = string.IsNullOrWhiteSpace(CurrentDescription) ? null : CurrentDescription.Trim(),
+                UserGuidance = string.IsNullOrWhiteSpace(CurrentUserGuidance) ? null : CurrentUserGuidance.Trim()
+            };
+
+            await OnSave.InvokeAsync(request);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving project: {ex.Message}";
+            IsSubmitting = false;
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        if (!IsSubmitting)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await CloseModal();
+    }
+
+    private string GetValidationClass(string fieldName)
+    {
+        return ValidationErrors.ContainsKey(fieldName) ? "is-invalid" : string.Empty;
+    }
+
+    private string GetFieldError(string fieldName)
+    {
+        return ValidationErrors.TryGetValue(fieldName, out var error) ? error : string.Empty;
+    }
+
+    private void ClearFieldError(string fieldName)
+    {
+        ValidationErrors.Remove(fieldName);
+    }
+
+    private string GetCharCountClass(int currentLength, int maxLength)
+    {
+        var percentage = (double)currentLength / maxLength;
+
+        if (percentage >= 1.0)
+            return "text-danger fw-bold";
+        if (percentage >= 0.9)
+            return "text-warning";
+
+        return "text-muted";
+    }
+}

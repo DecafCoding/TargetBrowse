@@ -1,0 +1,221 @@
+@using System.Net
+@using System.Text.RegularExpressions
+
+<div class="project-videos-list">
+    @if (Videos == null || !Videos.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No videos in this project yet.
+        </div>
+    }
+    else
+    {
+        @foreach (var video in Videos.OrderBy(v => GetVideoOrder(v)))
+        {
+            var order = GetVideoOrder(video);
+            var hasSummary = video.Summary != null && !string.IsNullOrEmpty(video.Summary.Content);
+
+            <div class="video-item card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Order Number -->
+                        <div class="col-auto d-flex align-items-start">
+                            <div class="order-number">
+                                <span class="badge bg-secondary">@order</span>
+                            </div>
+                        </div>
+
+                        <!-- Video Thumbnail -->
+                        <div class="col-auto">
+                            @if (!string.IsNullOrEmpty(video.ThumbnailUrl))
+                            {
+                                <img src="@video.ThumbnailUrl"
+                                     class="video-thumbnail rounded"
+                                     alt="@video.Title thumbnail"
+                                     loading="lazy"
+                                     style="width: 120px; height: 90px; object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-center bg-secondary rounded"
+                                     style="width: 120px; height: 90px;">
+                                    <i class="bi bi-camera-video text-white" style="font-size: 2rem;"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Video Info -->
+                        <div class="col">
+                            <!-- Video Title -->
+                            <h6 class="mb-2">
+                                <a href="/watch/@video.YouTubeVideoId"
+                                   class="text-decoration-none title-link"
+                                   title="@video.Title">
+                                    @video.Title
+                                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                                </a>
+                            </h6>
+
+                            <!-- Channel Name -->
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-person-circle me-1"></i>
+                                    @video.Channel?.Name
+                                </small>
+                            </div>
+
+                            <!-- Summary Status -->
+                            <div class="mb-2">
+                                @if (hasSummary)
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Summary available
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        No summary - <a href="/watch/@video.YouTubeVideoId" class="text-dark text-decoration-underline">generate first</a>
+                                    </span>
+                                }
+                            </div>
+
+                            <!-- Summary Preview -->
+                            @if (ShowSummaryPreview && hasSummary)
+                            {
+                                <div class="summary-preview mt-2 p-2 bg-light rounded">
+                                    <small class="text-muted">
+                                        @((MarkupString)GetSummaryPreview(video.Summary!.Content))
+                                    </small>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="col-auto d-flex align-items-start">
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    @onclick="() => HandleRemove(video.Id)"
+                                    title="Remove from Project">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .project-videos-list .video-item {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .project-videos-list .video-item:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .project-videos-list .order-number {
+        font-size: 1.25rem;
+        font-weight: bold;
+        min-width: 2rem;
+        text-align: center;
+    }
+
+    .project-videos-list .summary-preview {
+        max-height: 100px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .project-videos-list .title-link {
+        color: inherit;
+        transition: color 0.2s ease-in-out;
+    }
+
+    .project-videos-list .title-link:hover {
+        color: var(--bs-primary);
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<VideoEntity> Videos { get; set; } = new();
+
+    [Parameter]
+    public bool ShowSummaryPreview { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<Guid> OnRemove { get; set; }
+
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    private int GetVideoOrder(VideoEntity video)
+    {
+        // Get order from ProjectVideos navigation property
+        var projectVideo = video.ProjectVideos?.FirstOrDefault(pv => pv.ProjectId == ProjectId);
+        return projectVideo?.Order ?? 0;
+    }
+
+    private async Task HandleRemove(Guid videoId)
+    {
+        await OnRemove.InvokeAsync(videoId);
+    }
+
+    private string GetSummaryPreview(string htmlContent)
+    {
+        if (string.IsNullOrEmpty(htmlContent))
+            return string.Empty;
+
+        // Extract first paragraph from HTML
+        var firstParagraph = GetFirstParagraph(htmlContent);
+
+        // Truncate to max length
+        const int maxLength = 200;
+        if (firstParagraph.Length <= maxLength)
+            return firstParagraph;
+
+        return firstParagraph.Substring(0, maxLength) + "...";
+    }
+
+    private string GetFirstParagraph(string htmlContent)
+    {
+        // Try to extract content from first <p> tag
+        var paragraphMatch = Regex.Match(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        if (paragraphMatch.Success)
+        {
+            // Strip HTML tags from the paragraph content
+            var content = paragraphMatch.Groups[1].Value;
+            return StripHtmlTags(content);
+        }
+
+        // If no <p> tag found, strip all HTML and take first chunk
+        var stripped = StripHtmlTags(htmlContent);
+        var firstSentences = stripped.Split('.').Take(2);
+        return string.Join(". ", firstSentences).Trim();
+    }
+
+    private string StripHtmlTags(string html)
+    {
+        if (string.IsNullOrEmpty(html))
+            return string.Empty;
+
+        // Remove HTML tags
+        var withoutTags = Regex.Replace(html, @"<[^>]+>", " ");
+
+        // Decode HTML entities
+        var decoded = WebUtility.HtmlDecode(withoutTags);
+
+        // Clean up whitespace
+        var cleaned = Regex.Replace(decoded, @"\s+", " ").Trim();
+
+        return cleaned;
+    }
+}
