@@ -98,15 +98,12 @@
                 {
                     <button type="button"
                             class="btn btn-primary btn-sm flex-fill"
+                            title="Add to Library"
                             @onclick="AddToLibrary"
                             disabled="@IsAddingToLibrary">
                         @if (IsAddingToLibrary)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-bookmark-plus me-1"></i>
                         }
                         Library
                     </button>
@@ -121,12 +118,10 @@
                     </button>
                 }
 
-                <a href="@Video.YouTubeUrl"
-                   target="_blank"
+                <a href="/watch/@Video.YouTubeVideoId"
+                   title="Open on Watch Page"
                    class="btn btn-outline-secondary btn-sm flex-fill">
-                    <i class="bi bi-play-circle me-1"></i>
                     Watch
-                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
                 </a>
             </div>
         </div>
