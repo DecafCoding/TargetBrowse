@@ -1,0 +1,392 @@
+I'm implementing a Project feature for my ASP.NET Core Blazor application. I've completed Steps 1-5 and need to implement Step 6 (Razor Pages).
+
+## What's Been Completed:
+✅ Step 1: Database Layer (entities, configurations, DbContext, migration)
+✅ Step 2: Shared Services (AddToProjectService, AddToProjectModal component)
+✅ Step 3: Data Access Layer (IProjectRepository, ProjectRepository)
+✅ Step 4: Business Logic Layer (IProjectService, ProjectGuideService, Models)
+✅ Step 5: UI Components (ProjectCard, ProjectVideoList, ProjectGuideDisplay, EditProjectModal, DeleteProjectConfirmation)
+
+## What Needs to Be Done (Step 6 - Razor Pages):
+
+Create the main pages for the Project feature following the existing Blazor page patterns.
+
+### Location:
+`/Features/Projects/Pages/`
+
+### Pages to Create:
+
+#### 1. ProjectsList.razor
+**Route:** `@page "/projects"`
+
+**Purpose:** Display all user's projects in a list/grid view
+
+**Injected Services:**
+- `IProjectService`
+- `NavigationManager`
+- `IMessageCenterService` (for notifications/toasts)
+- `AuthenticationStateProvider` (to get current user)
+
+**State Management:**
+- `List<ProjectListViewModel>? projects` - User's projects
+- `bool isLoading` - Loading state
+- `ProjectEntity? projectToDelete` - Project pending deletion
+- `ProjectEntity? projectToEdit` - Project being edited
+- `bool showEditModal` - Edit modal visibility
+- `bool showDeleteModal` - Delete modal visibility
+- `bool showCreateModal` - Create modal visibility
+
+**Lifecycle:**
+- `OnInitializedAsync()`: Load user's projects, order by LastModifiedAt DESC
+
+**Key Features:**
+- Display projects in responsive grid (use ProjectCard component)
+- [Create New Project] button at top
+- Empty state message if no projects: "You haven't created any projects yet. Get started by creating your first project!"
+- Loading spinner while fetching data
+- Toast notifications for success/error messages
+
+**CRUD Operations:**
+- **Create:** Show EditProjectModal (null project), call CreateProjectAsync, refresh list
+- **Edit:** Show EditProjectModal (with project), call UpdateProjectAsync, refresh list
+- **Delete:** Show DeleteProjectConfirmation, call DeleteProjectAsync, refresh list
+- **View:** Navigate to `/projects/{id}` on card click or View button
+
+**Layout:**
+```razor
+@page "/projects"
+@using Features.Projects.Services
+@inject IProjectService ProjectService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>My Projects</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Projects</h2>
+        <button class="btn btn-primary" @onclick="ShowCreateModal">
+            Create New Project
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <!-- Loading spinner -->
+    }
+    else if (projects == null || !projects.Any())
+    {
+        <!-- Empty state -->
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var project in projects)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <ProjectCard Project="project"
+                                 OnEdit="HandleEdit"
+                                 OnDelete="HandleDelete" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modals -->
+@if (showEditModal || showCreateModal)
+{
+    <EditProjectModal Project="projectToEdit"
+                      OnSave="HandleSave"
+                      OnCancel="HideModals" />
+}
+
+@if (showDeleteModal)
+{
+    <DeleteProjectConfirmation Project="projectToDelete"
+                               OnConfirm="HandleDeleteConfirm"
+                               OnCancel="HideModals" />
+}
+```
+
+**Error Handling:**
+- Try-catch around service calls
+- Display user-friendly error messages via MessageCenter
+- Log errors appropriately
+
+---
+
+#### 2. ProjectDetail.razor
+**Route:** `@page "/projects/{id:guid}"`
+
+**Purpose:** Display single project with videos, manage videos, generate guide
+
+**Route Parameters:**
+- `[Parameter] public Guid Id { get; set; }`
+
+**Injected Services:**
+- `IProjectService`
+- `IProjectGuideService`
+- `IVideoService` (or appropriate service to get video details)
+- `NavigationManager`
+- `IMessageCenterService`
+- `AuthenticationStateProvider`
+
+**State Management:**
+- `ProjectDetailViewModel? project` - Current project
+- `List<VideoEntity>? videos` - Videos in project
+- `ProjectGuideEntity? guide` - Current guide
+- `bool isLoading` - Loading state
+- `bool isGeneratingGuide` - Guide generation in progress
+- `bool canGenerate` - Whether user can generate (daily limit check)
+- `int dailyCallCount` - User's AI calls today
+- `bool showEditModal` - Edit modal visibility
+- `VideoEntity? videoToRemove` - Video pending removal
+- `bool showRemoveConfirmation` - Remove video confirmation
+
+**Lifecycle:**
+- `OnInitializedAsync()`: Load project, videos, guide, check daily limit
+- `OnParametersSetAsync()`: Reload if Id parameter changes
+
+**Key Features:**
+
+**Project Header Section:**
+- Project name with [Edit] button
+- Description (full text)
+- User Guidance (if set)
+- Last modified timestamp
+- [Back to Projects] navigation link
+
+**Videos Section:**
+- Display using ProjectVideoList component
+- Show: "{count} / 10 videos" counter
+- Each video shows:
+  - Order number, title, thumbnail
+  - First paragraph of summary (if available)
+  - Summary status indicator
+  - [Remove] button
+- Warning if any videos missing summaries
+- Disable guide generation if summaries missing
+
+**Guide Section:**
+- Display using ProjectGuideDisplay component
+- Show prerequisites if not generated:
+  - ✅ All videos have summaries (or ❌ X videos need summaries)
+  - ✅ Daily limit not exceeded (X/10 calls today) (or ❌ Daily limit reached)
+- [Generate Guide] button (disabled if prerequisites not met)
+- If guide exists:
+  - Display guide content
+  - Show regeneration warnings if needed
+  - [Regenerate Guide] button
+- Loading spinner during generation
+
+**CRUD Operations:**
+- **Edit Project:** Show EditProjectModal, call UpdateProjectAsync, refresh
+- **Remove Video:** Confirm, call RemoveVideoFromProjectAsync, refresh
+- **Generate Guide:** Call GenerateGuideAsync, refresh, show success message
+- **Regenerate Guide:** Call RegenerateGuideAsync, refresh, show success message
+
+**Layout:**
+```razor
+@page "/projects/{id:guid}"
+@using Features.Projects.Services
+@inject IProjectService ProjectService
+@inject IProjectGuideService GuideService
+@inject NavigationManager Navigation
+
+<PageTitle>@(project?.Name ?? "Project")</PageTitle>
+
+<div class="container mt-4">
+    @if (isLoading)
+    {
+        <!-- Loading spinner -->
+    }
+    else if (project == null)
+    {
+        <p>Project not found.</p>
+        <a href="/projects">Back to Projects</a>
+    }
+    else
+    {
+        <!-- Project Header -->
+        <div class="mb-4">
+            <a href="/projects" class="btn btn-link">← Back to Projects</a>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>@project.Name</h2>
+                <button class="btn btn-secondary" @onclick="ShowEditModal">Edit</button>
+            </div>
+            @if (!string.IsNullOrEmpty(project.Description))
+            {
+                <p class="text-muted">@project.Description</p>
+            }
+            @if (!string.IsNullOrEmpty(project.UserGuidance))
+            {
+                <div class="alert alert-info">
+                    <strong>Focus:</strong> @project.UserGuidance
+                </div>
+            }
+        </div>
+
+        <!-- Videos Section -->
+        <div class="mb-4">
+            <h3>Videos (@videos?.Count ?? 0 / 10)</h3>
+            @if (videos != null && videos.Any())
+            {
+                <ProjectVideoList Videos="videos"
+                                  ShowSummaryPreview="true"
+                                  ProjectId="Id"
+                                  OnRemove="HandleRemoveVideo" />
+            }
+            else
+            {
+                <p class="text-muted">No videos in this project yet. Add videos from your library.</p>
+            }
+        </div>
+
+        <!-- Guide Section -->
+        <div class="mb-4">
+            <h3>Project Guide</h3>
+
+            @if (isGeneratingGuide)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p>Generating guide... This may take a minute.</p>
+                </div>
+            }
+            else
+            {
+                <ProjectGuideDisplay Guide="guide"
+                                     CurrentVideoCount="videos?.Count ?? 0"
+                                     CurrentUserGuidance="project.UserGuidance"
+                                     OnRegenerate="HandleRegenerateGuide"
+                                     CanGenerate="canGenerate" />
+            }
+        </div>
+    }
+</div>
+
+<!-- Edit Modal -->
+@if (showEditModal)
+{
+    <EditProjectModal Project="project"
+                      OnSave="HandleUpdateProject"
+                      OnCancel="HideModals" />
+}
+```
+
+**Error Handling:**
+- Handle project not found (404)
+- Handle unauthorized access (user doesn't own project)
+- Try-catch around guide generation
+- Display specific error messages for:
+  - Daily limit exceeded
+  - Missing summaries
+  - API failures
+- Show user-friendly messages via MessageCenter
+
+**Special Considerations:**
+
+**Daily Limit Display:**
+- Show "X/10 AI calls used today" indicator
+- Update after guide generation
+- Disable generate button when limit reached
+
+**Guide Generation Progress:**
+- Show loading spinner during generation
+- Disable all buttons during generation
+- Handle long-running operations gracefully
+- Show success message on completion
+
+**Regeneration Warnings:**
+- Detect if UserGuidance changed
+- Detect if video count changed
+- Display warnings prominently
+- Explain why regeneration is recommended
+
+**Prerequisites Check:**
+- Must have at least 1 video
+- All videos must have summaries
+- User must not exceed daily limit
+- Display clear checklist of what's needed
+
+---
+
+### 3. Update Navigation Menu
+**Location:** Main layout navigation (likely in `/Components/Layout/NavMenu.razor` or similar)
+
+**Add:**
+```razor
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="projects">
+        <span class="bi bi-folder-fill" aria-hidden="true"></span> Projects
+    </NavLink>
+</div>
+```
+
+Place it logically (e.g., after Videos, before Settings)
+
+---
+
+## Reference Existing Patterns:
+
+Look at these existing pages for patterns:
+- `/Features/Topics/Pages/` - Topic pages
+- `/Features/Videos/Pages/` - Video library pages
+- `/Features/Watch/Pages/Watch.razor` - Complex page with multiple sections
+- `/Features/Channels/Pages/` - Channel pages
+
+Follow the same patterns for:
+- Authentication state handling
+- Loading states
+- Error handling
+- Navigation
+- Modal management
+- Service injection
+- Toast notifications
+
+## Important Notes:
+
+**Authentication:**
+Get current user in OnInitializedAsync:
+```csharp
+var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+var user = authState.User;
+var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+```
+
+**Navigation:**
+Use `NavigationManager.NavigateTo("/projects")` for programmatic navigation
+
+**Toast Notifications:**
+If you have IMessageCenterService:
+```csharp
+await MessageCenter.ShowSuccessAsync("Project created successfully!");
+await MessageCenter.ShowErrorAsync("Failed to generate guide. Please try again.");
+```
+
+**Loading States:**
+Always show loading indicators for async operations. Disable buttons during operations.
+
+**Responsive Design:**
+Test on mobile, tablet, and desktop. Use Bootstrap responsive utilities.
+
+**Route Parameters:**
+Access via `[Parameter] public Guid Id { get; set; }`
+
+## Testing Checklist:
+After implementation, verify:
+- [ ] Routes work correctly (/projects, /projects/{id})
+- [ ] Authentication required (redirect if not logged in)
+- [ ] Projects load correctly
+- [ ] Create/Edit/Delete operations work
+- [ ] Videos display with summaries
+- [ ] Guide generation works end-to-end
+- [ ] Daily limit enforcement works
+- [ ] Error messages display properly
+- [ ] Navigation menu updated
+- [ ] Responsive on all screen sizes
+- [ ] Loading states display correctly
+- [ ] No console errors
+
+Please implement Step 6 following the existing Blazor page patterns in the codebase.
