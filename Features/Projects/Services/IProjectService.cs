@@ -37,6 +37,15 @@ namespace TargetBrowse.Features.Projects.Services
         Task<ProjectDeleteViewModel?> GetProjectForDeleteAsync(Guid id, string userId);
 
         /// <summary>
+        /// Gets detailed project information for the detail page.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        /// <param name="id">Project ID</param>
+        /// <param name="userId">User ID for ownership validation</param>
+        /// <returns>Project detail view model or null</returns>
+        Task<ProjectDetailViewModel?> GetProjectDetailAsync(Guid id, string userId);
+
+        /// <summary>
         /// Gets all projects for a user with video counts.
         /// </summary>
         /// <param name="userId">User ID</param>
