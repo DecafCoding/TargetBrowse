@@ -167,7 +167,7 @@
                                     else
                                     {
                                         <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                        <span>@Project.Videos.Count(v => string.IsNullOrEmpty(v.SummaryPreview)) video(s) need summaries</span>
+                                        <span>@Project.Videos.Count(v => !v.HasSummary)) video(s) need summaries</span>
                                     }
                                 </li>
                                 <li class="mb-2">

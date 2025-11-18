@@ -190,7 +190,7 @@ public partial class ProjectDetail : ComponentBase
     {
         if (Project == null) return;
 
-        VideoToRemove = Project.Videos.FirstOrDefault(v => v.VideoId == videoId);
+        VideoToRemove = Project.Videos.FirstOrDefault(v => v.Id == videoId);
         if (VideoToRemove != null)
         {
             ShowRemoveConfirmation = true;
@@ -220,7 +220,7 @@ public partial class ProjectDetail : ComponentBase
             IsRemovingVideo = true;
             StateHasChanged();
 
-            await ProjectService.RemoveVideoFromProjectAsync(Id, VideoToRemove.VideoId, CurrentUserId);
+            await ProjectService.RemoveVideoFromProjectAsync(Id, VideoToRemove.Id, CurrentUserId);
 
             await MessageCenter.ShowSuccessAsync($"'{VideoToRemove.Title}' removed from project.");
 
@@ -232,12 +232,12 @@ public partial class ProjectDetail : ComponentBase
         {
             await MessageCenter.ShowErrorAsync(ex.Message);
             Logger.LogError(ex, "Error removing video {VideoId} from project {ProjectId} for user {UserId}",
-                VideoToRemove.VideoId, Id, CurrentUserId);
+                VideoToRemove?.Id, Id, CurrentUserId);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unexpected error removing video {VideoId} from project {ProjectId} for user {UserId}",
-                VideoToRemove.VideoId, Id, CurrentUserId);
+                VideoToRemove?.Id, Id, CurrentUserId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
         }
         finally
