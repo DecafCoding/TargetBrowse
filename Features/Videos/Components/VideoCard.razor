@@ -4,6 +4,9 @@
 @using TargetBrowse.Features.Videos.Models
 @using TargetBrowse.Features.Videos.Services
 @using TargetBrowse.Services
+@using TargetBrowse.Services.ProjectServices
+@using TargetBrowse.Services.ProjectServices.Models
+@using TargetBrowse.Components.Shared
 @using System.Net
 
 <div class="card video-card h-100">
@@ -257,6 +260,17 @@
                             Watch
                         </a>
                     </div>
+
+                    <!-- Add to Project Button -->
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm w-100"
+                                @onclick="ShowAddToProjectModal"
+                                title="Add to project">
+                            <i class="bi bi-folder-plus me-1"></i>
+                            Add to Project
+                        </button>
+                    </div>
                 </div>
             }
         </div>
@@ -301,3 +315,12 @@
                   OnClose="@HideRatingModal"
                   OnSubmit="@HandleRatingSubmit"
                   OnDelete="@HandleRatingDelete" />
+
+<!-- Add to Project Modal (Library Mode Only) -->
+@if (DisplayMode == VideoDisplayMode.Library && ShowAddToProjectModalDialog)
+{
+    <AddToProjectModal IsVisible="@ShowAddToProjectModalDialog"
+                       VideoId="@Video.Id"
+                       OnClose="@HideAddToProjectModal"
+                       OnSuccess="@HandleAddToProjectSuccess" />
+}

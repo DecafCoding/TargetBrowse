@@ -17,6 +17,7 @@ public partial class VideoCard : ComponentBase
     [Inject] protected IVideoRatingService VideoRatingService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<VideoCard> Logger { get; set; } = default!;
+    [Inject] protected Services.ProjectServices.IAddToProjectService AddToProjectService { get; set; } = default!;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -34,6 +35,7 @@ public partial class VideoCard : ComponentBase
     private bool IsUpdatingStatus = false;
     private bool ShowConfirmDialog = false;
     private bool ShowRatingModalDialog = false;
+    private bool ShowAddToProjectModalDialog = false;
     private WatchStatus? PendingStatus = null;
     private string? CurrentUserId;
     private RateVideoModel? CurrentRatingModel = null;
@@ -421,6 +423,56 @@ public partial class VideoCard : ComponentBase
     private void HandleEditRating(VideoRatingModel rating)
     {
         ShowRatingModal();
+    }
+
+    #endregion
+
+    #region Add to Project Actions
+
+    /// <summary>
+    /// Shows the Add to Project modal.
+    /// </summary>
+    private void ShowAddToProjectModal()
+    {
+        ShowAddToProjectModalDialog = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides the Add to Project modal.
+    /// </summary>
+    private void HideAddToProjectModal()
+    {
+        ShowAddToProjectModalDialog = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles successful addition of video to projects.
+    /// </summary>
+    private async Task HandleAddToProjectSuccess(Services.ProjectServices.Models.AddToProjectResult result)
+    {
+        if (result.Success && result.AddedToProjectsCount > 0)
+        {
+            var projectText = result.AddedToProjectsCount == 1 ? "project" : "projects";
+            await MessageCenter.ShowSuccessAsync(
+                $"Video added to {result.AddedToProjectsCount} {projectText} successfully!");
+
+            Logger.LogInformation("Video {VideoId} added to {Count} projects",
+                Video.Id, result.AddedToProjectsCount);
+        }
+        else if (result.FailedProjectIds.Any())
+        {
+            // Show partial success or failure message
+            var errorMessages = string.Join(", ", result.ProjectErrors.Values.Take(3));
+            await MessageCenter.ShowWarningAsync(
+                $"Some projects could not be updated. {errorMessages}");
+
+            Logger.LogWarning("Failed to add video {VideoId} to some projects: {Errors}",
+                Video.Id, errorMessages);
+        }
+
+        HideAddToProjectModal();
     }
 
     #endregion
