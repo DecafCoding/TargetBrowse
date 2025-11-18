@@ -92,6 +92,9 @@
     [Parameter]
     public EventCallback<Guid> OnEdit { get; set; }
 
+    [Parameter]
+    public EventCallback<Guid> OnView { get; set; }
+
     private string GetTruncatedDescription()
     {
         if (string.IsNullOrEmpty(Project.DescriptionPreview))
@@ -130,5 +133,10 @@
     private async Task HandleDelete()
     {
         await OnDelete.InvokeAsync(Project.Id);
+    }
+
+    private async Task HandleView()
+    {
+        await OnView.InvokeAsync(Project.Id);
     }
 }
