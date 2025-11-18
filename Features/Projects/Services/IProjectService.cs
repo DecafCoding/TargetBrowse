@@ -15,8 +15,26 @@ namespace TargetBrowse.Features.Projects.Services
         /// </summary>
         /// <param name="id">Project ID</param>
         /// <param name="userId">User ID for ownership validation</param>
-        /// <returns>Project with videos or null</returns>
+        /// <returns>Project entity with videos or null</returns>
         Task<ProjectEntity?> GetProjectByIdAsync(Guid id, string userId);
+
+        /// <summary>
+        /// Gets a project for editing.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        /// <param name="id">Project ID</param>
+        /// <param name="userId">User ID for ownership validation</param>
+        /// <returns>Project view model for editing or null</returns>
+        Task<ProjectEditViewModel?> GetProjectForEditAsync(Guid id, string userId);
+
+        /// <summary>
+        /// Gets a project for deletion confirmation.
+        /// Returns null if project not found or user doesn't own it.
+        /// </summary>
+        /// <param name="id">Project ID</param>
+        /// <param name="userId">User ID for ownership validation</param>
+        /// <returns>Project view model for deletion or null</returns>
+        Task<ProjectDeleteViewModel?> GetProjectForDeleteAsync(Guid id, string userId);
 
         /// <summary>
         /// Gets all projects for a user with video counts.

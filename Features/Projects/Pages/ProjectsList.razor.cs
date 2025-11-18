@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Projects.Models;
 using TargetBrowse.Features.Projects.Services;
 using TargetBrowse.Services.Interfaces;
@@ -39,8 +38,8 @@ public partial class ProjectsList : ComponentBase
     // Modal states
     private bool ShowEditModalState = false;
     private bool ShowDeleteModalState = false;
-    private ProjectEntity? ProjectToEdit = null;
-    private ProjectEntity? ProjectToDelete = null;
+    private ProjectEditViewModel? ProjectToEdit = null;
+    private ProjectDeleteViewModel? ProjectToDelete = null;
 
     #endregion
 
@@ -114,8 +113,8 @@ public partial class ProjectsList : ComponentBase
                 return;
             }
 
-            // Fetch the full project entity for editing
-            ProjectToEdit = await ProjectService.GetProjectByIdAsync(projectId, CurrentUserId);
+            // Fetch the project view model for editing
+            ProjectToEdit = await ProjectService.GetProjectForEditAsync(projectId, CurrentUserId);
 
             if (ProjectToEdit == null)
             {
@@ -143,8 +142,8 @@ public partial class ProjectsList : ComponentBase
                 return;
             }
 
-            // Fetch the full project entity for deletion
-            ProjectToDelete = await ProjectService.GetProjectByIdAsync(projectId, CurrentUserId);
+            // Fetch the project view model for deletion
+            ProjectToDelete = await ProjectService.GetProjectForDeleteAsync(projectId, CurrentUserId);
 
             if (ProjectToDelete == null)
             {
