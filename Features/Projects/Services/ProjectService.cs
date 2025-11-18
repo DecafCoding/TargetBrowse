@@ -38,7 +38,7 @@ namespace TargetBrowse.Features.Projects.Services
         {
             try
             {
-                var project = await _projectRepository.GetProjectByIdAsync(id);
+                var project = await _projectRepository.GetByIdAsync(id, userId);
 
                 if (project == null || project.UserId != userId)
                 {
@@ -189,7 +189,7 @@ namespace TargetBrowse.Features.Projects.Services
                 }
 
                 // Get project
-                var project = await _projectRepository.GetProjectByIdAsync(id);
+                var project = await _projectRepository.GetByIdAsync(id, userId);
 
                 if (project == null)
                 {
@@ -233,7 +233,7 @@ namespace TargetBrowse.Features.Projects.Services
                 }
 
                 // Get project
-                var project = await _projectRepository.GetProjectByIdAsync(id);
+                var project = await _projectRepository.GetByIdAsync(id, userId);
 
                 if (project == null)
                 {
@@ -313,7 +313,7 @@ namespace TargetBrowse.Features.Projects.Services
                 }
 
                 // Get project
-                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                var project = await _projectRepository.GetByIdAsync(projectId, userId);
 
                 if (project == null)
                 {

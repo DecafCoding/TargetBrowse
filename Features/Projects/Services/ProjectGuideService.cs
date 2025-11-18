@@ -73,7 +73,7 @@ namespace TargetBrowse.Features.Projects.Services
                 }
 
                 // Check if project exists and has minimum videos
-                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                var project = await _projectRepository.GetByIdAsync(projectId, userId);
                 if (project == null)
                 {
                     return false;
@@ -286,8 +286,8 @@ namespace TargetBrowse.Features.Projects.Services
                     .CountAsync();
 
                 // Count project guide AI calls today
-                var guideCount = await _context.AICallLog
-                    .Where(ac => ac.UserId == userId && ac.CalledAt >= today && ac.CalledAt < tomorrow)
+                var guideCount = await _context.AICalls
+                    .Where(ac => ac.UserId == userId && ac.CreatedAt >= today && ac.CreatedAt < tomorrow)
                     .Join(_context.Prompts,
                         ac => ac.PromptId,
                         p => p.Id,

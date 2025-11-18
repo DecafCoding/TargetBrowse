@@ -7,6 +7,8 @@ using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
 using TargetBrowse.Services.Utilities;
 using TargetBrowse.Services.YouTube;
+using TargetBrowse.Services.ProjectServices;
+using TargetBrowse.Services.ProjectServices.Models;
 
 namespace TargetBrowse.Features.Videos.Components;
 
@@ -17,7 +19,7 @@ public partial class VideoCard : ComponentBase
     [Inject] protected IVideoRatingService VideoRatingService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<VideoCard> Logger { get; set; } = default!;
-    [Inject] protected Services.ProjectServices.IAddToProjectService AddToProjectService { get; set; } = default!;
+    [Inject] protected IAddToProjectService AddToProjectService { get; set; } = default!;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -450,7 +452,7 @@ public partial class VideoCard : ComponentBase
     /// <summary>
     /// Handles successful addition of video to projects.
     /// </summary>
-    private async Task HandleAddToProjectSuccess(Services.ProjectServices.Models.AddToProjectResult result)
+    private async Task HandleAddToProjectSuccess(AddToProjectResult result)
     {
         if (result.Success && result.AddedToProjectsCount > 0)
         {
