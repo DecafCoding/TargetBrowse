@@ -1,0 +1,264 @@
+@page "/projects/{id:guid}"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Models
+@using TargetBrowse.Features.Projects.Components
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>@(Project?.Name ?? "Project")</PageTitle>
+
+<div class="container mt-4">
+    @if (IsLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="mt-3 text-muted">Loading project details...</div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Error Loading Project
+            </h5>
+            <p class="mb-2">@ErrorMessage</p>
+            <button class="btn btn-outline-danger btn-sm me-2" @onclick="RetryLoad">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Try Again
+            </button>
+            <a href="/projects" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Projects
+            </a>
+        </div>
+    }
+    else if (Project == null)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-folder-x text-muted" style="font-size: 3rem;"></i>
+            <h5 class="mt-3 text-muted">Project Not Found</h5>
+            <p class="text-muted">The project you're looking for doesn't exist or you don't have access to it.</p>
+            <a href="/projects" class="btn btn-primary mt-3">
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Projects
+            </a>
+        </div>
+    }
+    else
+    {
+        @* Project Header *@
+        <div class="mb-4">
+            <a href="/projects" class="btn btn-link ps-0">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Projects
+            </a>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <h2>@Project.Name</h2>
+                <button class="btn btn-secondary" @onclick="ShowEditModal">
+                    <i class="bi bi-pencil me-1"></i>
+                    Edit
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(Project.Description))
+            {
+                <p class="text-muted mt-2">@Project.Description</p>
+            }
+            @if (!string.IsNullOrEmpty(Project.UserGuidance))
+            {
+                <div class="alert alert-info mt-3">
+                    <strong><i class="bi bi-bullseye me-1"></i>Focus:</strong> @Project.UserGuidance
+                </div>
+            }
+            <small class="text-muted">
+                Last modified: @Project.LastModifiedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")
+            </small>
+        </div>
+
+        @* Videos Section *@
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>
+                    <i class="bi bi-collection-play me-2"></i>
+                    Videos
+                    <span class="badge bg-secondary ms-2">@Project.Videos.Count / 10</span>
+                </h3>
+            </div>
+
+            @if (Project.Videos.Any())
+            {
+                @if (!Project.AllVideosHaveSummaries)
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Some videos are missing summaries.</strong>
+                        All videos must have summaries before you can generate a project guide.
+                        <a href="/library" class="alert-link">Go to Video Library</a> to generate summaries.
+                    </div>
+                }
+
+                <ProjectVideoList Videos="@Project.Videos"
+                                  ShowSummaryPreview="true"
+                                  ProjectId="@Id"
+                                  OnRemove="@HandleRemoveVideo" />
+            }
+            else
+            {
+                <div class="text-center py-4 bg-light rounded">
+                    <i class="bi bi-collection-play text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-3 mb-2">No videos in this project yet.</p>
+                    <p class="text-muted small">Add videos from your library using the "Add to Project" button.</p>
+                    <a href="/library" class="btn btn-primary mt-2">
+                        <i class="bi bi-collection-play me-2"></i>
+                        Go to Video Library
+                    </a>
+                </div>
+            }
+        </div>
+
+        @* Guide Section *@
+        <div class="mb-5">
+            <h3 class="mb-3">
+                <i class="bi bi-book me-2"></i>
+                Project Guide
+            </h3>
+
+            @if (IsGeneratingGuide)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating guide...</span>
+                    </div>
+                    <div class="mt-3">
+                        <h5>Generating your project guide...</h5>
+                        <p class="text-muted">This may take a minute. Please don't close this page.</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* Prerequisites Check *@
+                @if (Project.GuideContent == null)
+                {
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Prerequisites for Guide Generation</h5>
+                            <ul class="list-unstyled mb-3">
+                                <li class="mb-2">
+                                    @if (Project.Videos.Any())
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>At least one video added</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                        <span>No videos in project yet</span>
+                                    }
+                                </li>
+                                <li class="mb-2">
+                                    @if (Project.AllVideosHaveSummaries)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>All videos have summaries</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                        <span>@Project.Videos.Count(v => string.IsNullOrEmpty(v.SummaryPreview)) video(s) need summaries</span>
+                                    }
+                                </li>
+                                <li class="mb-2">
+                                    @if (CanGenerate)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>Daily AI limit not exceeded (@DailyCallCount/10 calls today)</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                        <span>Daily limit reached (10/10 calls used today)</span>
+                                    }
+                                </li>
+                            </ul>
+                            <button class="btn btn-primary"
+                                    @onclick="HandleGenerateGuide"
+                                    disabled="@(!CanGenerate || !Project.Videos.Any() || !Project.AllVideosHaveSummaries)">
+                                <i class="bi bi-stars me-2"></i>
+                                Generate Project Guide
+                            </button>
+                            @if (!CanGenerate)
+                            {
+                                <p class="text-muted small mt-2 mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    You've reached your daily limit of 10 AI-powered operations. The limit resets at midnight UTC.
+                                </p>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* Display Guide *@
+                <ProjectGuideDisplay Guide="@Project.GuideContent"
+                                     CurrentVideoCount="@Project.Videos.Count"
+                                     CurrentUserGuidance="@Project.UserGuidance"
+                                     NeedsRegeneration="@Project.NeedsRegeneration"
+                                     OnRegenerate="@HandleRegenerateGuide"
+                                     CanGenerate="@CanGenerate"
+                                     DailyCallCount="@DailyCallCount" />
+            }
+        </div>
+    }
+</div>
+
+@* Edit Modal *@
+@if (ShowEditModalState)
+{
+    <EditProjectModal IsVisible="@ShowEditModalState"
+                      Project="@Project"
+                      OnSave="@HandleUpdateProject"
+                      OnCancel="@CloseModals" />
+}
+
+@* Remove Video Confirmation *@
+@if (ShowRemoveConfirmation && VideoToRemove != null)
+{
+    <div class="modal fade show" tabindex="-1"
+         style="display: block; background-color: rgba(0,0,0,0.5);"
+         @onclick="CloseRemoveConfirmation">
+        <div class="modal-dialog" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Remove Video from Project?</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRemoveConfirmation" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove <strong>@VideoToRemove.Title</strong> from this project?</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This will not delete the video from your library, only remove it from this project.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRemoveConfirmation" disabled="@IsRemovingVideo">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmRemoveVideo" disabled="@IsRemovingVideo">
+                        @if (IsRemovingVideo)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Removing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash me-1"></i>
+                            <span>Remove Video</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
