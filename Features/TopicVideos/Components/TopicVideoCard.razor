@@ -20,11 +20,6 @@
             </span>
         }
 
-        <!-- Relevance Indicator -->
-        <div class="@GetRelevanceIndicatorClass()" title="@GetRelevanceTitle()">
-            <i class="bi @Video.RelevanceIcon"></i>
-        </div>
-
         <!-- Library Status Badge -->
         @if (Video.IsInLibrary)
         {
@@ -63,7 +58,7 @@
         @if (Video.MatchedKeywords.Any())
         {
             <div class="topic-match-info mb-2">
-                <span class="badge bg-light text-dark border topic-match-badge">
+                <span class="badge bg-light text-dark border topic-match-badge" title="@GetRelevanceTitle()">
                     <i class="bi bi-tag me-1"></i>
                     @Video.MatchReason
                 </span>
