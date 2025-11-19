@@ -1,6 +1,4 @@
 using TargetBrowse.Data.Entities;
-using TargetBrowse.Features.Suggestions.Models;
-using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Services.Utilities;
 
@@ -118,44 +116,6 @@ public static class CssClassFormatter
             WatchStatus.Watched => "Watched",
             WatchStatus.Skipped => "Skipped",
             _ => "Not Watched"
-        };
-    }
-
-    #endregion
-
-    #region Suggestion Status CSS Classes
-
-    /// <summary>
-    /// Gets CSS class for suggestion status badge.
-    /// </summary>
-    /// <param name="status">Suggestion status</param>
-    /// <returns>Bootstrap badge class with background</returns>
-    public static string GetSuggestionStatusBadgeClass(SuggestionStatus status)
-    {
-        return status switch
-        {
-            SuggestionStatus.Pending => "badge bg-warning",
-            SuggestionStatus.Approved => "badge bg-success",
-            SuggestionStatus.Denied => "badge bg-danger",
-            SuggestionStatus.Expired => "badge bg-secondary",
-            _ => "badge bg-light"
-        };
-    }
-
-    /// <summary>
-    /// Gets display text for suggestion status.
-    /// </summary>
-    /// <param name="status">Suggestion status</param>
-    /// <returns>Human-readable status text</returns>
-    public static string GetSuggestionStatusText(SuggestionStatus status)
-    {
-        return status switch
-        {
-            SuggestionStatus.Pending => "Pending Review",
-            SuggestionStatus.Approved => "Approved",
-            SuggestionStatus.Denied => "Denied",
-            SuggestionStatus.Expired => "Expired",
-            _ => "Unknown"
         };
     }
 
