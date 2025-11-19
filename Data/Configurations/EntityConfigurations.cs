@@ -22,6 +22,8 @@ namespace TargetBrowse.Data.Configurations
             // Properties
             builder.Property(t => t.Name).IsRequired().HasMaxLength(100);
             builder.Property(t => t.UserId).IsRequired();
+            builder.Property(t => t.CheckDays).IsRequired().HasDefaultValue(7);
+            builder.Property(t => t.LastCheckedDate).IsRequired(false); // Nullable
 
             // Relationships
             builder.HasOne(t => t.User)
