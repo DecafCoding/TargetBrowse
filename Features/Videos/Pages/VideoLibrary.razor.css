@@ -69,7 +69,7 @@
 /* Card Hover Effects */
 .sidebar-content .card {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
     .sidebar-content .card::after {
@@ -83,6 +83,8 @@
         opacity: 0;
         transition: opacity 0.3s ease;
         pointer-events: none;
+        overflow: hidden;
+        border-radius: 0.5rem;
     }
 
     .sidebar-content .card:hover::after {
