@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TargetBrowse.Services;
+namespace TargetBrowse.Services.Utilities;
 
 /// <summary>
 /// Static helper class for consistent formatting across the application.

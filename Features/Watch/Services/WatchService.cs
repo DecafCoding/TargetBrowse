@@ -2,7 +2,7 @@
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Watch.Data;
 using TargetBrowse.Features.Watch.Models;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Watch.Services
 {

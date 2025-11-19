@@ -55,13 +55,7 @@ public partial class VideoCard : ComponentBase
     /// </summary>
     private string GetThumbnailUrl()
     {
-        if (!string.IsNullOrEmpty(Video.ThumbnailUrl))
-        {
-            return Video.ThumbnailUrl;
-        }
-
-        // Start with hqdefault which is more reliable than maxresdefault
-        return $"https://img.youtube.com/vi/{Video.YouTubeVideoId}/hqdefault.jpg";
+        return ThumbnailFormatter.GetVideoThumbnailUrl(Video.ThumbnailUrl, Video.YouTubeVideoId, ThumbnailQuality.HqDefault);
     }
 
     /// <summary>
@@ -69,12 +63,7 @@ public partial class VideoCard : ComponentBase
     /// </summary>
     private string GetWatchStatusBadgeClass()
     {
-        return Video.WatchStatus switch
-        {
-            WatchStatus.Watched => "bg-success",
-            WatchStatus.Skipped => "bg-secondary",
-            _ => "bg-primary"
-        };
+        return CssClassFormatter.GetWatchStatusBadgeClass(Video.WatchStatus);
     }
 
     /// <summary>
@@ -82,12 +71,7 @@ public partial class VideoCard : ComponentBase
     /// </summary>
     private string GetWatchStatusIcon()
     {
-        return Video.WatchStatus switch
-        {
-            WatchStatus.Watched => "bi-check-circle-fill",
-            WatchStatus.Skipped => "bi-skip-forward-fill",
-            _ => "bi-circle"
-        };
+        return CssClassFormatter.GetWatchStatusIcon(Video.WatchStatus);
     }
 
     /// <summary>
@@ -95,12 +79,7 @@ public partial class VideoCard : ComponentBase
     /// </summary>
     private string GetWatchStatusText()
     {
-        return Video.WatchStatus switch
-        {
-            WatchStatus.Watched => "Watched",
-            WatchStatus.Skipped => "Skipped",
-            _ => "Not Watched"
-        };
+        return CssClassFormatter.GetWatchStatusText(Video.WatchStatus);
     }
 
     #region Search Mode Actions
