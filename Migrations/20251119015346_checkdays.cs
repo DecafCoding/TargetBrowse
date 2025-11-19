@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TargetBrowse.Migrations
 {
     /// <inheritdoc />
-    public partial class AddCheckDaysAndLastCheckedDateToTopics : Migration
+    public partial class checkdays : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,7 +16,7 @@ namespace TargetBrowse.Migrations
                 table: "Topics",
                 type: "int",
                 nullable: false,
-                defaultValue: 7);
+                defaultValue: 0);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "LastCheckedDate",
