@@ -32,12 +32,12 @@ public partial class TopicVideosList : ComponentBase
     [Parameter]
     public EventCallback<TopicVideoDisplayModel> OnVideoAdded { get; set; }
 
-    private List<TopicVideoDisplayModel> Videos { get; set; } = new();
-    private bool IsLoading { get; set; } = true;
+    public List<TopicVideoDisplayModel> Videos { get; set; } = new();
+    public bool IsLoading { get; set; } = true;
     private bool HasError { get; set; } = false;
     private string? CurrentUserId { get; set; }
 
-    private int HighRelevanceCount => Videos.Count(v => v.IsHighRelevance);
+    public int HighRelevanceCount => Videos.Count(v => v.IsHighRelevance);
 
     protected override async Task OnInitializedAsync()
     {
