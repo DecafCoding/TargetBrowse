@@ -39,7 +39,7 @@ public class TopicService : ITopicService
     /// <summary>
     /// Adds a new topic for the specified user with business rule validation.
     /// </summary>
-    public async Task<bool> AddTopicAsync(string userId, string topicName)
+    public async Task<bool> AddTopicAsync(string userId, string topicName, int checkDays = 7)
     {
         try
         {
@@ -83,7 +83,8 @@ public class TopicService : ITopicService
             var topicEntity = new TopicEntity
             {
                 Name = topicName,
-                UserId = userId
+                UserId = userId,
+                CheckDays = checkDays
             };
 
             _context.Topics.Add(topicEntity);

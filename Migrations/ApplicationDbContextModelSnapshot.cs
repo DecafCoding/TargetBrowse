@@ -902,6 +902,12 @@ namespace TargetBrowse.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<int>("CheckDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastCheckedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("LastModifiedAt")
                         .HasColumnType("datetime2");
 

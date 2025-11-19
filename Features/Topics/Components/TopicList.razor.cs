@@ -196,14 +196,56 @@ public partial class TopicList : ComponentBase
     /// <summary>
     /// Converts TopicEntity to TopicDisplayModel for UI display.
     /// </summary>
-    private static TopicDisplayModel ConvertToDisplayModel(TopicEntity entity)
+    private TopicDisplayModel ConvertToDisplayModel(TopicEntity entity)
     {
         return new TopicDisplayModel
         {
             Id = entity.Id,
             Name = entity.Name,
-            CreatedAt = entity.CreatedAt
+            CreatedAt = entity.CreatedAt,
+            CheckDays = entity.CheckDays,
+            LastCheckedDate = entity.LastCheckedDate,
+            VideosInDatabase = CalculateVideosInDatabase(entity),
+            VideosInLibrary = CalculateVideosInLibrary(entity),
+            VideoSuggestions = CalculateVideoSuggestions(entity)
         };
+    }
+
+    /// <summary>
+    /// Calculates the total number of unique videos in the database for this topic.
+    /// </summary>
+    private int CalculateVideosInDatabase(TopicEntity entity)
+    {
+        return entity.SuggestionTopics
+            .Select(st => st.SuggestionId)
+            .Distinct()
+            .Count();
+    }
+
+    /// <summary>
+    /// Calculates the number of videos in the user's library for this topic.
+    /// </summary>
+    private int CalculateVideosInLibrary(TopicEntity entity)
+    {
+        return entity.SuggestionTopics
+            .Where(st => st.Suggestion?.Video?.UserVideos?.Any() == true)
+            .Select(st => st.SuggestionId)
+            .Distinct()
+            .Count();
+    }
+
+    /// <summary>
+    /// Calculates the number of pending video suggestions for this topic.
+    /// </summary>
+    private int CalculateVideoSuggestions(TopicEntity entity)
+    {
+        return entity.SuggestionTopics
+            .Where(st => st.Suggestion != null &&
+                         !st.Suggestion.IsApproved &&
+                         !st.Suggestion.IsDenied)
+            .Select(st => st.SuggestionId)
+            .Distinct()
+            .Count();
     }
 
     #endregion

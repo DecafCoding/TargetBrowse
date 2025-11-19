@@ -14,8 +14,9 @@ public interface ITopicService
     /// </summary>
     /// <param name="userId">User ID to add topic for</param>
     /// <param name="topicName">Name of the topic to add</param>
+    /// <param name="checkDays">Number of days between checks for new content (default: 7)</param>
     /// <returns>True if successful, false if validation failed</returns>
-    Task<bool> AddTopicAsync(string userId, string topicName);
+    Task<bool> AddTopicAsync(string userId, string topicName, int checkDays = 7);
 
     /// <summary>
     /// Deletes a topic for the specified user.

@@ -125,7 +125,7 @@ namespace TargetBrowse.Features.Topics.Components
                 }
 
                 // Attempt to add the topic using business service
-                var success = await TopicService.AddTopicAsync(userId, TopicModel.Name);
+                var success = await TopicService.AddTopicAsync(userId, TopicModel.Name, TopicModel.CheckDays);
 
                 if (success)
                 {

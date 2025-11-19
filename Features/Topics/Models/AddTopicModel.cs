@@ -14,10 +14,18 @@ public class AddTopicModel
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Number of days between checks for new content.
+    /// </summary>
+    [Required(ErrorMessage = "Please select how often to check for new content.")]
+    [Display(Name = "Check Frequency")]
+    public int CheckDays { get; set; } = 7; // Default to Weekly
+
+    /// <summary>
     /// Resets the model to initial state for reuse after successful submission.
     /// </summary>
     public void Reset()
     {
         Name = string.Empty;
+        CheckDays = 7; // Reset to default (Weekly)
     }
 }
