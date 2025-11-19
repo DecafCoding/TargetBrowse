@@ -1,4 +1,5 @@
 ﻿using TargetBrowse.Services.Models;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Suggestions.Models;
 
@@ -58,26 +59,12 @@ public class SuggestionDisplayModel
     /// <summary>
     /// Gets CSS class for status badge.
     /// </summary>
-    public string GetStatusBadgeCss() => Status switch
-    {
-        SuggestionStatus.Pending => "badge bg-warning",
-        SuggestionStatus.Approved => "badge bg-success",
-        SuggestionStatus.Denied => "badge bg-danger",
-        SuggestionStatus.Expired => "badge bg-secondary",
-        _ => "badge bg-light"
-    };
+    public string GetStatusBadgeCss() => CssClassFormatter.GetSuggestionStatusBadgeClass(Status);
 
     /// <summary>
     /// Gets display text for status.
     /// </summary>
-    public string GetStatusText() => Status switch
-    {
-        SuggestionStatus.Pending => "Pending Review",
-        SuggestionStatus.Approved => "Approved",
-        SuggestionStatus.Denied => "Denied",
-        SuggestionStatus.Expired => "Expired",
-        _ => "Unknown"
-    };
+    public string GetStatusText() => CssClassFormatter.GetSuggestionStatusText(Status);
 
     /// <summary>
     /// Gets formatted score for display.

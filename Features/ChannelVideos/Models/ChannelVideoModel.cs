@@ -1,4 +1,4 @@
-using TargetBrowse.Services;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.ChannelVideos.Models;
 

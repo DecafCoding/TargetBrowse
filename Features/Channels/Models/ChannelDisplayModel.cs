@@ -1,4 +1,4 @@
-using TargetBrowse.Services;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Channels.Models;
 
@@ -96,7 +96,7 @@ public class ChannelDisplayModel
     /// <summary>
     /// Truncated description for card display.
     /// </summary>
-    public string ShortDescription => TruncateDescription(Description, 120);
+    public string ShortDescription => TextFormatter.Truncate(Description, 120);
 
     /// <summary>
     /// Gets the YouTube channel URL.
@@ -131,26 +131,5 @@ public class ChannelDisplayModel
     /// <summary>
     /// Gets CSS class for rating status display.
     /// </summary>
-    public string RatingStatusCssClass => UserRating switch
-    {
-        null => "text-muted",
-        var rating when rating.IsLowRating => "text-danger",
-        var rating when rating.Stars >= 4 => "text-success",
-        var rating when rating.Stars == 3 => "text-info",
-        var rating => "text-warning"
-    };
-
-    /// <summary>
-    /// Truncates description text to specified length with ellipsis.
-    /// </summary>
-    private static string TruncateDescription(string text, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return "No description available";
-
-        if (text.Length <= maxLength)
-            return text;
-
-        return text.Substring(0, maxLength).TrimEnd() + "...";
-    }
+    public string RatingStatusCssClass => CssClassFormatter.GetChannelRatingCssClass(StarRating, IsLowRated);
 }

@@ -1,4 +1,5 @@
 ﻿using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Watch.Models
 {
@@ -179,11 +180,7 @@ namespace TargetBrowse.Features.Watch.Models
         /// </summary>
         public string GetThumbnailUrl()
         {
-            if (!string.IsNullOrEmpty(ThumbnailUrl))
-                return ThumbnailUrl;
-
-            // YouTube thumbnail URL pattern
-            return $"https://img.youtube.com/vi/{YouTubeVideoId}/maxresdefault.jpg";
+            return ThumbnailFormatter.GetVideoThumbnailUrl(ThumbnailUrl, YouTubeVideoId, ThumbnailQuality.MaxResDefault);
         }
 
         /// <summary>
@@ -191,13 +188,7 @@ namespace TargetBrowse.Features.Watch.Models
         /// </summary>
         public string GetShortDescription()
         {
-            if (string.IsNullOrEmpty(Description))
-                return "No description available";
-
-            if (Description.Length <= 500)
-                return Description;
-
-            return Description.Substring(0, 497) + "...";
+            return TextFormatter.Truncate(Description, 500);
         }
     }
 }

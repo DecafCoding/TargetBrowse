@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Services.Models;
 
@@ -64,33 +65,17 @@ public abstract class RatingModelBase
     /// <summary>
     /// Gets display text for the star rating.
     /// </summary>
-    public string StarDisplayText => Stars switch
-    {
-        1 => "1 star - Poor",
-        2 => "2 stars - Fair",
-        3 => "3 stars - Good",
-        4 => "4 stars - Very Good",
-        5 => "5 stars - Excellent",
-        _ => "No rating"
-    };
+    public string StarDisplayText => CssClassFormatter.GetStarRatingDisplayText(Stars);
 
     /// <summary>
     /// Gets CSS class for star rating display.
     /// </summary>
-    public string StarCssClass => Stars switch
-    {
-        1 => "text-danger",
-        2 => "text-warning",
-        3 => "text-info",
-        4 => "text-success",
-        5 => "text-success",
-        _ => "text-muted"
-    };
+    public string StarCssClass => CssClassFormatter.GetStarRatingCssClass(Stars);
 
     /// <summary>
     /// Gets truncated notes for card display.
     /// </summary>
-    public string ShortNotes => Notes.Length > 100 ? $"{Notes[..97]}..." : Notes;
+    public string ShortNotes => TextFormatter.TruncateSlice(Notes, 100, Notes);
 
     /// <summary>
     /// Gets user-friendly display of when the rating was created.

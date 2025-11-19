@@ -1,6 +1,6 @@
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Videos.Services;
-using TargetBrowse.Services;
+using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Videos.Models;
 
@@ -217,12 +217,12 @@ public class VideoDisplayModel
     /// <summary>
     /// Truncated description for card display.
     /// </summary>
-    public string ShortDescription => TruncateDescription(Description, 100);
+    public string ShortDescription => TextFormatter.Truncate(Description, 100);
 
     /// <summary>
     /// Truncated title for compact display.
     /// </summary>
-    public string ShortTitle => TruncateDescription(Title, 60);
+    public string ShortTitle => TextFormatter.Truncate(Title, 60, Title);
 
     /// <summary>
     /// Gets the YouTube video URL.
@@ -295,20 +295,6 @@ public class VideoDisplayModel
     public string CannotRateReason => !IsInLibrary
         ? "Add video to your library to rate it"
         : string.Empty;
-
-    /// <summary>
-    /// Truncates text to specified length with ellipsis.
-    /// </summary>
-    private static string TruncateDescription(string text, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return "No description available";
-
-        if (text.Length <= maxLength)
-            return text;
-
-        return text.Substring(0, maxLength).TrimEnd() + "...";
-    }
 
     /// <summary>
     /// Creates a RateVideoModel from this video for rating purposes.
