@@ -60,10 +60,14 @@
     border-radius: 0.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: transform 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
-    .sidebar-content .card:hover {
+    .sidebar-content .card:hover,
+    .sidebar-content .card:has(.dropdown.show) {
         transform: translateY(-1px);
+        z-index: 10;
     }
 
 /* Card Hover Effects */
