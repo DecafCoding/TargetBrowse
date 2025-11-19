@@ -23,6 +23,7 @@ namespace TargetBrowse.Services.DataServices
         /// <summary>
         /// Retrieves all topics for a specific user, ordered by name.
         /// Used by multiple services for topic-based operations.
+        /// Includes navigation properties for video count calculations.
         /// </summary>
         public async Task<List<TopicEntity>> GetUserTopicsAsync(string userId)
         {
@@ -30,6 +31,10 @@ namespace TargetBrowse.Services.DataServices
             {
                 return await _context.Topics
                     .Where(t => t.UserId == userId)
+                    .Include(t => t.SuggestionTopics)
+                        .ThenInclude(st => st.Suggestion)
+                            .ThenInclude(s => s.Video)
+                                .ThenInclude(v => v.UserVideos.Where(uv => uv.UserId == userId))
                     .OrderBy(t => t.Name)
                     .ToListAsync();
             }

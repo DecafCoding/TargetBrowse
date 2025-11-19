@@ -18,24 +18,43 @@
             <DataAnnotationsValidator />
 
             <div class="mb-3">
-                <div class="input-group">
-                    <InputText @bind-Value="TopicModel.Name"
-                               class="form-control"
-                               id="topicName"
-                               placeholder="Enter A Topic"
-                               disabled="@IsSubmitting" />
-                    <button type="submit"
-                            class="btn btn-primary"
-                            disabled="@IsSubmitting">
-                        @if (IsSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        }
-                        Add
-                    </button>
-                </div>
+                <label for="topicName" class="form-label">Topic Name</label>
+                <InputText @bind-Value="TopicModel.Name"
+                           class="form-control"
+                           id="topicName"
+                           placeholder="Enter A Topic"
+                           disabled="@IsSubmitting" />
                 <ValidationMessage For="@(() => TopicModel.Name)" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="checkFrequency" class="form-label">Check Frequency</label>
+                <InputSelect @bind-Value="TopicModel.CheckDays"
+                             class="form-select"
+                             id="checkFrequency"
+                             disabled="@IsSubmitting">
+                    <option value="3">Every 3 days</option>
+                    <option value="5">Every 5 days</option>
+                    <option value="7">Weekly</option>
+                    <option value="14">Bi-Weekly</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => TopicModel.CheckDays)" class="text-danger" />
                 <div class="form-text">
+                    How often should we check for new content on this topic?
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit"
+                        class="btn btn-primary w-100"
+                        disabled="@IsSubmitting">
+                    @if (IsSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    Add Topic
+                </button>
+                <div class="form-text mt-2">
                     This will add a Topic to your list and add videos to your suggestions. If you don't want the topic added and just want to search YouTube to add individual vidoes to your library use <a href="video-search">Search Videos</a>.
                 </div>
             </div>

@@ -16,6 +16,18 @@ namespace TargetBrowse.Data.Entities
         [Required]
         public string UserId { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Number of days between checks for new content.
+        /// Maps to: 3 = Every 3 days, 5 = Every 5 days, 7 = Weekly, 14 = Bi-Weekly
+        /// </summary>
+        public int CheckDays { get; set; } = 7; // Default to Weekly
+
+        /// <summary>
+        /// Last date this topic was checked for new content.
+        /// Null indicates never checked.
+        /// </summary>
+        public DateTime? LastCheckedDate { get; set; }
+
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;
 
