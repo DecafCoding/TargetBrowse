@@ -29,15 +29,21 @@
 
             <div class="mb-3">
                 <label for="checkFrequency" class="form-label">Check Frequency</label>
-                <InputSelect @bind-Value="TopicModel.CheckDays"
-                             class="form-select"
-                             id="checkFrequency"
-                             disabled="@IsSubmitting">
-                    <option value="3">Every 3 days</option>
-                    <option value="5">Every 5 days</option>
-                    <option value="7">Weekly</option>
-                    <option value="14">Bi-Weekly</option>
-                </InputSelect>
+                <div class="dropdown d-grid">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            disabled="@IsSubmitting">
+                        <i class="bi bi-clock me-1"></i>
+                        @GetCheckFrequencyText(TopicModel.CheckDays)
+                    </button>
+                    <ul class="dropdown-menu w-100">
+                        <li><button class="dropdown-item" type="button" @onclick='() => SetCheckFrequency(3)'>Every 3 days</button></li>
+                        <li><button class="dropdown-item" type="button" @onclick='() => SetCheckFrequency(5)'>Every 5 days</button></li>
+                        <li><button class="dropdown-item" type="button" @onclick='() => SetCheckFrequency(7)'>Weekly</button></li>
+                        <li><button class="dropdown-item" type="button" @onclick='() => SetCheckFrequency(14)'>Bi-Weekly</button></li>
+                    </ul>
+                </div>
                 <ValidationMessage For="@(() => TopicModel.CheckDays)" class="text-danger" />
                 <div class="form-text">
                     How often should we check for new content on this topic?

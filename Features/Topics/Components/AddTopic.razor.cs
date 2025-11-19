@@ -209,6 +209,30 @@ namespace TargetBrowse.Features.Topics.Components
             return IsSubmitting || (HasLoadedCount && CurrentTopicCount >= 10) || string.IsNullOrWhiteSpace(TopicModel.Name);
         }
 
+        /// <summary>
+        /// Sets the check frequency for the topic.
+        /// </summary>
+        private void SetCheckFrequency(int days)
+        {
+            TopicModel.CheckDays = days;
+            StateHasChanged();
+        }
+
+        /// <summary>
+        /// Gets the display text for the check frequency dropdown.
+        /// </summary>
+        private string GetCheckFrequencyText(int days)
+        {
+            return days switch
+            {
+                3 => "Every 3 days",
+                5 => "Every 5 days",
+                7 => "Weekly",
+                14 => "Bi-Weekly",
+                _ => "Select frequency"
+            };
+        }
+
         #endregion
     }
 }
