@@ -43,6 +43,24 @@ public class UserLibraryVideoDto
     /// User's rating for this video (if rated).
     /// </summary>
     public UserVideoRating? Rating { get; set; }
+
+    /// <summary>
+    /// Video type ID for content classification.
+    /// Null if no type has been assigned.
+    /// </summary>
+    public Guid? VideoTypeId { get; set; }
+
+    /// <summary>
+    /// Video type name (e.g., "Tutorial", "Podcast", "Vlog").
+    /// Null if no type has been assigned.
+    /// </summary>
+    public string? VideoTypeName { get; set; }
+
+    /// <summary>
+    /// Video type code (e.g., "TUTORIAL", "PODCAST", "VLOG").
+    /// Null if no type has been assigned.
+    /// </summary>
+    public string? VideoTypeCode { get; set; }
 }
 
 /// <summary>

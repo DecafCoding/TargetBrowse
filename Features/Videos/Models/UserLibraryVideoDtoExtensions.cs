@@ -32,11 +32,9 @@ public static class UserLibraryVideoDtoExtensions
             IsInLibrary = true,
             AddedToLibrary = dto.AddedToLibraryAt,
             WatchStatus = dto.WatchStatus,
-            // Note: VideoType information is not in UserLibraryVideoDto
-            // Features can query separately if needed
-            VideoTypeId = null,
-            VideoTypeName = null,
-            VideoTypeCode = null
+            VideoTypeId = dto.VideoTypeId,
+            VideoTypeName = dto.VideoTypeName,
+            VideoTypeCode = dto.VideoTypeCode
         };
 
         // Map rating if exists
