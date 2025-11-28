@@ -37,9 +37,7 @@ public partial class ProjectsList : ComponentBase
 
     // Modal states
     private bool ShowEditModalState = false;
-    private bool ShowDeleteModalState = false;
     private ProjectEditViewModel? ProjectToEdit = null;
-    private ProjectDeleteViewModel? ProjectToDelete = null;
 
     #endregion
 
@@ -103,64 +101,6 @@ public partial class ProjectsList : ComponentBase
         StateHasChanged();
     }
 
-    private async Task HandleEdit(Guid projectId)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(CurrentUserId))
-            {
-                await MessageCenter.ShowErrorAsync("User not authenticated.");
-                return;
-            }
-
-            // Fetch the project view model for editing
-            ProjectToEdit = await ProjectService.GetProjectForEditAsync(projectId, CurrentUserId);
-
-            if (ProjectToEdit == null)
-            {
-                await MessageCenter.ShowErrorAsync("Project not found or you don't have permission to edit it.");
-                return;
-            }
-
-            ShowEditModalState = true;
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading project {ProjectId} for edit", projectId);
-            await MessageCenter.ShowErrorAsync("Failed to load project details.");
-        }
-    }
-
-    private async Task HandleDelete(Guid projectId)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(CurrentUserId))
-            {
-                await MessageCenter.ShowErrorAsync("User not authenticated.");
-                return;
-            }
-
-            // Fetch the project view model for deletion
-            ProjectToDelete = await ProjectService.GetProjectForDeleteAsync(projectId, CurrentUserId);
-
-            if (ProjectToDelete == null)
-            {
-                await MessageCenter.ShowErrorAsync("Project not found or you don't have permission to delete it.");
-                return;
-            }
-
-            ShowDeleteModalState = true;
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading project {ProjectId} for delete", projectId);
-            await MessageCenter.ShowErrorAsync("Failed to load project details.");
-        }
-    }
-
     private void HandleView(Guid projectId)
     {
         Navigation.NavigateTo($"/projects/{projectId}");
@@ -169,9 +109,7 @@ public partial class ProjectsList : ComponentBase
     private void CloseModals()
     {
         ShowEditModalState = false;
-        ShowDeleteModalState = false;
         ProjectToEdit = null;
-        ProjectToDelete = null;
         StateHasChanged();
     }
 
@@ -234,43 +172,6 @@ public partial class ProjectsList : ComponentBase
             // Unexpected errors
             Logger.LogError(ex, "Error saving project for user {UserId}", CurrentUserId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
-        }
-    }
-
-    private async Task HandleDeleteConfirm()
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(CurrentUserId))
-            {
-                await MessageCenter.ShowErrorAsync("User not authenticated.");
-                return;
-            }
-
-            if (ProjectToDelete == null)
-            {
-                await MessageCenter.ShowErrorAsync("No project selected for deletion.");
-                return;
-            }
-
-            await ProjectService.DeleteProjectAsync(ProjectToDelete.Id, CurrentUserId);
-            await MessageCenter.ShowSuccessAsync("Project deleted successfully!");
-
-            ShowDeleteModalState = false;
-            ProjectToDelete = null;
-            await LoadProjectsAsync();
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Business logic errors (e.g., project not found, not owned by user)
-            await MessageCenter.ShowErrorAsync(ex.Message);
-            Logger.LogError(ex, "Business logic error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
-        }
-        catch (Exception ex)
-        {
-            // Unexpected errors
-            Logger.LogError(ex, "Error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
-            await MessageCenter.ShowErrorAsync("An unexpected error occurred while deleting the project. Please try again.");
         }
     }
 

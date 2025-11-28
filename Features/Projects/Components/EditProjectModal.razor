@@ -91,28 +91,42 @@
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="CloseModal"
-                            disabled="@IsSubmitting">
-                        Cancel
-                    </button>
+                <div class="modal-footer d-flex justify-content-between">
+                    <div>
+                        @if (IsEditMode && OnDelete.HasDelegate)
+                        {
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    @onclick="HandleDelete"
+                                    disabled="@IsSubmitting">
+                                <i class="bi bi-trash me-1"></i>
+                                Delete Project
+                            </button>
+                        }
+                    </div>
+                    <div>
+                        <button type="button"
+                                class="btn btn-secondary me-2"
+                                @onclick="CloseModal"
+                                disabled="@IsSubmitting">
+                            Cancel
+                        </button>
 
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="HandleSubmit"
-                            disabled="@(IsSubmitting || !IsValid())">
-                        @if (IsSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi @(IsEditMode ? "bi-check-lg" : "bi-plus-lg") me-1"></i>
-                        }
-                        @(IsEditMode ? "Save Changes" : "Create Project")
-                    </button>
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="HandleSubmit"
+                                disabled="@(IsSubmitting || !IsValid())">
+                            @if (IsSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi @(IsEditMode ? "bi-check-lg" : "bi-plus-lg") me-1"></i>
+                            }
+                            @(IsEditMode ? "Save Changes" : "Create Project")
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -131,6 +145,9 @@
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback OnDelete { get; set; }
 
     private bool IsEditMode => Project != null;
 
@@ -256,6 +273,14 @@
     private async Task HandleBackdropClick()
     {
         await CloseModal();
+    }
+
+    private async Task HandleDelete()
+    {
+        if (!IsSubmitting && OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync();
+        }
     }
 
     private string GetValidationClass(string fieldName)

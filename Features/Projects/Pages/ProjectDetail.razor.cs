@@ -50,10 +50,12 @@ public partial class ProjectDetail : ComponentBase
 
     // Modal states
     private bool ShowEditModalState = false;
+    private bool ShowDeleteModalState = false;
     private bool ShowRemoveConfirmation = false;
     private ProjectVideoViewModel? VideoToRemove = null;
     private bool IsRemovingVideo = false;
     private ProjectEditViewModel? ProjectToEdit = null;
+    private ProjectDeleteViewModel? ProjectToDelete = null;
 
     #endregion
 
@@ -152,6 +154,42 @@ public partial class ProjectDetail : ComponentBase
         StateHasChanged();
     }
 
+    private async Task ShowDeleteModal()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                await MessageCenter.ShowErrorAsync("User not authenticated.");
+                return;
+            }
+
+            // Fetch the project view model for deletion
+            ProjectToDelete = await ProjectService.GetProjectForDeleteAsync(Id, CurrentUserId);
+
+            if (ProjectToDelete == null)
+            {
+                await MessageCenter.ShowErrorAsync("Project not found or you don't have permission to delete it.");
+                return;
+            }
+
+            ShowDeleteModalState = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading project {ProjectId} for delete", Id);
+            await MessageCenter.ShowErrorAsync("Failed to load project details.");
+        }
+    }
+
+    private void CloseDeleteModal()
+    {
+        ShowDeleteModalState = false;
+        ProjectToDelete = null;
+        StateHasChanged();
+    }
+
     #endregion
 
     #region Project Operations
@@ -192,6 +230,45 @@ public partial class ProjectDetail : ComponentBase
         {
             Logger.LogError(ex, "Error updating project {ProjectId} for user {UserId}", request.Id, CurrentUserId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
+        }
+    }
+
+    private async Task HandleDeleteConfirm()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                await MessageCenter.ShowErrorAsync("User not authenticated.");
+                return;
+            }
+
+            if (ProjectToDelete == null)
+            {
+                await MessageCenter.ShowErrorAsync("No project selected for deletion.");
+                return;
+            }
+
+            await ProjectService.DeleteProjectAsync(ProjectToDelete.Id, CurrentUserId);
+            await MessageCenter.ShowSuccessAsync("Project deleted successfully!");
+
+            ShowDeleteModalState = false;
+            ProjectToDelete = null;
+
+            // Navigate back to projects list
+            Navigation.NavigateTo("/projects");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Business logic errors (e.g., project not found, not owned by user)
+            await MessageCenter.ShowErrorAsync(ex.Message);
+            Logger.LogError(ex, "Business logic error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
+        }
+        catch (Exception ex)
+        {
+            // Unexpected errors
+            Logger.LogError(ex, "Error deleting project {ProjectId} for user {UserId}", ProjectToDelete?.Id, CurrentUserId);
+            await MessageCenter.ShowErrorAsync("An unexpected error occurred while deleting the project. Please try again.");
         }
     }
 
