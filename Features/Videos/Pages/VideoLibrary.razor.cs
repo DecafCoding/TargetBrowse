@@ -206,6 +206,9 @@ public partial class VideoLibrary : ComponentBase
     {
         var query = Videos.AsEnumerable();
 
+        // Filter out skipped videos by default
+        query = query.Where(v => v.WatchStatus != WatchStatus.Skipped);
+
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
         {
@@ -220,6 +223,7 @@ public partial class VideoLibrary : ComponentBase
         // Apply rating filter
         query = CurrentRatingFilter switch
         {
+            "Watched Only" => query.Where(v => v.WatchStatus == WatchStatus.Watched),
             "Rated" => query.Where(v => v.IsRatedByUser),
             "Not Rated" => query.Where(v => !v.IsRatedByUser),
             "5 Stars" => query.Where(v => v.UserStars == 5),
