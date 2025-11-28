@@ -55,19 +55,17 @@
             <div class="col-lg-3">
                 @* Project Info Card *@
                 <div class="card mb-4">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             Project Info
                         </h5>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ShowEditModal">
+                            <i class="bi bi-pencil"></i>
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="mb-0">@Project.Name</h6>
-                                <button class="btn btn-outline-secondary btn-sm" @onclick="ShowEditModal">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </div>
+                            <h6 class="mb-2">@Project.Name</h6>
                             @if (!string.IsNullOrEmpty(Project.Description))
                             {
                                 <p class="text-muted small mb-0 mt-2">@Project.Description</p>
