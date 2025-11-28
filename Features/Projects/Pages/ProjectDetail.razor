@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using TargetBrowse.Features.Projects.Models
 @using TargetBrowse.Features.Projects.Components
+@using TargetBrowse.Components.Shared
 @attribute [Authorize]
 @rendermode InteractiveServer
 
@@ -49,33 +50,65 @@
     }
     else
     {
-        @* Project Header *@
-        <div class="mb-4">
+        @* Back to Projects Link *@
+        <div class="mb-3">
             <a href="/projects" class="btn btn-link ps-0">
                 <i class="bi bi-arrow-left me-1"></i>
                 Back to Projects
             </a>
-            <div class="d-flex justify-content-between align-items-center mt-2">
-                <h2>@Project.Name</h2>
-                <button class="btn btn-secondary" @onclick="ShowEditModal">
-                    <i class="bi bi-pencil me-1"></i>
-                    Edit
-                </button>
-            </div>
-            @if (!string.IsNullOrEmpty(Project.Description))
-            {
-                <p class="text-muted mt-2">@Project.Description</p>
-            }
-            @if (!string.IsNullOrEmpty(Project.UserGuidance))
-            {
-                <div class="alert alert-info mt-3">
-                    <strong><i class="bi bi-bullseye me-1"></i>Focus:</strong> @Project.UserGuidance
-                </div>
-            }
-            <small class="text-muted">
-                Last modified: @Project.LastModifiedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")
-            </small>
         </div>
+
+        <div class="row">
+            @* Left Sidebar *@
+            <div class="col-lg-3">
+                @* Project Info Card *@
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            Project Info
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">@Project.Name</h6>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="ShowEditModal">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Project.Description))
+                            {
+                                <p class="text-muted small mb-0 mt-2">@Project.Description</p>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(Project.UserGuidance))
+                        {
+                            <div class="mb-3">
+                                <strong class="small"><i class="bi bi-bullseye me-1"></i>Focus:</strong>
+                                <p class="text-muted small mb-0 mt-1">@Project.UserGuidance</p>
+                            </div>
+                        }
+                        <div>
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>
+                                Updated: @Project.LastModifiedAt.ToString("MMM d, yyyy")
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-collection-play me-1"></i>
+                                @Project.Videos.Count / 10 videos
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                @* Message Center *@
+                <MessageSidebar />
+            </div>
+
+            @* Main Content *@
+            <div class="col-lg-9">
 
         @* Videos Section *@
         <div class="mb-5">
@@ -209,6 +242,8 @@
                                      CanGenerate="@CanGenerate" />
             }
         </div>
+            </div> @* End col-lg-9 *@
+        </div> @* End row *@
     }
 </div>
 
