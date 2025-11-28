@@ -218,7 +218,17 @@
     <EditProjectModal IsVisible="@ShowEditModalState"
                       Project="@ProjectToEdit"
                       OnSave="@HandleUpdateProject"
-                      OnCancel="@CloseModals" />
+                      OnCancel="@CloseModals"
+                      OnDelete="@ShowDeleteModal" />
+}
+
+@* Delete Confirmation Modal *@
+@if (ShowDeleteModalState && ProjectToDelete != null)
+{
+    <DeleteProjectConfirmation IsVisible="@ShowDeleteModalState"
+                                Project="@ProjectToDelete"
+                                OnConfirm="@HandleDeleteConfirm"
+                                OnCancel="@CloseDeleteModal" />
 }
 
 @* Remove Video Confirmation *@
