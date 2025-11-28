@@ -43,6 +43,8 @@ public class LibraryDataService : ILibraryDataService
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId))
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.VideoType)
                 .Where(uv => uv.UserId == userId)
                 .OrderByDescending(uv => uv.AddedToLibraryAt)
                 .ToListAsync();
@@ -69,6 +71,8 @@ public class LibraryDataService : ILibraryDataService
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId))
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.VideoType)
                 .FirstOrDefaultAsync(uv => uv.UserId == userId &&
                                           uv.Video.YouTubeVideoId == youTubeVideoId);
 
@@ -171,6 +175,8 @@ public class LibraryDataService : ILibraryDataService
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Ratings.Where(r => r.UserId == userId))
+                .Include(uv => uv.Video)
+                    .ThenInclude(v => v.VideoType)
                 .Where(uv => uv.UserId == userId &&
                             (uv.Video.Title.Contains(searchQuery) ||
                              uv.Video.Channel.Name.Contains(searchQuery)))
@@ -319,7 +325,10 @@ public class LibraryDataService : ILibraryDataService
             UserVideoId = userVideo.Id,
             AddedToLibraryAt = userVideo.AddedToLibraryAt,
             WatchStatus = userVideo.Status,
-            Notes = userVideo.Notes
+            Notes = userVideo.Notes,
+            VideoTypeId = userVideo.Video.VideoTypeId,
+            VideoTypeName = userVideo.Video.VideoType?.Name,
+            VideoTypeCode = userVideo.Video.VideoType?.Code
         };
 
         // Map user rating if exists
