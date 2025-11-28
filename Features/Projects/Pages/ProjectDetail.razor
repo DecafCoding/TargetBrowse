@@ -102,17 +102,6 @@
             @* Main Content *@
             <div class="col-lg-9">
 
-        @* Alert *@
-        @if (Project.Videos.Any() && !Project.AllVideosHaveSummaries)
-        {
-            <div class="alert alert-warning mb-4">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>Some videos are missing summaries.</strong>
-                All videos must have summaries before you can generate a project guide.
-                <a href="/library" class="alert-link">Go to Video Library</a> to generate summaries.
-            </div>
-        }
-
         @* Guide Section *@
         <div class="mb-5">
             @if (IsGeneratingGuide)
@@ -144,30 +133,20 @@
                     <div class="card-body">
                         <h6 class="mb-3">Prerequisites for Guide Generation</h6>
                         <ul class="list-unstyled mb-3">
-                            <li class="mb-2">
-                                @if (Project.Videos.Any())
-                                {
-                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                    <span>At least one video added</span>
-                                }
-                                else
-                                {
+                            @if (Project.Videos.Count < 3)
+                            {
+                                <li class="mb-2">
                                     <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                    <span>No videos in project yet</span>
-                                }
-                            </li>
-                            <li class="mb-2">
-                                @if (Project.AllVideosHaveSummaries)
-                                {
-                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                    <span>All videos have summaries</span>
-                                }
-                                else
-                                {
+                                    <span>Need at least 3 videos in the project to create Project Guide</span>
+                                </li>
+                            }
+                            @if (!Project.AllVideosHaveSummaries)
+                            {
+                                <li class="mb-2">
                                     <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                    <span>@Project.Videos.Count(v => !v.HasSummary)) video(s) need summaries</span>
-                                }
-                            </li>
+                                    <span>All videos need summaries to enable Project Guide creation.</span>
+                                </li>
+                            }
                             <li class="mb-2">
                                 @if (CanGenerate)
                                 {
@@ -183,7 +162,7 @@
                         </ul>
                         <button class="btn btn-primary"
                                 @onclick="HandleGenerateGuide"
-                                disabled="@(!CanGenerate || !Project.Videos.Any() || !Project.AllVideosHaveSummaries)">
+                                disabled="@(!CanGenerate || Project.Videos.Count < 3 || !Project.AllVideosHaveSummaries)">
                             <i class="bi bi-stars me-2"></i>
                             Generate Project Guide
                         </button>
