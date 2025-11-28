@@ -252,7 +252,7 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
     }
 
     /// <summary>
-    /// Removes a video from a project using soft delete.
+    /// Removes a video from a project (hard delete).
     /// </summary>
     public async Task RemoveVideoFromProjectAsync(Guid projectId, Guid videoId)
     {
@@ -269,7 +269,7 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 return;
             }
 
-            projectVideo.IsDeleted = true;
+            _context.ProjectVideos.Remove(projectVideo);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Removed video {VideoId} from project {ProjectId}", videoId, projectId);
