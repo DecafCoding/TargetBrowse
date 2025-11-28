@@ -476,8 +476,8 @@ namespace TargetBrowse.Features.Projects.Services
                     throw new ArgumentException("Video not found in project", nameof(videoId));
                 }
 
-                // Soft delete project video
-                projectVideo.IsDeleted = true;
+                // Hard delete project video
+                _context.ProjectVideos.Remove(projectVideo);
 
                 await _context.SaveChangesAsync();
 
