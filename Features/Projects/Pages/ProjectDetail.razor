@@ -115,11 +115,7 @@
         @* Videos Section *@
         <div class="mb-5">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>
-                    <i class="bi bi-collection-play me-2"></i>
-                    Videos
-                    <span class="badge bg-secondary ms-2">@Project.Videos.Count / 10</span>
-                </h3>
+                <h3>Videos</h3>
             </div>
 
             @if (Project.Videos.Any())
@@ -155,99 +151,190 @@
 
         @* Guide Section *@
         <div class="mb-5">
-            <h3 class="mb-3">
-                <i class="bi bi-book me-2"></i>
-                Project Guide
-            </h3>
-
             @if (IsGeneratingGuide)
             {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Generating guide...</span>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Project Guide</h5>
                     </div>
-                    <div class="mt-3">
-                        <h5>Generating your project guide...</h5>
-                        <p class="text-muted">This may take a minute. Please don't close this page.</p>
+                    <div class="card-body">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Generating guide...</span>
+                            </div>
+                            <div class="mt-3">
+                                <h5>Generating your project guide...</h5>
+                                <p class="text-muted">This may take a minute. Please don't close this page.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (Project.GuideContent == null)
+            {
+                @* Prerequisites Check *@
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Project Guide</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="mb-3">Prerequisites for Guide Generation</h6>
+                        <ul class="list-unstyled mb-3">
+                            <li class="mb-2">
+                                @if (Project.Videos.Any())
+                                {
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <span>At least one video added</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                    <span>No videos in project yet</span>
+                                }
+                            </li>
+                            <li class="mb-2">
+                                @if (Project.AllVideosHaveSummaries)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <span>All videos have summaries</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                    <span>@Project.Videos.Count(v => !v.HasSummary)) video(s) need summaries</span>
+                                }
+                            </li>
+                            <li class="mb-2">
+                                @if (CanGenerate)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <span>Daily AI limit not exceeded (@DailyCallCount/10 calls today)</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                    <span>Daily limit reached (10/10 calls used today)</span>
+                                }
+                            </li>
+                        </ul>
+                        <button class="btn btn-primary"
+                                @onclick="HandleGenerateGuide"
+                                disabled="@(!CanGenerate || !Project.Videos.Any() || !Project.AllVideosHaveSummaries)">
+                            <i class="bi bi-stars me-2"></i>
+                            Generate Project Guide
+                        </button>
+                        @if (!CanGenerate)
+                        {
+                            <p class="text-muted small mt-2 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                You've reached your daily limit of 10 AI-powered operations. The limit resets at midnight UTC.
+                            </p>
+                        }
                     </div>
                 </div>
             }
             else
             {
-                @* Prerequisites Check *@
-                @if (Project.GuideContent == null)
-                {
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Prerequisites for Guide Generation</h5>
-                            <ul class="list-unstyled mb-3">
-                                <li class="mb-2">
-                                    @if (Project.Videos.Any())
-                                    {
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <span>At least one video added</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                        <span>No videos in project yet</span>
-                                    }
-                                </li>
-                                <li class="mb-2">
-                                    @if (Project.AllVideosHaveSummaries)
-                                    {
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <span>All videos have summaries</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                        <span>@Project.Videos.Count(v => !v.HasSummary)) video(s) need summaries</span>
-                                    }
-                                </li>
-                                <li class="mb-2">
-                                    @if (CanGenerate)
-                                    {
-                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                        <span>Daily AI limit not exceeded (@DailyCallCount/10 calls today)</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                        <span>Daily limit reached (10/10 calls used today)</span>
-                                    }
-                                </li>
-                            </ul>
-                            <button class="btn btn-primary"
-                                    @onclick="HandleGenerateGuide"
-                                    disabled="@(!CanGenerate || !Project.Videos.Any() || !Project.AllVideosHaveSummaries)">
-                                <i class="bi bi-stars me-2"></i>
-                                Generate Project Guide
+                @* Display Guide *@
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Project Guide</h5>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    @onclick="HandleRegenerateGuide"
+                                    disabled="@(!CanGenerate)">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                Regenerate Guide
                             </button>
-                            @if (!CanGenerate)
-                            {
-                                <p class="text-muted small mt-2 mb-0">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    You've reached your daily limit of 10 AI-powered operations. The limit resets at midnight UTC.
-                                </p>
-                            }
                         </div>
                     </div>
-                }
-
-                @* Display Guide *@
-                <ProjectGuideDisplay Guide="@Project.GuideContent"
-                                     CurrentVideoCount="@Project.Videos.Count"
-                                     CurrentUserGuidance="@Project.UserGuidance"
-                                     NeedsRegeneration="@Project.NeedsRegeneration"
-                                     OnRegenerate="@HandleRegenerateGuide"
-                                     CanGenerate="@CanGenerate" />
+                    <div class="card-body">
+                        @if (Project.NeedsRegeneration)
+                        {
+                            <div class="alert alert-warning mb-4">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    Guide may be outdated
+                                </h6>
+                                <p class="mb-0 small">
+                                    The project has changed since the guide was generated.
+                                    @if (!CanGenerate)
+                                    {
+                                        <span class="d-block mt-1">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Daily generation limit reached - try again tomorrow
+                                        </span>
+                                    }
+                                </p>
+                            </div>
+                        }
+                        <div class="guide-content">
+                            @((MarkupString)Project.GuideContent)
+                        </div>
+                    </div>
+                </div>
             }
         </div>
             </div> @* End col-lg-9 *@
         </div> @* End row *@
     }
 </div>
+
+<style>
+    .guide-content {
+        line-height: 1.8;
+        font-size: 1rem;
+    }
+
+        .guide-content h1,
+        .guide-content h2,
+        .guide-content h3,
+        .guide-content h4,
+        .guide-content h5,
+        .guide-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .guide-content p {
+            margin-bottom: 1rem;
+        }
+
+        .guide-content ul,
+        .guide-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .guide-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .guide-content code {
+            background-color: var(--bs-secondary-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+
+        .guide-content pre {
+            background-color: var(--bs-secondary-bg);
+            padding: 1rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .guide-content blockquote {
+            border-left: 4px solid var(--bs-primary);
+            padding-left: 1rem;
+            margin-left: 0;
+            margin-bottom: 1rem;
+            color: var(--bs-secondary-color);
+        }
+</style>
 
 @* Edit Modal *@
 @if (ShowEditModalState)
