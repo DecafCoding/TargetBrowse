@@ -8,7 +8,7 @@
 
 <PageTitle>@(Project?.Name ?? "Project")</PageTitle>
 
-<div class="container mt-2">
+
     @if (IsLoading)
     {
         <div class="text-center py-5">
@@ -74,7 +74,7 @@
                         @if (!string.IsNullOrEmpty(Project.UserGuidance))
                         {
                             <div class="mb-3">
-                                <p class="text-muted small mb-0 mt-1"><strong class="small">Focus:</strong> @Project.UserGuidance</p>
+                            <p class="small mt-1">AI Guidance: <span class="text-muted">@Project.UserGuidance</span></p>
                             </div>
                         }
                         <div>
@@ -230,7 +230,6 @@
             </div> @* End col-lg-9 *@
         </div> @* End row *@
     }
-</div>
 
 <style>
     .guide-content {
