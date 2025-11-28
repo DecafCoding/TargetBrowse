@@ -27,6 +27,9 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 .Include(p => p.ProjectVideos.Where(pv => !pv.IsDeleted))
                     .ThenInclude(pv => pv.Video)
                         .ThenInclude(v => v.Channel)
+                .Include(p => p.ProjectVideos.Where(pv => !pv.IsDeleted))
+                    .ThenInclude(pv => pv.Video)
+                        .ThenInclude(v => v.Summary)
                 .Include(p => p.ProjectGuide)
                 .Where(p => p.Id == id && p.UserId == userId && !p.IsDeleted)
                 .FirstOrDefaultAsync();
