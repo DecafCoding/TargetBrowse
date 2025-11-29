@@ -19,12 +19,12 @@
             <div class="mb-3">
                 <div class="input-group">
                     <InputText @bind-Value="SearchModel.SearchQuery"
-                               class="form-control"
+                               class="@($"form-control {(ShouldShowPulse() ? "input-pulse-green" : "")}")"
                                id="searchQuery"
                                placeholder="Search Term or URL"
                                disabled="@IsSearching" />
                     <button type="submit"
-                            class="btn btn-primary"
+                            class="@($"btn btn-primary {(ShouldShowPulse() ? "btn-pulse-green" : "")}")"
                             disabled="@IsSearching">
                         @if (IsSearching)
                         {
