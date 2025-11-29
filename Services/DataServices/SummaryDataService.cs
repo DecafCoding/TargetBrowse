@@ -24,28 +24,30 @@ namespace TargetBrowse.Services.DataServices
         /// Creates a new summary for a video.
         /// Note: VideoId has a unique index, so duplicate summaries for the same video will fail.
         /// </summary>
-        public async Task<SummaryEntity> CreateSummaryAsync(Guid videoId, string content, Guid? aiCallId = null)
+        public async Task<SummaryEntity> CreateSummaryAsync(Guid videoId, string content, string summary, Guid? aiCallId = null)
         {
             try
             {
-                var summary = new SummaryEntity
+                var summaryEntity = new SummaryEntity
                 {
                     VideoId = videoId,
                     Content = content,
+                    Summary = summary,
                     AICallId = aiCallId,
                     GenerationCount = 1
                 };
 
-                _context.Summaries.Add(summary);
+                _context.Summaries.Add(summaryEntity);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation(
-                    "Created summary {SummaryId} for video {VideoId}. Content length: {ContentLength}",
-                    summary.Id,
+                    "Created summary {SummaryId} for video {VideoId}. Content length: {ContentLength}, Summary length: {SummaryLength}",
+                    summaryEntity.Id,
                     videoId,
-                    content.Length);
+                    content.Length,
+                    summary.Length);
 
-                return summary;
+                return summaryEntity;
             }
             catch (Exception ex)
             {
