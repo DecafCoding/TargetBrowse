@@ -413,6 +413,20 @@ html, body {
 }
 /*********************** Skeleton section END *******************************/
 
+/* Green pulse animation for Add Topic button when no topics exist */
+@keyframes green-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+    }
+}
+
+.btn-pulse-green {
+    animation: green-pulse 1s ease-out 2;
+}
+
 
 
 

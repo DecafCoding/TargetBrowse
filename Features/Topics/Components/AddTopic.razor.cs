@@ -32,6 +32,9 @@ namespace TargetBrowse.Features.Topics.Components
         [Parameter]
         public EventCallback OnTopicAdded { get; set; }
 
+        [Parameter]
+        public int ParentTopicCount { get; set; } = -1; // -1 indicates not set
+
         #endregion
 
         #region Properties
@@ -231,6 +234,22 @@ namespace TargetBrowse.Features.Topics.Components
                 14 => "Bi-Weekly",
                 _ => "Select frequency"
             };
+        }
+
+        /// <summary>
+        /// Determines if the Add Topic button should show the pulse animation.
+        /// Shows pulse when there are no topics (either from parent or own count).
+        /// </summary>
+        protected bool ShouldShowPulse()
+        {
+            // Use parent topic count if available (preferred)
+            if (ParentTopicCount >= 0)
+            {
+                return ParentTopicCount == 0;
+            }
+
+            // Fall back to own loaded count
+            return HasLoadedCount && CurrentTopicCount == 0;
         }
 
         #endregion
