@@ -20,7 +20,7 @@
             <div class="mb-3">
                 <label for="topicName" class="form-label">Topic Name</label>
                 <InputText @bind-Value="TopicModel.Name"
-                           class="form-control @(ShouldShowPulse() ? "input-pulse-green" : "")"
+                           class="@($"form-control {(ShouldShowPulse() ? "input-pulse-green" : "")}")"
                            id="topicName"
                            placeholder="Enter A Topic"
                            disabled="@IsSubmitting" />
@@ -52,7 +52,7 @@
 
             <div class="mb-3">
                 <button type="submit"
-                        class="btn btn-primary w-100 @(ShouldShowPulse() ? "btn-pulse-green" : "")"
+                        class="@($"btn btn-primary w-100 {(ShouldShowPulse() ? "btn-pulse-green" : "")}")"
                         disabled="@IsSubmitting">
                     @if (IsSubmitting)
                     {
