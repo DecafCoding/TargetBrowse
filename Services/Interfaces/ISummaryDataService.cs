@@ -12,10 +12,11 @@ namespace TargetBrowse.Services.Interfaces
         /// Creates a new summary for a video.
         /// </summary>
         /// <param name="videoId">The video ID (Guid) to associate with this summary</param>
-        /// <param name="content">The summary content (max 2000 characters)</param>
+        /// <param name="content">The detailed summary content (max 4000 characters)</param>
+        /// <param name="summary">The short summary (max 1000 characters)</param>
         /// <param name="aiCallId">Optional AI call ID for audit trail</param>
         /// <returns>The created SummaryEntity with populated Id</returns>
-        Task<SummaryEntity> CreateSummaryAsync(Guid videoId, string content, Guid? aiCallId = null);
+        Task<SummaryEntity> CreateSummaryAsync(Guid videoId, string content, string summary, Guid? aiCallId = null);
 
         /// <summary>
         /// Gets a summary by video ID.

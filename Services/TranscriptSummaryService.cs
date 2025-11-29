@@ -152,8 +152,10 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             }
 
             // Step 10: Parse response
-            var summaryContent = ParseSummaryResponse(response);
-            if (string.IsNullOrWhiteSpace(summaryContent))
+            var summaryResponse = ParseSummaryResponse(response);
+            if (summaryResponse == null ||
+                string.IsNullOrWhiteSpace(summaryResponse.ShortSummary) ||
+                string.IsNullOrWhiteSpace(summaryResponse.LongSummary))
             {
                 return CreateFailedResult(videoId, "Empty or invalid response from OpenAI API");
             }
@@ -161,12 +163,13 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             // Step 11: Store summary
             var summary = await _summaryDataService.CreateSummaryAsync(
                 videoId,
-                summaryContent,
+                summaryResponse.LongSummary,
+                summaryResponse.ShortSummary,
                 aiCall.Id);
 
             // Step 12: Calculate costs and build result
             var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(promptEntity.SystemPrompt + actualUserPrompt);
-            var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(summaryContent);
+            var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(summaryResponse.LongSummary + summaryResponse.ShortSummary);
             var totalCost = CalculateCost(
                 inputTokens,
                 promptEntity.Model.CostPer1kInputTokens,
@@ -180,7 +183,7 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             return CreateSuccessResult(
                 videoId,
                 summary.Id,
-                summaryContent,
+                summaryResponse.LongSummary,
                 inputTokens,
                 outputTokens,
                 totalCost,
@@ -274,7 +277,7 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             },
             MaxTokens = promptEntity.MaxTokens ?? DefaultMaxTokens,
             Temperature = promptEntity.Temperature ?? DefaultTemperature,
-            ResponseFormat = new OpenAiResponseFormat { Type = "text" }
+            ResponseFormat = new OpenAiResponseFormat { Type = "json_object" }
         };
     }
 
@@ -309,8 +312,9 @@ public class TranscriptSummaryService : ITranscriptSummaryService
 
     /// <summary>
     /// Parses the OpenAI response and extracts the summary content.
+    /// Now expects JSON format with short_summary and long_summary fields.
     /// </summary>
-    private string? ParseSummaryResponse(OpenAiResponse response)
+    private SummaryResponse? ParseSummaryResponse(OpenAiResponse response)
     {
         try
         {
@@ -323,14 +327,23 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             var messageContent = response.Choices.First().Message.Content;
 
             // Content could be string or object, handle both cases
-            if (messageContent is string textContent)
+            if (messageContent is string jsonContent)
             {
-                if (string.IsNullOrWhiteSpace(textContent))
+                if (string.IsNullOrWhiteSpace(jsonContent))
                 {
                     _logger.LogWarning("Empty response content from OpenAI API");
                     return null;
                 }
-                return textContent;
+
+                // Parse JSON response
+                var summaryResponse = JsonConvert.DeserializeObject<SummaryResponse>(jsonContent);
+                if (summaryResponse == null)
+                {
+                    _logger.LogWarning("Failed to deserialize summary response JSON");
+                    return null;
+                }
+
+                return summaryResponse;
             }
 
             _logger.LogWarning("Unexpected response content format from OpenAI API");
@@ -341,6 +354,18 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             _logger.LogError(ex, $"Error parsing OpenAI response: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Model for the JSON response from OpenAI containing both summary types.
+    /// </summary>
+    private class SummaryResponse
+    {
+        [JsonProperty("short_summary")]
+        public string ShortSummary { get; set; } = string.Empty;
+
+        [JsonProperty("long_summary")]
+        public string LongSummary { get; set; } = string.Empty;
     }
 
     /// <summary>
