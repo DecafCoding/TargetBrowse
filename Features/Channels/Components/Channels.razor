@@ -43,13 +43,22 @@
                         </div>
                     </div>
                 }
+                else
+                {
+                    <p class="text-muted small mb-0">
+                        Search for YouTube channels using the Add A New Channel form below.
+                    </p>
+                }
             </div>
         </div>
 
 
         <!-- Channel Search Component (moved to sidebar) -->
         <div class="mb-4">
-            <ChannelSearch @ref="ChannelSearchComponent" OnChannelAdded="HandleChannelAdded" OnSearchCompleted="HandleSearchCompleted" />
+            <ChannelSearch @ref="ChannelSearchComponent"
+                           OnChannelAdded="HandleChannelAdded"
+                           OnSearchCompleted="HandleSearchCompleted"
+                           ParentChannelCount="@(ChannelListComponent?.TrackedChannelCount ?? -1)" />
         </div>
 
         <!-- Recent Messages -->

@@ -29,6 +29,14 @@ public partial class ChannelSearch : ComponentBase
     [Parameter]
     public EventCallback OnSearchCompleted { get; set; }
 
+    /// <summary>
+    /// The tracked channel count from the parent component.
+    /// Used to determine if the pulse animation should be shown.
+    /// Default value of -1 means count hasn't been set by parent.
+    /// </summary>
+    [Parameter]
+    public int ParentChannelCount { get; set; } = -1;
+
     #endregion
 
     #region Protected Properties
@@ -138,6 +146,26 @@ public partial class ChannelSearch : ComponentBase
             _channelBeingAdded = null;
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Determines if the Search button and input should show the pulse animation.
+    /// Shows pulse when there are no channels tracked (count is 0).
+    /// </summary>
+    protected bool ShouldShowPulse()
+    {
+        // Use parent channel count if available (preferred)
+        if (ParentChannelCount >= 0)
+        {
+            return ParentChannelCount == 0;
+        }
+
+        // Default to not showing pulse if count not available
+        return false;
     }
 
     #endregion
