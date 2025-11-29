@@ -417,14 +417,31 @@ html, body {
 @keyframes green-pulse {
     0%, 100% {
         box-shadow: 0 0 0 0 rgba(25, 135, 84, 1);
+        background-color: var(--bs-btn-bg, #1b6ec2);
     }
     50% {
         box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+        background-color: #198754;
+    }
+}
+
+@keyframes green-pulse-input {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 1);
+        border-color: var(--bs-border-color);
+    }
+    50% {
+        box-shadow: 0 0 0 5px rgba(25, 135, 84, 0);
+        border-color: #198754;
     }
 }
 
 .btn-pulse-green {
     animation: green-pulse 2s ease-out 2;
+}
+
+.input-pulse-green {
+    animation: green-pulse-input 2s ease-out 2;
 }
 
 
