@@ -38,13 +38,25 @@
 
 /* Empty State */
 .empty-state .tip-card {
-    transition: transform 0.2s ease;
+    transition: all 0.3s ease;
     background: var(--bs-body-bg);
+    cursor: pointer;
 }
 
     .empty-state .tip-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: var(--bs-primary) !important;
+    }
+
+.empty-state .hover-lift {
+    transition: all 0.3s ease;
+}
+
+    .empty-state .hover-lift:hover .tip-card {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: var(--bs-primary) !important;
     }
 
 /* Suggestions Grid */
