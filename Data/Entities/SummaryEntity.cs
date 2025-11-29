@@ -17,6 +17,11 @@ namespace TargetBrowse.Data.Entities
         public string Content { get; set; } = string.Empty;
 
         /// <summary>
+        /// Short summary of the video content (max 1000 characters).
+        /// </summary>
+        public string Summary { get; set; } = string.Empty;
+
+        /// <summary>
         /// Links to the AI call that generated this summary.
         /// Provides full audit trail including prompt used, tokens, and cost.
         /// </summary>
