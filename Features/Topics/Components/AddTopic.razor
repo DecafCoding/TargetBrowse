@@ -52,7 +52,7 @@
 
             <div class="mb-3">
                 <button type="submit"
-                        class="btn btn-primary w-100"
+                        class="btn btn-primary w-100 @(ShouldShowPulse() ? "btn-pulse-green" : "")"
                         disabled="@IsSubmitting">
                     @if (IsSubmitting)
                     {

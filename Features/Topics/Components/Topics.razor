@@ -43,13 +43,21 @@
                         </div>
                     </div>
                 }
+                else
+                {
+                    <p class="text-muted small mb-0">
+                        Add your first topic using the Enter A Topic form below
+                    </p>
+                }
             </div>
         </div>
 
 
         <!-- Add Topic Component (moved to left side) -->
         <div class="mb-4">
-            <AddTopic @ref="AddTopicComponent" OnTopicAdded="HandleTopicAdded" />
+            <AddTopic @ref="AddTopicComponent"
+                      OnTopicAdded="HandleTopicAdded"
+                      ParentTopicCount="@(TopicListComponent?.TopicCount ?? 0)" />
         </div>
 
         <!-- Recent Messages -->
