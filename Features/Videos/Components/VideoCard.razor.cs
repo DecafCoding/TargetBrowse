@@ -129,8 +129,22 @@ public partial class VideoCard : ComponentBase
 
             if (success)
             {
-                Video.IsInLibrary = true;
-                Video.AddedToLibrary = DateTime.UtcNow;
+                // Fetch the complete video info from library to get the Video.Id
+                var libraryVideo = await LibraryDataService.GetVideoByYouTubeIdAsync(CurrentUserId, Video.YouTubeVideoId);
+
+                if (libraryVideo != null)
+                {
+                    Video.Id = libraryVideo.VideoId;
+                    Video.UserVideoId = libraryVideo.UserVideoId;
+                    Video.IsInLibrary = true;
+                    Video.AddedToLibrary = libraryVideo.AddedToLibraryAt;
+                }
+                else
+                {
+                    // Fallback if we can't fetch the complete info
+                    Video.IsInLibrary = true;
+                    Video.AddedToLibrary = DateTime.UtcNow;
+                }
 
                 await MessageCenter.ShowSuccessAsync($"Added '{Video.ShortTitle}' to your library!");
                 await OnVideoAdded.InvokeAsync(Video);
