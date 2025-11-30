@@ -35,6 +35,7 @@ public partial class VideoCard : ComponentBase
     private bool IsAddingToLibrary = false;
     private bool IsRemoving = false;
     private bool IsUpdatingStatus = false;
+    private bool IsPreparingProject = false;
     private bool ShowConfirmDialog = false;
     private bool ShowRatingModalDialog = false;
     private bool ShowAddToProjectModalDialog = false;
@@ -440,6 +441,33 @@ public partial class VideoCard : ComponentBase
     {
         ShowAddToProjectModalDialog = false;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets VideoInfo for videos not yet in the database.
+    /// </summary>
+    private VideoInfo? GetVideoInfo()
+    {
+        // Only return VideoInfo if the video doesn't have a valid database ID
+        if (Video.Id == Guid.Empty || !Video.IsInLibrary)
+        {
+            return new VideoInfo
+            {
+                YouTubeVideoId = Video.YouTubeVideoId,
+                ChannelId = Video.ChannelId,
+                ChannelName = Video.ChannelTitle,
+                Title = Video.Title,
+                Description = Video.Description,
+                ThumbnailUrl = Video.ThumbnailUrl ?? string.Empty,
+                Duration = DurationParser.ParseToSeconds(Video.Duration),
+                ViewCount = (int)(Video.ViewCount ?? 0),
+                LikeCount = (int)(Video.LikeCount ?? 0),
+                CommentCount = (int)(Video.CommentCount ?? 0),
+                PublishedAt = Video.PublishedAt
+            };
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -57,11 +57,6 @@ namespace TargetBrowse.Services.ProjectServices
         public async Task<AddToProjectResult> AddVideoToProjectsAsync(AddToProjectRequest request)
         {
             // Validate request
-            if (request.VideoId == Guid.Empty)
-            {
-                return AddToProjectResult.CreateFailure("Invalid video ID.");
-            }
-
             if (string.IsNullOrWhiteSpace(request.UserId))
             {
                 return AddToProjectResult.CreateFailure("User ID is required.");
@@ -72,8 +67,32 @@ namespace TargetBrowse.Services.ProjectServices
                 return AddToProjectResult.CreateFailure("At least one project must be selected.");
             }
 
+            Guid videoId = request.VideoId;
+
+            // If VideoId is not provided or empty, ensure video exists using VideoInfo
+            if (videoId == Guid.Empty && request.VideoInfo != null)
+            {
+                try
+                {
+                    var videoEntity = await _videoDataService.EnsureVideoExistsAsync(request.VideoInfo);
+                    videoId = videoEntity.Id;
+                    _logger.LogInformation("Created video entity {VideoId} for YouTube video {YouTubeVideoId}",
+                        videoId, request.VideoInfo.YouTubeVideoId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create video entity for {YouTubeVideoId}",
+                        request.VideoInfo.YouTubeVideoId);
+                    return AddToProjectResult.CreateFailure("Failed to create video in database.");
+                }
+            }
+            else if (videoId == Guid.Empty)
+            {
+                return AddToProjectResult.CreateFailure("Either VideoId or VideoInfo must be provided.");
+            }
+
             // Check if video exists
-            var videoExists = await _context.Videos.AnyAsync(v => v.Id == request.VideoId);
+            var videoExists = await _context.Videos.AnyAsync(v => v.Id == videoId);
             if (!videoExists)
             {
                 return AddToProjectResult.CreateFailure("Video not found.");
@@ -85,14 +104,14 @@ namespace TargetBrowse.Services.ProjectServices
             foreach (var projectId in request.ProjectIds)
             {
                 // Validate each project
-                var (canAdd, errorMessage) = await CanAddVideoToProjectAsync(projectId, request.VideoId, request.UserId);
+                var (canAdd, errorMessage) = await CanAddVideoToProjectAsync(projectId, videoId, request.UserId);
 
                 if (!canAdd)
                 {
                     result.FailedProjectIds.Add(projectId);
                     result.ProjectErrors[projectId] = errorMessage ?? "Unknown error";
                     _logger.LogWarning("Cannot add video {VideoId} to project {ProjectId}: {Error}",
-                        request.VideoId, projectId, errorMessage);
+                        videoId, projectId, errorMessage);
                     continue;
                 }
 
@@ -107,7 +126,7 @@ namespace TargetBrowse.Services.ProjectServices
                     var projectVideo = new ProjectVideoEntity
                     {
                         ProjectId = projectId,
-                        VideoId = request.VideoId,
+                        VideoId = videoId,
                         Order = maxOrder + 1,
                         AddedAt = DateTime.UtcNow
                     };
@@ -116,14 +135,14 @@ namespace TargetBrowse.Services.ProjectServices
                     addedCount++;
 
                     _logger.LogInformation("Added video {VideoId} to project {ProjectId} at order {Order}",
-                        request.VideoId, projectId, projectVideo.Order);
+                        videoId, projectId, projectVideo.Order);
                 }
                 catch (Exception ex)
                 {
                     result.FailedProjectIds.Add(projectId);
                     result.ProjectErrors[projectId] = "Failed to add video to project.";
                     _logger.LogError(ex, "Error adding video {VideoId} to project {ProjectId}",
-                        request.VideoId, projectId);
+                        videoId, projectId);
                 }
             }
 
@@ -135,11 +154,11 @@ namespace TargetBrowse.Services.ProjectServices
                     await _context.SaveChangesAsync();
                     result.AddedToProjectsCount = addedCount;
                     _logger.LogInformation("Successfully added video {VideoId} to {Count} projects",
-                        request.VideoId, addedCount);
+                        videoId, addedCount);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error saving changes for video {VideoId}", request.VideoId);
+                    _logger.LogError(ex, "Error saving changes for video {VideoId}", videoId);
                     return AddToProjectResult.CreateFailure("Failed to save changes to database.");
                 }
             }

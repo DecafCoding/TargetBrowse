@@ -225,19 +225,16 @@
                         </a>
                     </div>
 
-                    <!-- Add to Project Button (only when video is in library) -->
-                    @if (Video.IsInLibrary)
-                    {
-                        <div class="d-flex gap-2">
-                            <button type="button"
-                                    class="btn btn-outline-primary btn-sm w-100"
-                                    @onclick="ShowAddToProjectModal"
-                                    title="Add to project">
-                                <i class="bi bi-folder-plus me-1"></i>
-                                Add to Project
-                            </button>
-                        </div>
-                    }
+                    <!-- Add to Project Button (always visible in search mode) -->
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm w-100"
+                                @onclick="ShowAddToProjectModal"
+                                title="Add to project">
+                            <i class="bi bi-folder-plus me-1"></i>
+                            Add to Project
+                        </button>
+                    </div>
                 </div>
             }
             else if (DisplayMode == VideoDisplayMode.Library)
@@ -332,11 +329,12 @@
                   OnSubmit="@HandleRatingSubmit"
                   OnDelete="@HandleRatingDelete" />
 
-<!-- Add to Project Modal (Library Mode and Search Mode when video is in library) -->
-@if (ShowAddToProjectModalDialog && ((DisplayMode == VideoDisplayMode.Library) || (DisplayMode == VideoDisplayMode.Search && Video.IsInLibrary)))
+<!-- Add to Project Modal (Library Mode and Search Mode) -->
+@if (ShowAddToProjectModalDialog && (DisplayMode == VideoDisplayMode.Library || DisplayMode == VideoDisplayMode.Search))
 {
     <AddToProjectModal IsVisible="@ShowAddToProjectModalDialog"
                        VideoId="@Video.Id"
+                       VideoInfo="@GetVideoInfo()"
                        OnClose="@HideAddToProjectModal"
                        OnSuccess="@HandleAddToProjectSuccess" />
 }

@@ -24,8 +24,15 @@ namespace TargetBrowse.Components.Shared
 
         /// <summary>
         /// The ID of the video to add to projects.
+        /// Required if VideoInfo is not provided.
         /// </summary>
         [Parameter] public Guid VideoId { get; set; }
+
+        /// <summary>
+        /// Video information for videos not yet in the database.
+        /// If provided, will be used instead of VideoId.
+        /// </summary>
+        [Parameter] public TargetBrowse.Services.Models.VideoInfo? VideoInfo { get; set; }
 
         /// <summary>
         /// Callback when the modal should be closed.
@@ -143,6 +150,7 @@ namespace TargetBrowse.Components.Shared
                 var request = new AddToProjectRequest
                 {
                     VideoId = VideoId,
+                    VideoInfo = VideoInfo,
                     ProjectIds = SelectedProjectIds.ToList(),
                     UserId = CurrentUserId
                 };
