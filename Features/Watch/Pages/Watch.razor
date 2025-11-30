@@ -9,6 +9,7 @@
 @using TargetBrowse.Features.Watch.Models
 @using TargetBrowse.Features.Watch.Services
 @using TargetBrowse.Services.Interfaces
+@using TargetBrowse.Components.Shared
 
 @attribute [Authorize]
 
@@ -187,6 +188,9 @@ else
 
         <!-- Left Sidebar - Action Buttons -->
         <div class="col-lg-4">
+            <!-- Message Center -->
+            <MessageSidebar />
+
             <!-- Content Display Card -->
             <div class="card watch-actions-card h-100">
                 <div class="card-header">
