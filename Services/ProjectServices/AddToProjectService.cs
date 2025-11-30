@@ -73,19 +73,19 @@ namespace TargetBrowse.Services.ProjectServices
 
             Guid videoId = request.VideoId;
 
-            // If VideoId is not provided or empty, ensure video exists using VideoInfo
-            if (videoId == Guid.Empty && request.VideoInfo != null)
+            // If VideoInfo is provided, ensure video exists in database (create if needed)
+            if (request.VideoInfo != null)
             {
                 try
                 {
                     var videoEntity = await _videoDataService.EnsureVideoExistsAsync(request.VideoInfo);
                     videoId = videoEntity.Id;
-                    _logger.LogInformation("Created video entity {VideoId} for YouTube video {YouTubeVideoId}",
+                    _logger.LogInformation("Ensured video entity {VideoId} exists for YouTube video {YouTubeVideoId}",
                         videoId, request.VideoInfo.YouTubeVideoId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to create video entity for {YouTubeVideoId}",
+                    _logger.LogError(ex, "Failed to ensure video entity exists for {YouTubeVideoId}",
                         request.VideoInfo.YouTubeVideoId);
                     return AddToProjectResult.CreateFailure("Failed to create video in database.");
                 }
