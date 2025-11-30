@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
+using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.ProjectServices.Models;
 
 namespace TargetBrowse.Services.ProjectServices
@@ -15,15 +16,18 @@ namespace TargetBrowse.Services.ProjectServices
         private readonly ApplicationDbContext _context;
         private readonly ProjectSettings _projectSettings;
         private readonly ILogger<AddToProjectService> _logger;
+        private readonly IVideoDataService _videoDataService;
 
         public AddToProjectService(
             ApplicationDbContext context,
             IOptions<ProjectSettings> projectSettings,
-            ILogger<AddToProjectService> logger)
+            ILogger<AddToProjectService> logger,
+            IVideoDataService videoDataService)
         {
             _context = context;
             _projectSettings = projectSettings.Value;
             _logger = logger;
+            _videoDataService = videoDataService;
         }
 
         /// <inheritdoc />
