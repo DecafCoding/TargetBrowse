@@ -187,41 +187,57 @@
             @if (DisplayMode == VideoDisplayMode.Search)
             {
                 <!-- Search Mode Actions -->
-                <div class="d-flex gap-2">
-                    @if (!Video.IsInLibrary)
-                    {
-                        <button type="button"
-                                class="btn btn-primary btn-sm flex-fill"
-                                @onclick="AddToLibrary"
-                                disabled="@IsAddingToLibrary">
-                            @if (IsAddingToLibrary)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-bookmark-plus me-1"></i>
-                            }
-                            Library
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="button"
-                                class="btn btn-success btn-sm flex-fill"
-                                disabled>
-                            <i class="bi bi-check-circle me-1"></i>
-                            In Library
-                        </button>
-                    }
+                <div class="d-grid gap-2">
+                    <div class="d-flex gap-2">
+                        @if (!Video.IsInLibrary)
+                        {
+                            <button type="button"
+                                    class="btn btn-primary btn-sm flex-fill"
+                                    @onclick="AddToLibrary"
+                                    disabled="@IsAddingToLibrary">
+                                @if (IsAddingToLibrary)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-bookmark-plus me-1"></i>
+                                }
+                                Library
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    class="btn btn-success btn-sm flex-fill"
+                                    disabled>
+                                <i class="bi bi-check-circle me-1"></i>
+                                In Library
+                            </button>
+                        }
 
-                    <a href="@Video.YouTubeUrl"
-                       target="_blank"
-                       class="btn btn-outline-secondary btn-sm flex-fill">
-                        <i class="bi bi-play-circle me-1"></i>
-                        Watch
-                        <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                    </a>
+                        <a href="@Video.YouTubeUrl"
+                           target="_blank"
+                           class="btn btn-outline-secondary btn-sm flex-fill">
+                            <i class="bi bi-play-circle me-1"></i>
+                            Watch
+                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                        </a>
+                    </div>
+
+                    <!-- Add to Project Button (only when video is in library) -->
+                    @if (Video.IsInLibrary)
+                    {
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm w-100"
+                                    @onclick="ShowAddToProjectModal"
+                                    title="Add to project">
+                                <i class="bi bi-folder-plus me-1"></i>
+                                Add to Project
+                            </button>
+                        </div>
+                    }
                 </div>
             }
             else if (DisplayMode == VideoDisplayMode.Library)
@@ -316,8 +332,8 @@
                   OnSubmit="@HandleRatingSubmit"
                   OnDelete="@HandleRatingDelete" />
 
-<!-- Add to Project Modal (Library Mode Only) -->
-@if (DisplayMode == VideoDisplayMode.Library && ShowAddToProjectModalDialog)
+<!-- Add to Project Modal (Library Mode and Search Mode when video is in library) -->
+@if (ShowAddToProjectModalDialog && ((DisplayMode == VideoDisplayMode.Library) || (DisplayMode == VideoDisplayMode.Search && Video.IsInLibrary)))
 {
     <AddToProjectModal IsVisible="@ShowAddToProjectModalDialog"
                        VideoId="@Video.Id"
