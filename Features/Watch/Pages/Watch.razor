@@ -8,6 +8,7 @@
 @using System.Net
 @using TargetBrowse.Features.Watch.Models
 @using TargetBrowse.Features.Watch.Services
+@using TargetBrowse.Features.Watch.Components
 @using TargetBrowse.Services.Interfaces
 @using TargetBrowse.Components.Shared
 
@@ -52,12 +53,13 @@ else if (!string.IsNullOrEmpty(Model.ErrorMessage))
 else
 {
     <div class="row">
-        <!-- Left Sidebar - Message Center -->
+        <!-- Left Sidebar - Video Details and Message Center -->
         <div class="col-lg-4">
+            <VideoDetailsCard Model="@Model" />
             <MessageSidebar />
         </div>
 
-        <!-- Main Content - Video Player and Details -->
+        <!-- Main Content - Video Player and Description/Transcript/Summary -->
         <div class="col-lg-8">
             <!-- Video Player Container -->
             <div class="mb-1 bg-dark rounded overflow-hidden shadow-sm">
@@ -70,123 +72,6 @@ else
                             loading="lazy"
                             class="rounded">
                     </iframe>
-                </div>
-            </div>
-
-            <!-- Video Information -->
-            <div class="mt-1">
-                <!-- Video Title with Duration -->
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h1 class="h4 mb-0 fw-semibold lh-sm flex-grow-1 me-3">
-                        @Model.Title
-                    </h1>
-                    @if (!string.IsNullOrEmpty(Model.DurationDisplay))
-                    {
-                        <span class="badge bg-secondary fs-6 flex-shrink-0">
-                            <i class="bi bi-clock me-1"></i>
-                            @Model.DurationDisplay
-                        </span>
-                    }
-                </div>
-
-                <!-- Video Metadata Row -->
-                <div class="py-0">
-                    <div class="row align-items-center">
-                        <!-- Channel Info -->
-                        <div class="col-12">
-                            <div class="d-flex align-items-center mb-1">
-                                <!-- Channel Thumbnail -->
-                                @if (!string.IsNullOrEmpty(Model.ChannelThumbnailUrl))
-                                {
-                                    <div class="me-3">
-                                        <img src="@Model.ChannelThumbnailUrl"
-                                             class="rounded-circle d-none d-sm-block"
-                                             alt="@Model.ChannelName"
-                                             loading="lazy"
-                                             width="48"
-                                             height="48"
-                                             style="object-fit: cover;"
-                                             onerror="handleChannelThumbnailError(this)" />
-                                        <img src="@Model.ChannelThumbnailUrl"
-                                             class="rounded-circle d-block d-sm-none"
-                                             alt="@Model.ChannelName"
-                                             loading="lazy"
-                                             width="40"
-                                             height="40"
-                                             style="object-fit: cover;"
-                                             onerror="handleChannelThumbnailError(this)" />
-                                    </div>
-                                }
-
-
-                                <!-- Channel Details with Stats -->
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-semibold">
-                                        @Model.ChannelName
-
-                                        <small class="text-muted flex-wrap mx-3">
-                                            @if (!string.IsNullOrEmpty(Model.ViewCountDisplay))
-                                            {
-                                                <span class="me-3">
-                                                    <i class="bi bi-eye"></i>
-                                                    @Model.ViewCountDisplay
-                                                </span>
-                                            }
-
-                                            @if (!string.IsNullOrEmpty(Model.LikeCountDisplay))
-                                            {
-                                                <span class="me-3">
-                                                    <i class="bi bi-hand-thumbs-up"></i>
-                                                    @Model.LikeCountDisplay
-                                                </span>
-                                            }
-
-                                            @if (!string.IsNullOrEmpty(Model.CommentCountDisplay))
-                                            {
-                                                <span class="me-3">
-                                                    <i class="bi bi-chat"></i>
-                                                    @Model.CommentCountDisplay
-                                                </span>
-                                            }
-
-                                            <span>
-                                                <i class="bi bi-calendar"></i>
-                                                @Model.PublishedDisplay
-                                            </span>
-                                        </small>
-                                    </h6>
-                                    <!-- Watch Status Badge -->
-                                    <span class="badge @GetWatchStatusBadgeClass() me-1">
-                                        <i class="bi @GetWatchStatusIcon() me-1"></i>
-                                        @GetWatchStatusDisplay()
-                                    </span>
-
-                                    @if (Model.IsInLibrary)
-                                    {
-                                        <span class="badge bg-success me-1">
-                                            <i class="bi bi-bookmark-check me-1"></i>
-                                            In Library
-                                        </span>
-                                    }
-
-                                    <!-- Rating Status -->
-                                    @if (Model.UserRating.HasValue)
-                                    {
-                                        <span class="badge bg-warning me-1">
-                                            <i class="bi bi-star-fill me-1"></i>
-                                            @Model.UserRating.Value @(Model.UserRating.Value == 1 ? "Star" : "Stars")
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            <!-- Status Badges (moved under channel) -->
-                            <div class="d-flex flex-wrap gap-2 mb-1">
-                                <!-- Video Stats (directly after channel title) -->
-
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
