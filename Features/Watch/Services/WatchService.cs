@@ -50,6 +50,8 @@ namespace TargetBrowse.Features.Watch.Services
                 model.PublishedDisplay = FormatHelper.FormatDateDisplay(video.PublishedAt);
                 model.ViewCount = video.ViewCount;
                 model.RawTranscript = video.RawTranscript;
+                model.VideoTypeId = video.VideoTypeId;
+                model.VideoTypeName = video.VideoType?.Name;
 
                 // Add " views" suffix for view count
                 var viewCountFormatted = FormatHelper.FormatCount((ulong)video.ViewCount);
@@ -108,6 +110,9 @@ namespace TargetBrowse.Features.Watch.Services
                     model.RatingNotes = rating.Notes;
                 }
 
+                // Load available video types for the dropdown
+                model.AvailableVideoTypes = await _watchRepository.GetAllVideoTypesAsync();
+
                 _logger.LogInformation("Successfully loaded watch data for video {VideoId}", youTubeVideoId);
             }
             catch (Exception ex)
@@ -140,6 +145,28 @@ namespace TargetBrowse.Features.Watch.Services
             return $"https://www.youtube.com/embed/{youTubeVideoId}?rel=0&modestbranding=1&autoplay=0";
         }
 
+        public async Task<bool> UpdateVideoTypeAsync(Guid videoId, Guid? videoTypeId)
+        {
+            try
+            {
+                var result = await _watchRepository.UpdateVideoTypeAsync(videoId, videoTypeId);
 
+                if (result)
+                {
+                    _logger.LogInformation("Successfully updated video type for video {VideoId} to {VideoTypeId}", videoId, videoTypeId);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update video type for video {VideoId}", videoId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating video type for video {VideoId}", videoId);
+                return false;
+            }
+        }
     }
 }

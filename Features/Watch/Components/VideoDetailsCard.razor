@@ -25,6 +25,24 @@
             </div>
         }
 
+        <!-- Video Type Dropdown -->
+        <div class="mb-3">
+            <label for="videoTypeSelect" class="form-label fw-semibold">
+                <i class="bi bi-tag me-1"></i>
+                Video Type
+            </label>
+            <select id="videoTypeSelect"
+                    class="form-select"
+                    value="@Model.VideoTypeId"
+                    @onchange="HandleVideoTypeChange">
+                <option value="">-- Select Type --</option>
+                @foreach (var videoType in Model.AvailableVideoTypes)
+                {
+                    <option value="@videoType.Id">@videoType.Name</option>
+                }
+            </select>
+        </div>
+
         <!-- Channel Information -->
         <div class="mb-3">
             <div class="d-flex align-items-center mb-2">
@@ -109,6 +127,22 @@
 @code {
     [Parameter]
     public WatchViewModel Model { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Guid?> OnVideoTypeChanged { get; set; }
+
+    private async Task HandleVideoTypeChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        Guid? newVideoTypeId = null;
+
+        if (!string.IsNullOrEmpty(value) && Guid.TryParse(value, out var parsedGuid))
+        {
+            newVideoTypeId = parsedGuid;
+        }
+
+        await OnVideoTypeChanged.InvokeAsync(newVideoTypeId);
+    }
 
     private string GetWatchStatusBadgeClass()
     {

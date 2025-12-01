@@ -55,7 +55,7 @@ else
     <div class="row">
         <!-- Left Sidebar - Video Details and Message Center -->
         <div class="col-lg-4">
-            <VideoDetailsCard Model="@Model" />
+            <VideoDetailsCard Model="@Model" OnVideoTypeChanged="HandleVideoTypeChanged" />
             <MessageSidebar />
         </div>
 

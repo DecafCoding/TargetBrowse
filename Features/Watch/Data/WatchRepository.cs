@@ -24,9 +24,10 @@ namespace TargetBrowse.Features.Watch.Data
         {
             try
             {
-                // Include channel data for display
+                // Include channel and video type data for display
                 return await _context.Videos
                     .Include(v => v.Channel)
+                    .Include(v => v.VideoType)
                     .Where(v => !v.IsDeleted)
                     .FirstOrDefaultAsync(v => v.YouTubeVideoId == youTubeVideoId);
             }
@@ -182,6 +183,52 @@ namespace TargetBrowse.Features.Watch.Data
             {
                 _logger.LogError(ex, "Error retrieving summary for video {VideoId}", videoId);
                 return null;
+            }
+        }
+
+        public async Task<List<VideoTypeEntity>> GetAllVideoTypesAsync()
+        {
+            try
+            {
+                return await _context.VideoTypes
+                    .Where(vt => !vt.IsDeleted)
+                    .OrderBy(vt => vt.Name)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving video types");
+                return new List<VideoTypeEntity>();
+            }
+        }
+
+        public async Task<bool> UpdateVideoTypeAsync(Guid videoId, Guid? videoTypeId)
+        {
+            try
+            {
+                var video = await _context.Videos
+                    .Where(v => !v.IsDeleted)
+                    .FirstOrDefaultAsync(v => v.Id == videoId);
+
+                if (video == null)
+                {
+                    _logger.LogWarning("Video {VideoId} not found for video type update", videoId);
+                    return false;
+                }
+
+                // Update the VideoTypeId field
+                video.VideoTypeId = videoTypeId;
+                video.LastModifiedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated video type for video {VideoId} to {VideoTypeId}", videoId, videoTypeId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating video type for video {VideoId}", videoId);
+                return false;
             }
         }
     }

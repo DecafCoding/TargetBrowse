@@ -174,6 +174,22 @@ namespace TargetBrowse.Features.Watch.Models
         /// </summary>
         public string? SummaryContent { get; set; }
 
+        // Video Type Information
+        /// <summary>
+        /// The ID of the video type classification
+        /// </summary>
+        public Guid? VideoTypeId { get; set; }
+
+        /// <summary>
+        /// The name of the video type (e.g., "Tutorial", "Podcast", "Vlog")
+        /// </summary>
+        public string? VideoTypeName { get; set; }
+
+        /// <summary>
+        /// List of all available video types for selection
+        /// </summary>
+        public List<VideoTypeEntity> AvailableVideoTypes { get; set; } = new();
+
         // Helper Methods
         /// <summary>
         /// Gets the appropriate thumbnail URL with fallback

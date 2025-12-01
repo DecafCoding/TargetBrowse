@@ -29,5 +29,13 @@ namespace TargetBrowse.Features.Watch.Services
         /// <param name="youTubeVideoId">The YouTube video ID</param>
         /// <returns>Formatted embed URL for iframe usage</returns>
         string GetYouTubeEmbedUrl(string youTubeVideoId);
+
+        /// <summary>
+        /// Updates the video type for a video
+        /// </summary>
+        /// <param name="videoId">The database video ID (Guid)</param>
+        /// <param name="videoTypeId">The new video type ID, or null to clear the type</param>
+        /// <returns>True if update was successful, false otherwise</returns>
+        Task<bool> UpdateVideoTypeAsync(Guid videoId, Guid? videoTypeId);
     }
 }

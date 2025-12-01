@@ -350,6 +350,57 @@ public partial class Watch : ComponentBase
         }
     }
 
+    /// <summary>
+    /// Handles video type changes from the VideoDetailsCard dropdown
+    /// </summary>
+    protected async Task HandleVideoTypeChanged(Guid? newVideoTypeId)
+    {
+        try
+        {
+            if (Model.VideoId == Guid.Empty)
+            {
+                Logger.LogWarning("Cannot update video type: Video ID is not set");
+                await MessageCenter.ShowErrorAsync("Unable to update video type. Please try reloading the page.");
+                return;
+            }
+
+            Logger.LogInformation("Updating video type for video {VideoId} to {VideoTypeId}", Model.VideoId, newVideoTypeId);
+
+            var success = await WatchService.UpdateVideoTypeAsync(Model.VideoId, newVideoTypeId);
+
+            if (success)
+            {
+                // Update the model to reflect the change
+                Model.VideoTypeId = newVideoTypeId;
+
+                // Find and set the video type name
+                if (newVideoTypeId.HasValue)
+                {
+                    var selectedType = Model.AvailableVideoTypes.FirstOrDefault(vt => vt.Id == newVideoTypeId.Value);
+                    Model.VideoTypeName = selectedType?.Name;
+                }
+                else
+                {
+                    Model.VideoTypeName = null;
+                }
+
+                await MessageCenter.ShowSuccessAsync("Video type updated successfully!");
+                Logger.LogInformation("Successfully updated video type for video {VideoId}", Model.VideoId);
+                StateHasChanged();
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to update video type. Please try again.");
+                Logger.LogWarning("Failed to update video type for video {VideoId}", Model.VideoId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error updating video type for video {VideoId}", Model.VideoId);
+            await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
+        }
+    }
+
     #endregion
 
     #region UI Helper Methods
