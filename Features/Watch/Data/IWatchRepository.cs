@@ -73,5 +73,19 @@ namespace TargetBrowse.Features.Watch.Data
         /// Gets the most recent summary for a video if available
         /// </summary>
         Task<SummaryEntity?> GetMostRecentSummaryAsync(Guid videoId);
+
+        /// <summary>
+        /// Gets all available video types for selection
+        /// </summary>
+        /// <returns>List of all video types</returns>
+        Task<List<VideoTypeEntity>> GetAllVideoTypesAsync();
+
+        /// <summary>
+        /// Updates the video type for a video
+        /// </summary>
+        /// <param name="videoId">The database video ID (Guid)</param>
+        /// <param name="videoTypeId">The new video type ID, or null to clear the type</param>
+        /// <returns>True if update was successful, false otherwise</returns>
+        Task<bool> UpdateVideoTypeAsync(Guid videoId, Guid? videoTypeId);
     }
 }
