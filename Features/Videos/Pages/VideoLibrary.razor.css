@@ -1,4 +1,22 @@
-﻿/* Grid view adjustments */
+﻿/* Sidebar card dropdown support */
+.sidebar-content .card {
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+}
+
+/* Elevate card when dropdown is open */
+.sidebar-content .card:hover,
+.sidebar-content .card:has(.dropdown.show) {
+    z-index: 10;
+}
+
+/* Ensure card body doesn't clip dropdowns */
+.card-body {
+    overflow: visible;
+}
+
+/* Grid view adjustments */
 .row .video-card {
     height: 100%;
 }
