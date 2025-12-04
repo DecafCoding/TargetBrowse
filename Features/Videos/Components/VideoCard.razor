@@ -64,15 +64,10 @@
     <div class="card-body d-flex flex-column p-3">
         <!-- Video Title -->
         <h6 class="card-title video-title mb-2">
-            <a href="@Video.YouTubeUrl"
-               target="_blank"
+            <a href="/watch/@Video.YouTubeVideoId"
                class="text-decoration-none title-link"
                title="@((MarkupString)WebUtility.HtmlDecode(Video.Title))">
                 @((MarkupString)WebUtility.HtmlDecode(Video.Title))
-                @if (Video.Title.Length < 50)
-                {
-                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                }
             </a>
         </h6>
 
@@ -266,12 +261,6 @@
                             }
                             Skip
                         </button>
-
-                        <a href="/watch/@Video.YouTubeVideoId"
-                           target="_blank"
-                           class="btn btn-outline-secondary btn-sm flex-fill">
-                            Watch
-                        </a>
                     </div>
 
                     <!-- Add to Project Button -->
