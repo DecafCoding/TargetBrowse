@@ -221,33 +221,3 @@
 .quick-stats-card .stat-item:hover .stat-value {
     transform: scale(1.1);
 }
-
-/* Card Hover Effects */
-.sidebar-content .card {
-    position: relative;
-    overflow: visible;
-    z-index: 1;
-}
-
-    /* Elevate card when dropdown is open */
-    .sidebar-content .card:hover,
-    .sidebar-content .card:has(.dropdown.show) {
-        z-index: 10;
-    }
-
-    .sidebar-content .card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent, rgba(13, 110, 253, 0.05), transparent);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
-    }
-
-    .sidebar-content .card:hover::after {
-        opacity: 1;
-    }

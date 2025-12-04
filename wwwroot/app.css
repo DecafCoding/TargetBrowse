@@ -195,6 +195,11 @@ header {
     overflow: visible;
 }
 
+    /* Ensure card body doesn't clip dropdowns */
+    .sidebar-content .card .card-body {
+        overflow: visible;
+    }
+
     /* Elevate card when hovered or has open dropdown */
     .sidebar-content .card:hover,
     .sidebar-content .card:has(.dropdown.show) {
