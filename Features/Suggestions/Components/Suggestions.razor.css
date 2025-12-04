@@ -48,17 +48,6 @@
     letter-spacing: 0.025em;
 }
 
-/* Sidebar Content */
-.sidebar-content .card {
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease;
-}
-
-    .sidebar-content .card:hover {
-        transform: translateY(-1px);
-    }
-
 /* How It Works Steps */
 /*.how-it-works-steps .step {
     display: flex;
