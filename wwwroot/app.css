@@ -190,7 +190,6 @@ header {
     border-radius: 0.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     position: relative;
-    z-index: 1;
     overflow: visible;
 }
 
@@ -201,7 +200,13 @@ header {
 
     /* Elevate card when it has an open dropdown */
     .sidebar-content .card:has(.dropdown.show) {
-        z-index: 10;
+        z-index: 1050;
+        position: relative;
+    }
+
+    /* Ensure dropdown menus appear above other cards */
+    .sidebar-content .dropdown-menu {
+        z-index: 1051;
     }
 
 /* Mobile Responsive for sidebar */
