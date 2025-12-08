@@ -18,13 +18,15 @@ public interface ISuggestionRepository
     Task<List<SuggestionEntity>> CreateSuggestionsAsync(List<SuggestionEntity> suggestions);
 
     /// <summary>
-    /// Gets pending suggestions for a user with pagination.
+    /// Gets pending suggestions for a user with pagination, filtering, and sorting.
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="pageNumber">Page number for pagination</param>
     /// <param name="pageSize">Number of suggestions per page</param>
+    /// <param name="filter">Optional filter to apply</param>
+    /// <param name="sortBy">Optional sort order to apply</param>
     /// <returns>List of pending suggestions</returns>
-    Task<List<SuggestionEntity>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20);
+    Task<List<SuggestionEntity>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20, SuggestionFilter? filter = null, SuggestionSort? sortBy = null);
 
     /// <summary>
     /// Gets a suggestion by ID with user ownership validation.

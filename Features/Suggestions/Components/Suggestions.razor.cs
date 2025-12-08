@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Suggestions.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Utilities;
@@ -231,6 +232,22 @@ public partial class Suggestions : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to update suggestions count for user {UserId}", CurrentUserId);
+        }
+    }
+
+    protected async Task HandleFilterChange(SuggestionFilter filter)
+    {
+        if (SuggestionQueueComponent != null)
+        {
+            await SuggestionQueueComponent.SetFilter(filter);
+        }
+    }
+
+    protected async Task HandleSortChange(SuggestionSort sort)
+    {
+        if (SuggestionQueueComponent != null)
+        {
+            await SuggestionQueueComponent.SetSort(sort);
         }
     }
 
