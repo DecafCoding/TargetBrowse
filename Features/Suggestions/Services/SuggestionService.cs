@@ -281,13 +281,13 @@ public class SuggestionService : ISuggestionService
     }
 
     /// <summary>
-    /// Gets all pending suggestions for a user with pagination.
+    /// Gets all pending suggestions for a user with pagination, filtering, and sorting.
     /// </summary>
-    public async Task<List<SuggestionDisplayModel>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20)
+    public async Task<List<SuggestionDisplayModel>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20, SuggestionFilter? filter = null, SuggestionSort? sortBy = null)
     {
         try
         {
-            var suggestions = await _suggestionRepository.GetPendingSuggestionsAsync(userId, pageNumber, pageSize);
+            var suggestions = await _suggestionRepository.GetPendingSuggestionsAsync(userId, pageNumber, pageSize, filter, sortBy);
 
             return suggestions.Select(s => new SuggestionDisplayModel
             {

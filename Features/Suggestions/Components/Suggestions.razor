@@ -28,15 +28,15 @@
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="suggestionFilter" data-bs-toggle="dropdown">
                                     <i class="bi bi-funnel me-1"></i>
-                                    Filter
+                                    @(SuggestionQueueComponent?.GetFilterDisplayText() ?? "Filter")
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="suggestionFilter">
-                                    <li><button class="dropdown-item" type="button">All Suggestions</button></li>
-                                    <li><button class="dropdown-item" type="button">⭐ High Priority</button></li>
-                                    <li><button class="dropdown-item" type="button">📺 Channel Updates</button></li>
-                                    <li><button class="dropdown-item" type="button">🔍 Topic Matches</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleFilterChange(SuggestionFilter.All))">All Suggestions</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleFilterChange(SuggestionFilter.BothSources))">⭐ High Priority</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleFilterChange(SuggestionFilter.ChannelOnly))">📺 Channel Updates</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleFilterChange(SuggestionFilter.TopicOnly))">🔍 Topic Matches</button></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><button class="dropdown-item" type="button">⏰ Expiring Soon</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleFilterChange(SuggestionFilter.NearExpiry))">⏰ Expiring Soon</button></li>
                                 </ul>
                             </div>
 
@@ -44,13 +44,13 @@
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="suggestionSort" data-bs-toggle="dropdown">
                                     <i class="bi bi-sort-down me-1"></i>
-                                    Sort
+                                    @(SuggestionQueueComponent?.GetSortDisplayText() ?? "Sort")
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="suggestionSort">
-                                    <li><button class="dropdown-item" type="button">Newest First</button></li>
-                                    <li><button class="dropdown-item" type="button">Oldest First</button></li>
-                                    <li><button class="dropdown-item" type="button">Highest Score</button></li>
-                                    <li><button class="dropdown-item" type="button">Expiring Soon</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.CreatedDesc))">Newest First</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.CreatedAsc))">Oldest First</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.ScoreDesc))">Highest Score</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.ExpiryAsc))">Expiring Soon</button></li>
                                 </ul>
                             </div>
                         </div>

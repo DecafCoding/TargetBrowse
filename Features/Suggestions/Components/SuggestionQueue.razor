@@ -97,9 +97,9 @@
     }
     else
     {
-        var filteredSuggestions = QueueModel.FilteredSuggestions;
+        var suggestions = QueueModel.Suggestions;
 
-        if (!filteredSuggestions.Any())
+        if (!suggestions.Any())
         {
             <div class="no-results-state text-center py-4">
                 <i class="bi bi-funnel text-muted mb-3" style="font-size: 3rem;"></i>
@@ -115,7 +115,7 @@
         {
             <div class="suggestions-grid">
                 <div class="row g-3">
-                    @foreach (var suggestion in filteredSuggestions)
+                    @foreach (var suggestion in suggestions)
                     {
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-1">
                             <SuggestionCard Suggestion="@suggestion"
@@ -130,7 +130,7 @@
             </div>
 
             <!-- Load More Button (if needed for large queues) -->
-            @if (filteredSuggestions.Count >= 12 && HasMoreSuggestions)
+            @if (suggestions.Count >= 12 && HasMoreSuggestions)
             {
                 <div class="text-center mt-4">
                     <button class="btn btn-outline-primary"

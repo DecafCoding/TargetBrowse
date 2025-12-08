@@ -39,6 +39,10 @@ public partial class SuggestionQueue : ComponentBase
     private const int PageSize = 20; // Number of suggestions per page
     private bool IsLoadingMore { get; set; } = false;
 
+    // Server-side filter and sort state
+    private SuggestionFilter CurrentFilter { get; set; } = SuggestionFilter.All;
+    private SuggestionSort CurrentSort { get; set; } = SuggestionSort.CreatedDesc;
+
     #endregion
 
     #region Component Lifecycle
@@ -89,8 +93,13 @@ public partial class SuggestionQueue : ComponentBase
             QueueModel.ErrorMessage = null;
             StateHasChanged();
 
-            // Use pageNumber and pageSize as expected by the service
-            var suggestions = await SuggestionService.GetPendingSuggestionsAsync(CurrentUserId, CurrentPage, PageSize);
+            // Pass filter and sort to the service for server-side filtering
+            var suggestions = await SuggestionService.GetPendingSuggestionsAsync(
+                CurrentUserId,
+                CurrentPage,
+                PageSize,
+                CurrentFilter,
+                CurrentSort);
 
             if (!isLoadMore)
             {
@@ -142,28 +151,31 @@ private async Task LoadMoreSuggestions()
 
     #region Filter and Sort
 
-    private void SetFilter(SuggestionFilter filter)
+    public async Task SetFilter(SuggestionFilter filter)
     {
-        QueueModel.Filter = filter;
-        StateHasChanged();
+        CurrentFilter = filter;
+        CurrentPage = 1; // Reset to first page when filter changes
+        await LoadSuggestionsAsync();
     }
 
-    private void SetSort(SuggestionSort sort)
+    public async Task SetSort(SuggestionSort sort)
     {
-        QueueModel.SortBy = sort;
-        StateHasChanged();
+        CurrentSort = sort;
+        CurrentPage = 1; // Reset to first page when sort changes
+        await LoadSuggestionsAsync();
     }
 
-    private void ClearFilters()
+    public async Task ClearFilters()
     {
-        QueueModel.Filter = SuggestionFilter.All;
-        QueueModel.SortBy = SuggestionSort.CreatedDesc;
-        StateHasChanged();
+        CurrentFilter = SuggestionFilter.All;
+        CurrentSort = SuggestionSort.CreatedDesc;
+        CurrentPage = 1;
+        await LoadSuggestionsAsync();
     }
 
-    private string GetFilterDisplayText()
+    public string GetFilterDisplayText()
     {
-        return QueueModel.Filter switch
+        return CurrentFilter switch
         {
             SuggestionFilter.All => "All",
             SuggestionFilter.BothSources => "High Priority",
@@ -171,6 +183,18 @@ private async Task LoadMoreSuggestions()
             SuggestionFilter.TopicOnly => "Topics",
             SuggestionFilter.NearExpiry => "Expiring",
             _ => "Filter"
+        };
+    }
+
+    public string GetSortDisplayText()
+    {
+        return CurrentSort switch
+        {
+            SuggestionSort.CreatedDesc => "Newest First",
+            SuggestionSort.CreatedAsc => "Oldest First",
+            SuggestionSort.ScoreDesc => "Highest Score",
+            SuggestionSort.ExpiryAsc => "Expiring Soon",
+            _ => "Sort"
         };
     }
 

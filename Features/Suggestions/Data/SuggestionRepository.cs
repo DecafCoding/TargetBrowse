@@ -59,24 +59,50 @@ public class SuggestionRepository : BaseRepository<SuggestionEntity>, ISuggestio
     }
 
     /// <summary>
-    /// Gets pending suggestions for a user with pagination.
+    /// Gets pending suggestions for a user with pagination, filtering, and sorting.
     /// </summary>
-    public async Task<List<SuggestionEntity>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20)
+    public async Task<List<SuggestionEntity>> GetPendingSuggestionsAsync(string userId, int pageNumber = 1, int pageSize = 20, SuggestionFilter? filter = null, SuggestionSort? sortBy = null)
     {
         try
         {
             var skip = (pageNumber - 1) * pageSize;
             var cutoffDate = DateTime.UtcNow.AddDays(-SuggestionExpiryDays);
+            var nearExpiryDate = DateTime.UtcNow.AddDays(-27); // Less than 3 days until expiry
 
-            return await _context.Suggestions
+            var query = _context.Suggestions
                 .Include(s => s.Video)
                     .ThenInclude(v => v.Channel)
+                .Include(s => s.SuggestionTopics)
                 .Where(s => s.UserId == userId &&
                            !s.IsApproved &&
                            !s.IsDenied &&
                            !s.IsDeleted &&
-                           s.CreatedAt > cutoffDate)
-                .OrderByDescending(s => s.CreatedAt)
+                           s.CreatedAt > cutoffDate);
+
+            // Apply filter
+            if (filter.HasValue)
+            {
+                query = filter.Value switch
+                {
+                    SuggestionFilter.ChannelOnly => query.Where(s => !s.SuggestionTopics.Any()),
+                    SuggestionFilter.TopicOnly => query.Where(s => s.SuggestionTopics.Any() && !s.Reason.Contains("⭐")),
+                    SuggestionFilter.BothSources => query.Where(s => s.Reason.Contains("⭐")),
+                    SuggestionFilter.NearExpiry => query.Where(s => s.CreatedAt < nearExpiryDate),
+                    _ => query
+                };
+            }
+
+            // Apply sort
+            query = (sortBy ?? SuggestionSort.CreatedDesc) switch
+            {
+                SuggestionSort.CreatedAsc => query.OrderBy(s => s.CreatedAt),
+                SuggestionSort.CreatedDesc => query.OrderByDescending(s => s.CreatedAt),
+                SuggestionSort.ScoreDesc => query.OrderByDescending(s => s.CreatedAt), // Score not stored, fallback to date
+                SuggestionSort.ExpiryAsc => query.OrderBy(s => s.CreatedAt), // Older = expires sooner
+                _ => query.OrderByDescending(s => s.CreatedAt)
+            };
+
+            return await query
                 .Skip(skip)
                 .Take(pageSize)
                 .AsSplitQuery() // Optimize for multiple includes
