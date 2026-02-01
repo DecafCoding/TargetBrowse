@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Suggestions.Models;
@@ -92,13 +92,15 @@ public class SuggestionRepository : BaseRepository<SuggestionEntity>, ISuggestio
                 };
             }
 
-            // Apply sort
-            query = (sortBy ?? SuggestionSort.CreatedDesc) switch
+// Apply sort
+            query = (sortBy ?? SuggestionSort.Random) switch
             {
-                SuggestionSort.CreatedAsc => query.OrderBy(s => s.CreatedAt),
                 SuggestionSort.CreatedDesc => query.OrderByDescending(s => s.CreatedAt),
                 SuggestionSort.ScoreDesc => query.OrderByDescending(s => s.CreatedAt), // Score not stored, fallback to date
-                SuggestionSort.ExpiryAsc => query.OrderBy(s => s.CreatedAt), // Older = expires sooner
+                SuggestionSort.ExpiryAsc => query.OrderBy(s => s.CreatedAt.AddDays(30)), // Expiring soonest first (earlier expiry date)
+                SuggestionSort.Random => query.OrderBy(s => Guid.NewGuid()), // Random ordering using GUID
+                SuggestionSort.PublishedAsc => query.OrderBy(s => s.Video.PublishedAt), // Oldest published first
+                SuggestionSort.PublishedDesc => query.OrderByDescending(s => s.Video.PublishedAt), // Newest published first
                 _ => query.OrderByDescending(s => s.CreatedAt)
             };
 
