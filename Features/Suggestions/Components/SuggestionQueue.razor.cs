@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using TargetBrowse.Features.Suggestions.Models;
 using TargetBrowse.Features.Suggestions.Services;
@@ -39,9 +39,9 @@ public partial class SuggestionQueue : ComponentBase
     private const int PageSize = 20; // Number of suggestions per page
     private bool IsLoadingMore { get; set; } = false;
 
-    // Server-side filter and sort state
+// Server-side filter and sort state
     private SuggestionFilter CurrentFilter { get; set; } = SuggestionFilter.All;
-    private SuggestionSort CurrentSort { get; set; } = SuggestionSort.CreatedDesc;
+    private SuggestionSort CurrentSort { get; set; } = SuggestionSort.Random;
 
     #endregion
 
@@ -165,10 +165,10 @@ private async Task LoadMoreSuggestions()
         await LoadSuggestionsAsync();
     }
 
-    public async Task ClearFilters()
+public async Task ClearFilters()
     {
         CurrentFilter = SuggestionFilter.All;
-        CurrentSort = SuggestionSort.CreatedDesc;
+        CurrentSort = SuggestionSort.Random;
         CurrentPage = 1;
         await LoadSuggestionsAsync();
     }
@@ -186,14 +186,16 @@ private async Task LoadMoreSuggestions()
         };
     }
 
-    public string GetSortDisplayText()
+public string GetSortDisplayText()
     {
         return CurrentSort switch
         {
-            SuggestionSort.CreatedDesc => "Newest First",
-            SuggestionSort.CreatedAsc => "Oldest First",
+            SuggestionSort.CreatedDesc => "Recently Added",
             SuggestionSort.ScoreDesc => "Highest Score",
             SuggestionSort.ExpiryAsc => "Expiring Soon",
+            SuggestionSort.Random => "Random Order",
+            SuggestionSort.PublishedDesc => "Published (Newest)",
+            SuggestionSort.PublishedAsc => "Published (Oldest)",
             _ => "Sort"
         };
     }

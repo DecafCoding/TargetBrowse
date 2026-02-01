@@ -1,4 +1,4 @@
-﻿@page "/suggestions"
+@page "/suggestions"
 @using Microsoft.AspNetCore.Authorization
 @using TargetBrowse.Features.Suggestions.Models
 @using TargetBrowse.Features.Suggestions.Components
@@ -46,11 +46,13 @@
                                     <i class="bi bi-sort-down me-1"></i>
                                     @(SuggestionQueueComponent?.GetSortDisplayText() ?? "Sort")
                                 </button>
-                                <ul class="dropdown-menu" aria-labelledby="suggestionSort">
-                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.CreatedDesc))">Newest First</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.CreatedAsc))">Oldest First</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.ScoreDesc))">Highest Score</button></li>
+<ul class="dropdown-menu" aria-labelledby="suggestionSort">
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.Random))">Random Order</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.CreatedDesc))">Recently Added</button></li>
                                     <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.ExpiryAsc))">Expiring Soon</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.PublishedDesc))">Published (Newest)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.PublishedAsc))">Published (Oldest)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => HandleSortChange(SuggestionSort.ScoreDesc))">Highest Score</button></li>
                                 </ul>
                             </div>
                         </div>

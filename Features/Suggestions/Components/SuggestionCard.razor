@@ -72,9 +72,11 @@
                     <i class="bi bi-person-circle me-1"></i>
                     @Suggestion.Video.ChannelName
                 </a>
-                @if (!string.IsNullOrEmpty(Suggestion.Video.ViewCountDisplay))
+@if (!string.IsNullOrEmpty(Suggestion.Video.ViewCountDisplay))
                 {
-                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">@Suggestion.Video.ViewCountDisplay</span>
+                    <span title="@(Suggestion.Video.ViewCount.ToString("N0")) views">
+                        <i class="bi bi-eye me-1"></i>@Suggestion.Video.ViewCountDisplay
+                    </span>
                 }
             </small>
         </div>
@@ -82,7 +84,9 @@
         <!-- Video Metadata -->
         <div class="video-metadata mb-2">
             <small class="text-muted d-flex justify-content-between">
-                <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">@Suggestion.Video.PublishedAtDisplay</span>
+                <span title="Published @Suggestion.Video.PublishedAt.ToString("MMM d, yyyy")">
+                    <i class="bi bi-calendar me-1"></i>@Suggestion.Video.PublishedAtDisplay
+                </span>
                 <span title="Expires in @Suggestion.DaysUntilExpiry days">
                     <i class="bi bi-hourglass-split me-1"></i>
                     @Suggestion.DaysUntilExpiry days left

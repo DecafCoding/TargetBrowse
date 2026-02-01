@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace TargetBrowse.Services.Utilities;
 
@@ -51,9 +51,10 @@ public static class FormatHelper
         };
     }
 
-    /// <summary>
+/// <summary>
     /// Formats dates for normal display with relative time.
     /// Rules: &lt;1 hour "just now", &lt;24 hours "X hours ago", then days/weeks/months/years ago.
+    /// Uses proper singular and plural forms for time units.
     /// </summary>
     public static string FormatDateDisplay(DateTime? date)
     {
@@ -66,11 +67,11 @@ public static class FormatHelper
         return timeSpan.TotalDays switch
         {
             < 1 when timeSpan.TotalHours < 1 => "just now",
-            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours} hours ago",
-            < 7 => $"{(int)timeSpan.TotalDays} days ago",
-            < 30 => $"{(int)(timeSpan.TotalDays / 7)} weeks ago",
-            < 365 => $"{(int)(timeSpan.TotalDays / 30)} months ago",
-            _ => $"{(int)(timeSpan.TotalDays / 365)} years ago"
+            < 1 when timeSpan.TotalHours < 24 => $"{(int)timeSpan.TotalHours} hour{((int)timeSpan.TotalHours != 1 ? "s" : "")} ago",
+            < 7 => $"{(int)timeSpan.TotalDays} day{((int)timeSpan.TotalDays != 1 ? "s" : "")} ago",
+            < 30 => $"{(int)(timeSpan.TotalDays / 7)} week{((int)(timeSpan.TotalDays / 7) != 1 ? "s" : "")} ago",
+            < 365 => $"{(int)(timeSpan.TotalDays / 30)} month{((int)(timeSpan.TotalDays / 30) != 1 ? "s" : "")} ago",
+            _ => $"{(int)(timeSpan.TotalDays / 365)} year{((int)(timeSpan.TotalDays / 365) != 1 ? "s" : "")} ago"
         };
     }
 

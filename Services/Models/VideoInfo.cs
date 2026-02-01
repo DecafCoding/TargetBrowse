@@ -36,7 +36,7 @@ public class VideoInfo
     /// <summary>
     /// When the video was published on YouTube.
     /// </summary>
-    public string PublishedAtDisplay => FormatHelper.FormatUpdateDateDisplay(PublishedAt);
+    public string PublishedAtDisplay => FormatHelper.FormatDateDisplay(PublishedAt);
 
     /// <summary>
     /// Video view count from YouTube.

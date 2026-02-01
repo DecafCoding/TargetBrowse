@@ -1,4 +1,4 @@
-﻿namespace TargetBrowse.Features.Suggestions.Models;
+namespace TargetBrowse.Features.Suggestions.Models;
 
 /// <summary>
 /// View model for managing suggestion queue state and user interactions.
@@ -35,10 +35,10 @@ public class SuggestionQueueModel
     /// </summary>
     public SuggestionFilter Filter { get; set; } = SuggestionFilter.All;
 
-    /// <summary>
+/// <summary>
     /// Current sort order for suggestions.
     /// </summary>
-    public SuggestionSort SortBy { get; set; } = SuggestionSort.CreatedDesc;
+    public SuggestionSort SortBy { get; set; } = SuggestionSort.Random;
 
     /// <summary>
     /// Whether to show batch action controls.
@@ -61,12 +61,14 @@ public class SuggestionQueueModel
                 _ => Suggestions
             };
 
-            return SortBy switch
+return SortBy switch
             {
-                SuggestionSort.CreatedAsc => filtered.OrderBy(s => s.CreatedAt).ToList(),
                 SuggestionSort.CreatedDesc => filtered.OrderByDescending(s => s.CreatedAt).ToList(),
                 SuggestionSort.ScoreDesc => filtered.OrderByDescending(s => s.Score ?? 0).ToList(),
                 SuggestionSort.ExpiryAsc => filtered.OrderBy(s => s.DaysUntilExpiry).ToList(),
+                SuggestionSort.Random => filtered.OrderBy(s => Guid.NewGuid()).ToList(),
+                SuggestionSort.PublishedAsc => filtered.OrderBy(s => s.Video.PublishedAt).ToList(),
+                SuggestionSort.PublishedDesc => filtered.OrderByDescending(s => s.Video.PublishedAt).ToList(),
                 _ => filtered.OrderByDescending(s => s.CreatedAt).ToList()
             };
         }
@@ -165,9 +167,11 @@ public enum SuggestionFilter
 public enum SuggestionSort
 {
     CreatedDesc,
-    CreatedAsc,
     ScoreDesc,
-    ExpiryAsc
+    ExpiryAsc,
+    Random,
+    PublishedDesc,
+    PublishedAsc
 }
 
 /// <summary>

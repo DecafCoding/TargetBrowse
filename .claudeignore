@@ -1,0 +1,43 @@
+# Application settings files (may contain sensitive configuration)
+appsettings.json
+appsettings.*.json
+**/appsettings.json
+**/appsettings.*.json
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# User secrets
+secrets.json
+
+# Connection strings and credentials
+connectionstrings.json
+credentials.json
+
+# Private keys and certificates
+*.pfx
+*.key
+*.pem
+*.p12
+
+# Local development settings
+launchSettings.json
+
+# Database files
+*.db
+*.sqlite
+*.mdf
+*.ldf
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Personal notes and TODOs
+NOTES.md
+TODO.md
+.notes/
