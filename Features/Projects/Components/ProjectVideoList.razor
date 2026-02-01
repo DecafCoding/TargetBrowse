@@ -1,5 +1,6 @@
 @using System.Net
 @using System.Text.RegularExpressions
+@using TargetBrowse.Services.Utilities
 
 <div class="project-videos-list">
     @if (Videos == null || !Videos.Any())
@@ -35,6 +36,11 @@
                                 </div>
                             }
 
+                            <!-- Duration Badge -->
+                            <span class="badge bg-dark position-absolute duration-badge">
+                                @FormatHelper.FormatDuration(video.Duration)
+                            </span>
+
                             <!-- Order Number Badge -->
                             @if (order > 0)
                             {
@@ -68,6 +74,21 @@
                                 <small class="text-muted">
                                     <i class="bi bi-person-circle me-1"></i>
                                     @video.ChannelName
+                                </small>
+                            </div>
+
+                            <!-- Video Metadata -->
+                            <div class="video-metadata mb-2">
+                                <small class="text-muted">
+                                    <span title="@(video.ViewCount.ToString("N0")) views">
+                                        <i class="bi bi-eye me-1"></i>@FormatHelper.FormatCount(video.ViewCount)
+                                    </span>
+                                    <span class="mx-1">•</span>
+                                    <span title="@(video.LikeCount.ToString("N0")) likes">
+                                        <i class="bi bi-hand-thumbs-up me-1"></i>@FormatHelper.FormatCount(video.LikeCount)
+                                    </span>
+                                    <span class="mx-1">•</span>
+                                    <span title="Published @video.PublishedAt.ToString("MMM d, yyyy")">@FormatHelper.FormatDateDisplay(video.PublishedAt)</span>
                                 </small>
                             </div>
 

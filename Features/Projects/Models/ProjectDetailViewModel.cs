@@ -112,9 +112,24 @@ namespace TargetBrowse.Features.Projects.Models
         public bool HasSummary { get; set; }
 
         /// <summary>
-        /// Channel name.
+        /// Summary preview text.
         /// </summary>
         public string SummaryPreview { get; set; } = string.Empty;
+
+        /// <summary>
+        /// View count.
+        /// </summary>
+        public int ViewCount { get; set; }
+
+        /// <summary>
+        /// Like count.
+        /// </summary>
+        public int LikeCount { get; set; }
+
+        /// <summary>
+        /// When the video was published on YouTube.
+        /// </summary>
+        public DateTime PublishedAt { get; set; }
 
         /// <summary>
         /// Order in the project.
