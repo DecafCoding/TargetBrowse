@@ -11,19 +11,20 @@ namespace TargetBrowse.Services.DataServices;
 /// Data access service implementation for user library management operations.
 /// Handles UserVideoEntity operations and user-specific video library functionality.
 /// Works with IVideoDataService for video entity management while focusing on library operations.
+/// Uses DbContextFactory to handle concurrent operations safely.
 /// </summary>
 public class LibraryDataService : ILibraryDataService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IVideoDataService _videoDataService;
     private readonly ILogger<LibraryDataService> _logger;
 
     public LibraryDataService(
-        ApplicationDbContext context,
+        IDbContextFactory<ApplicationDbContext> contextFactory,
         IVideoDataService videoDataService,
         ILogger<LibraryDataService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _videoDataService = videoDataService;
         _logger = logger;
     }
@@ -38,7 +39,8 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
-            var userVideos = await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var userVideos = await context.UserVideos
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
@@ -66,7 +68,8 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
-            var userVideo = await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var userVideo = await context.UserVideos
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
@@ -88,12 +91,14 @@ public class LibraryDataService : ILibraryDataService
 
     /// <summary>
     /// Checks if a video is already in the user's library.
+    /// Uses dedicated DbContext instance to support concurrent calls.
     /// </summary>
     public async Task<bool> IsVideoInLibraryAsync(string userId, string youTubeVideoId)
     {
         try
         {
-            return await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.UserVideos
                 .AnyAsync(uv => uv.UserId == userId &&
                                uv.Video.YouTubeVideoId == youTubeVideoId);
         }
@@ -112,7 +117,8 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
-            var userVideo = await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var userVideo = await context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Id == videoId);
 
             if (userVideo == null)
@@ -120,8 +126,8 @@ public class LibraryDataService : ILibraryDataService
                 return false;
             }
 
-            _context.UserVideos.Remove(userVideo);
-            await _context.SaveChangesAsync();
+            context.UserVideos.Remove(userVideo);
+            await context.SaveChangesAsync();
 
             return true;
         }
@@ -140,7 +146,8 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
-            var userVideo = await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var userVideo = await context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.Id == videoId);
 
             if (userVideo == null)
@@ -152,7 +159,7 @@ public class LibraryDataService : ILibraryDataService
             userVideo.StatusChangedAt = DateTime.UtcNow;
             userVideo.LastModifiedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch (Exception ex)
@@ -170,7 +177,8 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
-            var userVideos = await _context.UserVideos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var userVideos = await context.UserVideos
                 .Include(uv => uv.Video)
                     .ThenInclude(v => v.Channel)
                 .Include(uv => uv.Video)
@@ -203,11 +211,12 @@ public class LibraryDataService : ILibraryDataService
     /// </summary>
     public async Task<bool> AddVideoToLibraryAsync(string userId, VideoInfo video, string notes = "")
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
             // Check if already exists
-            var existingUserVideo = await _context.UserVideos
+            var existingUserVideo = await context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId &&
                                           uv.Video.YouTubeVideoId == video.YouTubeVideoId);
 
@@ -231,8 +240,8 @@ public class LibraryDataService : ILibraryDataService
                 Notes = string.IsNullOrEmpty(notes) ? $"Added to library on {DateTime.Now:yyyy-MM-dd}" : notes
             };
 
-            _context.UserVideos.Add(userVideoEntity);
-            await _context.SaveChangesAsync();
+            context.UserVideos.Add(userVideoEntity);
+            await context.SaveChangesAsync();
             await transaction.CommitAsync();
 
             _logger.LogInformation("Added video {VideoId} '{Title}' to library for user {UserId}",
@@ -257,8 +266,9 @@ public class LibraryDataService : ILibraryDataService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             // Check if already exists
-            var existingUserVideo = await _context.UserVideos
+            var existingUserVideo = await context.UserVideos
                 .FirstOrDefaultAsync(uv => uv.UserId == userId &&
                                           uv.Video.YouTubeVideoId == videoEntity.YouTubeVideoId);
 
@@ -279,8 +289,8 @@ public class LibraryDataService : ILibraryDataService
                 Notes = string.IsNullOrEmpty(notes) ? $"Added existing video on {DateTime.Now:yyyy-MM-dd}" : notes
             };
 
-            _context.UserVideos.Add(userVideoEntity);
-            await _context.SaveChangesAsync();
+            context.UserVideos.Add(userVideoEntity);
+            await context.SaveChangesAsync();
 
             _logger.LogInformation("Added existing video {VideoId} '{Title}' to library for user {UserId}",
                 videoEntity.YouTubeVideoId, videoEntity.Title, userId);

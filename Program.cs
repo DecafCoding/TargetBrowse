@@ -42,8 +42,17 @@ public class Program
             .AddIdentityCookies();
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+        // Add scoped DbContext for Identity and other services that need it
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+
+        // Add scoped DbContext factory for concurrent database operations
+        // Using Scoped lifetime prevents the singleton/scoped conflict
+        builder.Services.AddDbContextFactory<ApplicationDbContext>(
+            options => options.UseSqlServer(connectionString),
+            ServiceLifetime.Scoped);
+
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
         // Updated Identity configuration for YouTube Video Tracker requirements
