@@ -4,8 +4,8 @@ using TargetBrowse.Data.Common;
 namespace TargetBrowse.Data.Entities
 {
     /// <summary>
-    /// Represents a user's project containing multiple videos for guide generation.
-    /// Users can organize 3-10 videos into a project and generate an AI-powered cohesive guide.
+    /// Represents a user's project containing multiple videos for guide and script generation.
+    /// Users can organize 3-10 videos into a project and generate AI-powered guides or video scripts.
     /// </summary>
     public class ProjectEntity : BaseEntity
     {
@@ -34,5 +34,6 @@ namespace TargetBrowse.Data.Entities
         public virtual ApplicationUser User { get; set; } = null!;
         public virtual ICollection<ProjectVideoEntity> ProjectVideos { get; set; } = new List<ProjectVideoEntity>();
         public virtual ProjectGuideEntity? ProjectGuide { get; set; } // One guide per project (1-to-1)
+        public virtual ScriptContentEntity? ScriptContent { get; set; } // One script per project (1-to-1)
     }
 }

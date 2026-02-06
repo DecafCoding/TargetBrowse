@@ -8,7 +8,10 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(powershell -Command:*)",
-      "Bash(dotnet user-secrets:*)"
+      "Bash(dotnet user-secrets:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(dotnet ef migrations:*)"
     ]
   }
 }

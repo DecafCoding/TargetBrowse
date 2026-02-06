@@ -38,6 +38,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProjectVideoEntity> ProjectVideos { get; set; }
     public DbSet<ProjectGuideEntity> ProjectGuides { get; set; }
 
+    // Script Generation DbSets
+    public DbSet<ScriptContentEntity> ScriptContents { get; set; }
+    public DbSet<UserScriptProfileEntity> UserScriptProfiles { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -64,6 +68,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new ProjectEntityConfiguration());
         builder.ApplyConfiguration(new ProjectVideoEntityConfiguration());
         builder.ApplyConfiguration(new ProjectGuideEntityConfiguration());
+
+        // Apply Script Generation configurations
+        builder.ApplyConfiguration(new ScriptContentEntityConfiguration());
+        builder.ApplyConfiguration(new UserScriptProfileEntityConfiguration());
 
         // Configure Identity tables to avoid conflicts
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers");
