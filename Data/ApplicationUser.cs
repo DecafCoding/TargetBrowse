@@ -18,4 +18,5 @@ public class ApplicationUser : IdentityUser
     public virtual ICollection<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; } = new List<SummaryGenerationRequestEntity>();
     public virtual ICollection<AICallEntity> AICalls { get; set; } = new List<AICallEntity>();
     public virtual ICollection<ProjectEntity> Projects { get; set; } = new List<ProjectEntity>();
+    public virtual ICollection<UserScriptProfileEntity> ScriptProfiles { get; set; } = new List<UserScriptProfileEntity>();
 }

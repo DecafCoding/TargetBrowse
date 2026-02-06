@@ -555,4 +555,88 @@ namespace TargetBrowse.Data.Configurations
                    .OnDelete(DeleteBehavior.SetNull); // Keep guide even if AI call is deleted
         }
     }
+
+    /// <summary>
+    /// Entity configuration for ScriptContentEntity.
+    /// Configures AI-generated video scripts for projects with 1-to-1 relationship.
+    /// </summary>
+    public class ScriptContentEntityConfiguration : IEntityTypeConfiguration<ScriptContentEntity>
+    {
+        public void Configure(EntityTypeBuilder<ScriptContentEntity> builder)
+        {
+            builder.ToTable("ScriptContents");
+
+            // Primary key and indexes
+            builder.HasKey(sc => sc.Id);
+            builder.HasIndex(sc => sc.ProjectId).IsUnique(); // One script per project
+            builder.HasIndex(sc => sc.ScriptStatus);
+            builder.HasIndex(sc => sc.GeneratedAt);
+            builder.HasIndex(sc => sc.AnalysisAICallId);
+            builder.HasIndex(sc => sc.OutlineAICallId);
+            builder.HasIndex(sc => sc.ScriptAICallId);
+
+            // Properties
+            builder.Property(sc => sc.ProjectId).IsRequired();
+            builder.Property(sc => sc.ScriptStatus).IsRequired().HasMaxLength(50);
+            builder.Property(sc => sc.MainTopic).HasMaxLength(200);
+            builder.Property(sc => sc.AnalysisJsonResult).HasColumnType("nvarchar(max)");
+            builder.Property(sc => sc.OutlineJsonStructure).HasColumnType("nvarchar(max)");
+            builder.Property(sc => sc.ScriptText).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(sc => sc.InternalNotesJson).HasColumnType("nvarchar(max)");
+            builder.Property(sc => sc.GeneratedAt).IsRequired();
+
+            // Relationships
+            builder.HasOne(sc => sc.Project)
+                   .WithOne(p => p.ScriptContent)
+                   .HasForeignKey<ScriptContentEntity>(sc => sc.ProjectId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Changed to NoAction to prevent cascade path conflict
+            // Projects -> User (CASCADE) -> AICalls
+            // Projects -> ScriptContents -> AICalls (NO ACTION) - prevents multiple cascade paths
+            builder.HasOne(sc => sc.AnalysisAICall)
+                   .WithMany(a => a.ScriptAnalysisCalls)
+                   .HasForeignKey(sc => sc.AnalysisAICallId)
+                   .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasOne(sc => sc.OutlineAICall)
+                   .WithMany(a => a.ScriptOutlineCalls)
+                   .HasForeignKey(sc => sc.OutlineAICallId)
+                   .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasOne(sc => sc.ScriptAICall)
+                   .WithMany(a => a.ScriptGenerationCalls)
+                   .HasForeignKey(sc => sc.ScriptAICallId)
+                   .OnDelete(DeleteBehavior.NoAction);
+        }
+    }
+
+    /// <summary>
+    /// Entity configuration for UserScriptProfileEntity.
+    /// Configures user preferences for script generation with one profile per user.
+    /// </summary>
+    public class UserScriptProfileEntityConfiguration : IEntityTypeConfiguration<UserScriptProfileEntity>
+    {
+        public void Configure(EntityTypeBuilder<UserScriptProfileEntity> builder)
+        {
+            builder.ToTable("UserScriptProfiles");
+
+            // Primary key and indexes
+            builder.HasKey(usp => usp.Id);
+            builder.HasIndex(usp => usp.UserId).IsUnique(); // One profile per user
+
+            // Properties
+            builder.Property(usp => usp.UserId).IsRequired();
+            builder.Property(usp => usp.Tone).IsRequired().HasMaxLength(50);
+            builder.Property(usp => usp.Pacing).IsRequired().HasMaxLength(50);
+            builder.Property(usp => usp.Complexity).IsRequired().HasMaxLength(50);
+            builder.Property(usp => usp.CustomInstructions).HasMaxLength(2000);
+
+            // Relationships
+            builder.HasOne(usp => usp.User)
+                   .WithMany(u => u.ScriptProfiles)
+                   .HasForeignKey(usp => usp.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
 }

@@ -147,6 +147,9 @@ namespace TargetBrowse.Features.Projects.Services
                         ChannelName = pv.Video.Channel.Name,
                         HasSummary = pv.Video.Summary != null && !pv.Video.Summary.IsDeleted,
                         SummaryPreview = GetSummaryPreview(pv?.Video?.Summary?.Content),
+                        ViewCount = pv.Video.ViewCount,
+                        LikeCount = pv.Video.LikeCount,
+                        PublishedAt = pv.Video.PublishedAt,
                         Order = pv.Order,
                         AddedAt = pv.CreatedAt
                     })
@@ -540,8 +543,8 @@ namespace TargetBrowse.Features.Projects.Services
             // Extract first paragraph from HTML
             var firstParagraph = GetFirstParagraph(htmlContent);
 
-            // Truncate to max length
-            const int maxLength = 200;
+            // Truncate to max length (increased to show more content on project info page)
+            const int maxLength = 1200;
             if (firstParagraph.Length <= maxLength)
                 return firstParagraph;
 
@@ -550,20 +553,23 @@ namespace TargetBrowse.Features.Projects.Services
 
         private string GetFirstParagraph(string htmlContent)
         {
-            // Try to extract content from first <p> tag
-            var paragraphMatch = Regex.Match(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            // Extract ALL paragraph tags and combine them (instead of just the first one)
+            var paragraphMatches = Regex.Matches(htmlContent, @"<p[^>]*>(.*?)</p>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-            if (paragraphMatch.Success)
+            if (paragraphMatches.Count > 0)
             {
-                // Strip HTML tags from the paragraph content
-                var content = paragraphMatch.Groups[1].Value;
-                return StripHtmlTags(content);
+                // Combine all paragraphs with double line breaks
+                var paragraphs = paragraphMatches
+                    .Cast<Match>()
+                    .Select(m => StripHtmlTags(m.Groups[1].Value))
+                    .Where(p => !string.IsNullOrWhiteSpace(p));
+
+                return string.Join("\n\n", paragraphs);
             }
 
-            // If no <p> tag found, strip all HTML and take first chunk
+            // If no <p> tag found, strip all HTML and return the entire content
             var stripped = StripHtmlTags(htmlContent);
-            var firstSentences = stripped.Split('.').Take(2);
-            return string.Join(". ", firstSentences).Trim();
+            return stripped;
         }
 
         private string StripHtmlTags(string html)

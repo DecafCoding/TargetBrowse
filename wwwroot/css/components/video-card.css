@@ -270,11 +270,11 @@
     line-height: 1.4;
     margin-bottom: 1rem;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 12;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 2.1rem;
+    max-height: 12.6rem;
 }
 
 /* Suggestion-specific metadata */
@@ -454,7 +454,7 @@
 
 @media (max-width: 576px) {
     .video-description {
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 12;
     }
 }
 

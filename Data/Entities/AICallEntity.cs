@@ -70,5 +70,8 @@ namespace TargetBrowse.Data.Entities
         public virtual ApplicationUser? User { get; set; }
         public virtual ICollection<SummaryEntity> Summaries { get; set; } = new List<SummaryEntity>();
         public virtual ICollection<ProjectGuideEntity> ProjectGuides { get; set; } = new List<ProjectGuideEntity>();
+        public virtual ICollection<ScriptContentEntity> ScriptAnalysisCalls { get; set; } = new List<ScriptContentEntity>();
+        public virtual ICollection<ScriptContentEntity> ScriptOutlineCalls { get; set; } = new List<ScriptContentEntity>();
+        public virtual ICollection<ScriptContentEntity> ScriptGenerationCalls { get; set; } = new List<ScriptContentEntity>();
     }
 }
