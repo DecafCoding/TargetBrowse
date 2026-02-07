@@ -1,0 +1,183 @@
+@page "/projects/{id:guid}/script/outline"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Models
+@using TargetBrowse.Features.Projects.Services
+@using TargetBrowse.Components.Shared
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Script Outline - @(ProjectName ?? "Project")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id">@(ProjectName ?? "Project")</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/analyze">Analysis</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/configure">Configure</a></li>
+                    <li class="breadcrumb-item active">Outline</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (_isGenerating)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Generating outline...</span>
+            </div>
+            <div class="mt-4">
+                <h4>Generating Script Outline</h4>
+                <p class="text-muted">This may take 30-60 seconds. Please don't close this page.</p>
+                <p class="small text-muted">Creating structured outline based on your analysis and preferences...</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Outline Generation Failed
+            </h5>
+            <p class="mb-2">@_errorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" @onclick="HandleRetryOutline">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Try Again
+            </button>
+            <a href="/projects/@Id/script/configure" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Configuration
+            </a>
+        </div>
+    }
+    else if (_outline != null)
+    {
+        <div class="row">
+            <div class="col-lg-9">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-list-ul me-2"></i>
+                            Script Outline
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h5>Title</h5>
+                            <p class="lead">@_outline.Title</p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(_outline.Hook))
+                        {
+                            <div class="mb-4">
+                                <h5>Opening Hook</h5>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-lightbulb me-2"></i>
+                                    @_outline.Hook
+                                </div>
+                            </div>
+                        }
+
+                        @if (_outline.Sections.Any())
+                        {
+                            <h5 class="mt-4">Content Sections</h5>
+                            @foreach (var section in _outline.Sections)
+                            {
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-bookmark me-2"></i>
+                                            @(section.Title)
+                                            <span class="badge bg-secondary ms-2">~@(section.EstimatedMinutes) min</span>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        @if (section.KeyPoints.Any())
+                                        {
+                                            <h6>Key Points:</h6>
+                                            <ul>
+                                                @foreach (var point in section.KeyPoints)
+                                                {
+                                                    <li>@point</li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(section.SourceVideos))
+                                        {
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-camera-video me-1"></i>
+                                                    Sources: @(section.SourceVideos)
+                                                </small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        @if (!string.IsNullOrEmpty(_outline.Conclusion))
+                        {
+                            <div class="mt-4">
+                                <h5>Conclusion</h5>
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    @_outline.Conclusion
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="bi bi-cash-coin me-1"></i>
+                                Cost: $@_totalCost.ToString("F6") |
+                                <i class="bi bi-clock me-1"></i>
+                                Duration: @(_durationMs / 1000.0)s
+                            </div>
+                            <div>
+                                <a href="/projects/@Id/script/configure" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-left me-1"></i>
+                                    Back to Configuration
+                                </a>
+                                <a href="/projects/@Id/script/generate" class="btn btn-primary">
+                                    Continue to Script Generation
+                                    <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Outline Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Total Sections</small>
+                            <div class="h4">@(_outline.Sections.Count)</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Estimated Length</small>
+                            <div class="h4">@_estimatedMinutes min</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Target Length</small>
+                            <div class="h4">@_targetMinutes min</div>
+                        </div>
+                    </div>
+                </div>
+
+                <MessageSidebar />
+            </div>
+        </div>
+    }
+</div>

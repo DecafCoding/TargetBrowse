@@ -151,6 +151,8 @@ public class Program
         builder.Services.AddScoped<Features.Projects.Data.IProjectRepository, Features.Projects.Data.ProjectRepository>();
         builder.Services.AddScoped<Features.Projects.Services.IProjectService, Features.Projects.Services.ProjectService>();
         builder.Services.AddScoped<Features.Projects.Services.IProjectGuideService, Features.Projects.Services.ProjectGuideService>();
+        builder.Services.AddScoped<Features.Projects.Services.IScriptProfileService, Features.Projects.Services.ScriptProfileService>();
+        builder.Services.AddScoped<Features.Projects.Services.IScriptGenerationService, Features.Projects.Services.ScriptGenerationService>();
 
         #endregion
 

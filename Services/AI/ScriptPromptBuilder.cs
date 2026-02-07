@@ -85,29 +85,31 @@ User's style preferences:
 
 Generate a structured outline in JSON format:
 {{
+  ""title"": ""Compelling video title based on main topic"",
+  ""hook"": ""Opening hook to grab attention (1-2 sentences)"",
   ""sections"": [
     {{
       ""title"": ""Section title"",
-      ""estimatedMinutes"": 2,
       ""keyPoints"": [
-        ""Point 1 (source: all videos agree)"",
-        ""Point 2 (source: video 2 best explanation)""
+        ""Point 1"",
+        ""Point 2""
       ],
-      ""sourceNotes"": ""Which videos this section draws from"",
-      ""conflictsToAddress"": ""Any conflicts that need to be handled in this section""
+      ""estimatedMinutes"": 2,
+      ""sourceVideos"": ""Video titles that cover this section""
     }}
   ],
-  ""totalEstimatedMinutes"": {targetLengthMinutes},
-  ""structureRationale"": ""Why this structure was chosen""
+  ""conclusion"": ""Closing summary and call to action""
 }}
 
 Guidelines:
-1. Include introduction (hook, preview) and conclusion (recap, call-to-action)
-2. Organize content logically from fundamentals to advanced
-3. Note which video provides the best explanation for each point
-4. Flag any conflicts that will be addressed in the script
-5. Distribute time appropriately across sections to hit {targetLengthMinutes} minutes
-6. Match the user's preferred tone and complexity level";
+1. Create an engaging title that captures the main topic
+2. Write a hook that grabs attention in the first 10 seconds
+3. Organize content sections logically from fundamentals to advanced
+4. Each section should have 3-5 key points
+5. Include which source videos are referenced in each section
+6. Distribute time to hit approximately {targetLengthMinutes} minutes total
+7. End with a strong conclusion that summarizes and provides next steps
+8. Match the user's preferred tone, pacing, and complexity level";
         }
 
         /// <summary>

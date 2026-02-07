@@ -1,0 +1,188 @@
+@page "/projects/{id:guid}/script/configure"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Services
+@using TargetBrowse.Components.Shared
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Configure Script - @(ProjectName ?? "Project")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id">@(ProjectName ?? "Project")</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/analyze">Analysis</a></li>
+                    <li class="breadcrumb-item active">Configure</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Configuration Error
+            </h5>
+            <p class="mb-2">@_errorMessage</p>
+            <a href="/projects/@Id/script/analyze" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Analysis
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-sliders me-2"></i>
+                            Configure Your Script
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        @if (!_hasProfile)
+                        {
+                            <div class="alert alert-warning">
+                                <h5 class="alert-heading">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    Script Profile Required
+                                </h5>
+                                <p class="mb-3">
+                                    You need to set up your script profile before generating a script.
+                                    This defines your preferred tone, pacing, and complexity level.
+                                </p>
+                                <a href="/Account/Manage/ScriptProfile" class="btn btn-warning">
+                                    <i class="bi bi-person-gear me-2"></i>
+                                    Set Up Script Profile
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-4">
+                                Configure the settings for your video script generation.
+                            </p>
+
+                            <EditForm Model="@ConfigModel" OnValidSubmit="HandleSaveConfiguration" FormName="configureScript">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-4">
+                                    <label for="targetLength" class="form-label">
+                                        <strong>Target Script Length (minutes)</strong>
+                                    </label>
+                                    <InputNumber @bind-Value="ConfigModel.TargetLengthMinutes"
+                                                 class="form-control"
+                                                 id="targetLength"
+                                                 min="5"
+                                                 max="30" />
+                                    <ValidationMessage For="@(() => ConfigModel.TargetLengthMinutes)" class="text-danger" />
+                                    <div class="form-text">
+                                        Recommended: 10-20 minutes. The AI will structure the script to fit this duration.
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6>Your Script Profile</h6>
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Tone</small>
+                                                    <div><strong>@_profileTone</strong></div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Pacing</small>
+                                                    <div><strong>@_profilePacing</strong></div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Complexity</small>
+                                                    <div><strong>@_profileComplexity</strong></div>
+                                                </div>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(_profileInstructions))
+                                            {
+                                                <div class="mt-3">
+                                                    <small class="text-muted">Custom Instructions</small>
+                                                    <div class="small">@_profileInstructions</div>
+                                                </div>
+                                            }
+                                            <div class="mt-2">
+                                                <a href="/Account/Manage/ScriptProfile" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-pencil me-1"></i>
+                                                    Edit Profile
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="/projects/@Id/script/analyze" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>
+                                        Back to Analysis
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                        @if (_isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            <span>Saving...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Save & Continue</span>
+                                            <i class="bi bi-arrow-right ms-1"></i>
+                                        }
+                                    </button>
+                                </div>
+                            </EditForm>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Configuration Tips</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Script Length Guidelines:</h6>
+                        <ul class="small">
+                            <li><strong>5-10 minutes:</strong> Quick overview or highlight reel</li>
+                            <li><strong>10-15 minutes:</strong> Standard tutorial or explanation</li>
+                            <li><strong>15-20 minutes:</strong> In-depth coverage with examples</li>
+                            <li><strong>20-30 minutes:</strong> Comprehensive deep dive</li>
+                        </ul>
+
+                        <h6 class="mt-3">Estimated Word Count:</h6>
+                        <p class="small">
+                            At ~150 words per minute:
+                        </p>
+                        <ul class="small">
+                            <li>10 min = ~1,500 words</li>
+                            <li>15 min = ~2,250 words</li>
+                            <li>20 min = ~3,000 words</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <MessageSidebar />
+            </div>
+        </div>
+    }
+</div>
