@@ -1,0 +1,225 @@
+@page "/projects/{id:guid}/script/analyze"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Models
+@using TargetBrowse.Features.Projects.Services
+@using TargetBrowse.Components.Shared
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Script Analysis - @(Project?.Name ?? "Project")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id">@(Project?.Name ?? "Project")</a></li>
+                    <li class="breadcrumb-item active">Script Analysis</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (_isAnalyzing)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Analyzing...</span>
+            </div>
+            <div class="mt-4">
+                <h4>Analyzing Your Videos</h4>
+                <p class="text-muted">This may take 30-60 seconds. Please don't close this page.</p>
+                <p class="small text-muted">Identifying themes, conflicts, and creating analysis report...</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Analysis Failed
+            </h5>
+            <p class="mb-2">@_errorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" @onclick="HandleRetryAnalysis">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Try Again
+            </button>
+            <a href="/projects/@Id" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Project
+            </a>
+        </div>
+    }
+    else if (_analysis != null)
+    {
+        <div class="row">
+            <div class="col-lg-9">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-graph-up me-2"></i>
+                            Analysis Results
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <h5>Main Topic</h5>
+                                <p class="lead">@_analysis.MainTopic</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <h5>Cohesion Score</h5>
+                                <div class="display-4 @GetCohesionScoreClass(_analysis.CohesionScore)">
+                                    @_analysis.CohesionScore<small class="fs-5">/100</small>
+                                </div>
+                                <small class="text-muted">@GetCohesionDescription(_analysis.CohesionScore)</small>
+                            </div>
+                        </div>
+
+                        @if (_analysis.Subtopics.Any())
+                        {
+                            <h5 class="mt-4">Subtopics Covered</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Subtopic</th>
+                                            <th>Coverage</th>
+                                            <th>Best Source</th>
+                                            <th>Depth</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var subtopic in _analysis.Subtopics)
+                                        {
+                                            <tr>
+                                                <td><strong>@subtopic.Name</strong></td>
+                                                <td>
+                                                    <span class="badge bg-info">@subtopic.CoveredBy.Count video(s)</span>
+                                                </td>
+                                                <td>@subtopic.BestSource</td>
+                                                <td>
+                                                    <span class="badge @GetDepthBadgeClass(subtopic.Depth)">
+                                                        @subtopic.Depth
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+
+                        @if (_analysis.Conflicts.Any())
+                        {
+                            <h5 class="mt-4">
+                                <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                                Conflicts Detected
+                            </h5>
+                            @foreach (var conflict in _analysis.Conflicts)
+                            {
+                                <div class="alert alert-warning">
+                                    <h6>@conflict.Topic</h6>
+                                    <div class="row">
+                                        <div class="col-md-5">
+                                            <strong>Video 1:</strong> @conflict.Video1Claim
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <strong>Video 2:</strong> @conflict.Video2Claim
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <strong>AI Recommendation:</strong> @conflict.AiRecommendation
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        @if (_analysis.UniqueClaims.Any())
+                        {
+                            <h5 class="mt-4">
+                                <i class="bi bi-star text-info me-2"></i>
+                                Unique Claims
+                            </h5>
+                            <ul class="list-group">
+                                @foreach (var claim in _analysis.UniqueClaims)
+                                {
+                                    <li class="list-group-item">
+                                        <strong>@claim.Source:</strong> @claim.Claim
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (_analysis.Recommendations.Any())
+                        {
+                            <h5 class="mt-4">Recommendations</h5>
+                            <ul class="list-unstyled">
+                                @foreach (var rec in _analysis.Recommendations)
+                                {
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle text-success me-2"></i>
+                                        @rec
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="bi bi-cash-coin me-1"></i>
+                                Cost: $@_totalCost.ToString("F6") |
+                                <i class="bi bi-clock me-1"></i>
+                                Duration: @(_durationMs / 1000.0)s
+                            </div>
+                            <div>
+                                <a href="/projects/@Id" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-left me-1"></i>
+                                    Back to Project
+                                </a>
+                                <a href="/projects/@Id/script/configure" class="btn btn-primary">
+                                    Continue to Configuration
+                                    <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Analysis Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Videos Analyzed</small>
+                            <div class="h4">@(_videoCount)</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Subtopics Found</small>
+                            <div class="h4">@(_analysis.Subtopics.Count)</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Conflicts</small>
+                            <div class="h4">@(_analysis.Conflicts.Count)</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Unique Claims</small>
+                            <div class="h4">@(_analysis.UniqueClaims.Count)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <MessageSidebar />
+            </div>
+        </div>
+    }
+</div>
