@@ -73,6 +73,11 @@ namespace TargetBrowse.Components.Account.Pages.Manage
                         Tone = existingProfile.Tone,
                         Pacing = existingProfile.Pacing,
                         Complexity = existingProfile.Complexity,
+                        StructureStyle = existingProfile.StructureStyle,
+                        HookStrategy = existingProfile.HookStrategy,
+                        AudienceRelationship = existingProfile.AudienceRelationship,
+                        InformationDensity = existingProfile.InformationDensity,
+                        RhetoricalStyle = existingProfile.RhetoricalStyle,
                         CustomInstructions = existingProfile.CustomInstructions
                     };
 
@@ -81,12 +86,7 @@ namespace TargetBrowse.Components.Account.Pages.Manage
                 else
                 {
                     // Set default values
-                    ProfileModel = new UserScriptProfileModel
-                    {
-                        Tone = "Casual",
-                        Pacing = "Moderate",
-                        Complexity = "Intermediate"
-                    };
+                    ProfileModel = new UserScriptProfileModel();
 
                     Logger.LogInformation($"No existing profile found for user {_userId}, using defaults");
                 }

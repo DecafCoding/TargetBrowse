@@ -12,7 +12,8 @@
       "Bash(dotnet ef migrations add:*)",
       "Bash(dotnet ef database update:*)",
       "Bash(dotnet ef migrations:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(Select-String -Pattern \"error CS|Build FAILED|Build succeeded\")"
     ]
   }
 }

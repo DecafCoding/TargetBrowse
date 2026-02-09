@@ -14,25 +14,60 @@ namespace TargetBrowse.Data.Entities
         public string UserId { get; set; } = string.Empty;
 
         /// <summary>
-        /// Script tone: Casual, Professional, Enthusiastic, Technical
+        /// Script tone: Insider Conversational, Informed Skeptic, Enthusiastic Guide, Authoritative Expert
         /// </summary>
         [Required]
         [StringLength(50)]
-        public string Tone { get; set; } = "Casual";
+        public string Tone { get; set; } = "Insider Conversational";
 
         /// <summary>
-        /// Script pacing: Fast, Moderate, Deliberate
+        /// Script pacing: Build-Release, Rapid-Fire, Steady Cruise, Deliberate Deep-Dive
         /// </summary>
         [Required]
         [StringLength(50)]
-        public string Pacing { get; set; } = "Moderate";
+        public string Pacing { get; set; } = "Build-Release";
 
         /// <summary>
-        /// Complexity level: Beginner, Intermediate, Advanced
+        /// Complexity level: Layered Progressive, Assumes Competence, Ground-Up, Technical Immersion
         /// </summary>
         [Required]
         [StringLength(50)]
-        public string Complexity { get; set; } = "Intermediate";
+        public string Complexity { get; set; } = "Layered Progressive";
+
+        /// <summary>
+        /// Structure style: Enumerated Scaffolding, Narrative Flow, Comparative Framework, Preview-Deliver-Recap
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string StructureStyle { get; set; } = "Enumerated Scaffolding";
+
+        /// <summary>
+        /// Hook strategy: Insider Secret, Provocative Question, Bold Claim, Shared Frustration
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string HookStrategy { get; set; } = "Insider Secret";
+
+        /// <summary>
+        /// Audience relationship: Insider-Outsider, Collaborative Partner, Mentor-Student, Peer-to-Peer
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string AudienceRelationship { get; set; } = "Insider-Outsider";
+
+        /// <summary>
+        /// Information density: High Density, Balanced, Focused Essentials, Story-Rich
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string InformationDensity { get; set; } = "High Density";
+
+        /// <summary>
+        /// Rhetorical style: Extended Metaphors, Direct and Punchy, Socratic, Parenthetical Asides
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string RhetoricalStyle { get; set; } = "Extended Metaphors";
 
         /// <summary>
         /// Optional custom instructions for script generation.

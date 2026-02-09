@@ -38,6 +38,15 @@ namespace TargetBrowse.Features.Projects.Services
         Task<ScriptOutlineResult> GenerateOutlineAsync(Guid projectId, string userId);
 
         /// <summary>
+        /// Generates the final script based on outline and video transcripts (Phase 5).
+        /// Creates complete narration text with internal source notes.
+        /// </summary>
+        /// <param name="projectId">Project ID to generate script for</param>
+        /// <param name="userId">User ID for tracking and quota</param>
+        /// <returns>Script result with full text, word count, and duration</returns>
+        Task<ScriptGenerationResult> GenerateScriptAsync(Guid projectId, string userId);
+
+        /// <summary>
         /// Gets the script content entity for a project.
         /// Returns null if no script generation has been started.
         /// </summary>

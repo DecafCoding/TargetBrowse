@@ -74,6 +74,11 @@ namespace TargetBrowse.Features.Projects.Services
                     existingProfile.Tone = model.Tone;
                     existingProfile.Pacing = model.Pacing;
                     existingProfile.Complexity = model.Complexity;
+                    existingProfile.StructureStyle = model.StructureStyle;
+                    existingProfile.HookStrategy = model.HookStrategy;
+                    existingProfile.AudienceRelationship = model.AudienceRelationship;
+                    existingProfile.InformationDensity = model.InformationDensity;
+                    existingProfile.RhetoricalStyle = model.RhetoricalStyle;
                     existingProfile.CustomInstructions = model.CustomInstructions;
 
                     _logger.LogInformation($"Updating script profile for user {userId}");
@@ -87,6 +92,11 @@ namespace TargetBrowse.Features.Projects.Services
                         Tone = model.Tone,
                         Pacing = model.Pacing,
                         Complexity = model.Complexity,
+                        StructureStyle = model.StructureStyle,
+                        HookStrategy = model.HookStrategy,
+                        AudienceRelationship = model.AudienceRelationship,
+                        InformationDensity = model.InformationDensity,
+                        RhetoricalStyle = model.RhetoricalStyle,
                         CustomInstructions = model.CustomInstructions
                     };
 
@@ -123,9 +133,14 @@ namespace TargetBrowse.Features.Projects.Services
                 return new UserScriptProfileEntity
                 {
                     UserId = userId,
-                    Tone = "Casual",
-                    Pacing = "Moderate",
-                    Complexity = "Intermediate",
+                    Tone = "Insider Conversational",
+                    Pacing = "Build-Release",
+                    Complexity = "Layered Progressive",
+                    StructureStyle = "Enumerated Scaffolding",
+                    HookStrategy = "Insider Secret",
+                    AudienceRelationship = "Insider-Outsider",
+                    InformationDensity = "High Density",
+                    RhetoricalStyle = "Extended Metaphors",
                     CustomInstructions = null
                 };
             }
