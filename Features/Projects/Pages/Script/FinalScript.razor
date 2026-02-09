@@ -1,0 +1,211 @@
+@page "/projects/{id:guid}/script/generate"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Models
+@using TargetBrowse.Features.Projects.Services
+@using TargetBrowse.Components.Shared
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Script - @(ProjectName ?? "Project")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id">@(ProjectName ?? "Project")</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/analyze">Analysis</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/configure">Configure</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id/script/outline">Outline</a></li>
+                    <li class="breadcrumb-item active">Script</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (_isGenerating)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Generating script...</span>
+            </div>
+            <div class="mt-4">
+                <h4>Generating Your Script</h4>
+                <p class="text-muted">This may take 60-90 seconds. Please don't close this page.</p>
+                <p class="small text-muted">Writing narration text based on your outline and source transcripts...</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Script Generation Failed
+            </h5>
+            <p class="mb-2">@_errorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" @@onclick="HandleRetryScript">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Try Again
+            </button>
+            <a href="/projects/@Id/script/outline" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Outline
+            </a>
+        </div>
+    }
+    else if (_script != null)
+    {
+        <div class="row">
+            <div class="col-lg-9">
+                @* Script Display Card *@
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-file-text me-2"></i>
+                            Generated Script
+                        </h4>
+                        <div>
+                            <button class="btn btn-outline-secondary btn-sm me-1" @@onclick="HandleCopyScript">
+                                <i class="bi bi-clipboard me-1"></i>
+                                @(_copyButtonText)
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" @@onclick="HandleDownloadScript">
+                                <i class="bi bi-download me-1"></i>
+                                Download .txt
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="script-text" style="white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; line-height: 1.8;">@_script.ScriptText</div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="bi bi-cash-coin me-1"></i>
+                                Cost: $@_totalCost.ToString("F6") |
+                                <i class="bi bi-clock me-1"></i>
+                                Duration: @(_durationMs / 1000.0)s
+                            </div>
+                            <div>
+                                <a href="/projects/@Id/script/outline" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-left me-1"></i>
+                                    Back to Outline
+                                </a>
+                                <button class="btn btn-outline-primary" @@onclick="HandleRegenerateScript">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                    Regenerate Script
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* Internal Notes Accordion *@
+                @if (_script.InternalNotes.Any())
+                {
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-journal-text me-2"></i>
+                                Internal Source Notes
+                            </h5>
+                            <small class="text-muted">Transparency notes about how the script was generated</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="accordion" id="notesAccordion">
+                                @{ var noteIndex = 0; }
+                                @foreach (var note in _script.InternalNotes)
+                                {
+                                    var collapseId = $"collapse-{noteIndex}";
+                                    var headingId = $"heading-{noteIndex}";
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="@headingId">
+                                            <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                                    aria-expanded="false" aria-controls="@collapseId">
+                                                @note.Key
+                                            </button>
+                                        </h2>
+                                        <div id="@collapseId" class="accordion-collapse collapse"
+                                             aria-labelledby="@headingId" data-bs-parent="#notesAccordion">
+                                            <div class="accordion-body">
+                                                @if (note.Value.Sources.Any())
+                                                {
+                                                    <div class="mb-2">
+                                                        <strong>Sources:</strong>
+                                                        <ul class="mb-0">
+                                                            @foreach (var source in note.Value.Sources)
+                                                            {
+                                                                <li>@source</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+                                                @if (note.Value.ConflictsResolved.Any())
+                                                {
+                                                    <div class="mb-2">
+                                                        <strong>Conflicts Resolved:</strong>
+                                                        <ul class="mb-0">
+                                                            @foreach (var conflict in note.Value.ConflictsResolved)
+                                                            {
+                                                                <li>@conflict</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+                                                @if (note.Value.UniqueClaims.Any())
+                                                {
+                                                    <div class="mb-2">
+                                                        <strong>Unique Claims:</strong>
+                                                        <ul class="mb-0">
+                                                            @foreach (var claim in note.Value.UniqueClaims)
+                                                            {
+                                                                <li>@claim</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    noteIndex++;
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-3">
+                @* Script Stats *@
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Script Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Word Count</small>
+                            <div class="h4">@_script.WordCount.ToString("N0")</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Estimated Duration</small>
+                            <div class="h4">@FormatDuration(_script.EstimatedDurationSeconds)</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Speaking Rate</small>
+                            <div class="h4">~150 wpm</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Sections</small>
+                            <div class="h4">@_script.InternalNotes.Count</div>
+                        </div>
+                    </div>
+                </div>
+
+                <MessageSidebar />
+            </div>
+        </div>
+    }
+</div>

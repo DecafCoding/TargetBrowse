@@ -29,45 +29,125 @@
             <EditForm Model="ProfileModel" OnValidSubmit="HandleSaveProfile" FormName="scriptProfile">
                 <DataAnnotationsValidator />
 
+                <h5 class="mt-2 mb-3">Voice & Delivery</h5>
+
                 <div class="mb-3">
                     <label for="tone" class="form-label">Script Tone</label>
                     <InputSelect @bind-Value="ProfileModel.Tone" class="form-select" id="tone">
-                        <option value="Casual">Casual - Friendly and conversational</option>
-                        <option value="Professional">Professional - Formal and polished</option>
-                        <option value="Enthusiastic">Enthusiastic - Energetic and exciting</option>
-                        <option value="Technical">Technical - Precise and detailed</option>
+                        <option value="Insider Conversational">Insider Conversational - Confident, direct, shares "secrets" with the viewer</option>
+                        <option value="Informed Skeptic">Informed Skeptic - Critical but constructive, questions defaults and common advice</option>
+                        <option value="Enthusiastic Guide">Enthusiastic Guide - Energetic, encouraging, celebrates discoveries</option>
+                        <option value="Authoritative Expert">Authoritative Expert - Commanding, precise, leads with data and evidence</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => ProfileModel.Tone)" class="text-danger" />
                     <div class="form-text">
-                        The overall voice and style of your scripts.
+                        The overall voice and personality of your scripts.
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label for="pacing" class="form-label">Script Pacing</label>
                     <InputSelect @bind-Value="ProfileModel.Pacing" class="form-select" id="pacing">
-                        <option value="Fast">Fast - Quick and concise</option>
-                        <option value="Moderate">Moderate - Balanced pace</option>
-                        <option value="Deliberate">Deliberate - Slow and thorough</option>
+                        <option value="Build-Release">Build-Release - Builds tension then delivers solutions, dynamic speed</option>
+                        <option value="Rapid-Fire">Rapid-Fire - Quick micro-transitions, dense information delivery</option>
+                        <option value="Steady Cruise">Steady Cruise - Consistent moderate pace, methodical</option>
+                        <option value="Deliberate Deep-Dive">Deliberate Deep-Dive - Slow, thorough, exhaustive exploration</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => ProfileModel.Pacing)" class="text-danger" />
                     <div class="form-text">
-                        How quickly information is presented.
+                        How quickly information is presented and the rhythm of delivery.
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label for="complexity" class="form-label">Complexity Level</label>
                     <InputSelect @bind-Value="ProfileModel.Complexity" class="form-select" id="complexity">
-                        <option value="Beginner">Beginner - Simple explanations</option>
-                        <option value="Intermediate">Intermediate - Balanced detail</option>
-                        <option value="Advanced">Advanced - Technical depth</option>
+                        <option value="Layered Progressive">Layered Progressive - Starts with metaphor, moves to mechanism, then application</option>
+                        <option value="Assumes Competence">Assumes Competence - Skips basics, speaks to an informed audience</option>
+                        <option value="Ground-Up">Ground-Up - Builds from fundamentals, no assumptions</option>
+                        <option value="Technical Immersion">Technical Immersion - Full jargon, expects domain knowledge</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => ProfileModel.Complexity)" class="text-danger" />
                     <div class="form-text">
-                        The technical level of your target audience.
+                        How deeply concepts are explained and what knowledge is assumed.
                     </div>
                 </div>
+
+                <h5 class="mt-4 mb-3">Structure & Presentation</h5>
+
+                <div class="mb-3">
+                    <label for="structureStyle" class="form-label">Structure Style</label>
+                    <InputSelect @bind-Value="ProfileModel.StructureStyle" class="form-select" id="structureStyle">
+                        <option value="Enumerated Scaffolding">Enumerated Scaffolding - Numbered lists, levers, clear mental structure</option>
+                        <option value="Narrative Flow">Narrative Flow - Story-driven, seamless transitions between ideas</option>
+                        <option value="Comparative Framework">Comparative Framework - Constant contrasts and side-by-side analysis</option>
+                        <option value="Preview-Deliver-Recap">Preview-Deliver-Recap - Tells what's coming, delivers it, reinforces</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ProfileModel.StructureStyle)" class="text-danger" />
+                    <div class="form-text">
+                        How the script is organized and how ideas flow from one to the next.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="hookStrategy" class="form-label">Hook Strategy</label>
+                    <InputSelect @bind-Value="ProfileModel.HookStrategy" class="form-select" id="hookStrategy">
+                        <option value="Insider Secret">Insider Secret - "I'm gonna let you in on a secret" framing</option>
+                        <option value="Provocative Question">Provocative Question - Opens with a challenging question</option>
+                        <option value="Bold Claim">Bold Claim - Starts with a surprising statement or statistic</option>
+                        <option value="Shared Frustration">Shared Frustration - Opens with a common pain point the audience relates to</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ProfileModel.HookStrategy)" class="text-danger" />
+                    <div class="form-text">
+                        How the script opens to grab the viewer's attention in the first 10 seconds.
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3">Audience & Style</h5>
+
+                <div class="mb-3">
+                    <label for="audienceRelationship" class="form-label">Audience Relationship</label>
+                    <InputSelect @bind-Value="ProfileModel.AudienceRelationship" class="form-select" id="audienceRelationship">
+                        <option value="Insider-Outsider">Insider-Outsider - You're learning secrets most people miss</option>
+                        <option value="Collaborative Partner">Collaborative Partner - We're figuring this out together</option>
+                        <option value="Mentor-Student">Mentor-Student - Guiding through a learning journey</option>
+                        <option value="Peer-to-Peer">Peer-to-Peer - Speaking as equals with shared expertise</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ProfileModel.AudienceRelationship)" class="text-danger" />
+                    <div class="form-text">
+                        The dynamic between the narrator and the viewer throughout the script.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="informationDensity" class="form-label">Information Density</label>
+                    <InputSelect @bind-Value="ProfileModel.InformationDensity" class="form-select" id="informationDensity">
+                        <option value="High Density">High Density - Packed with specifics, proof points, real examples</option>
+                        <option value="Balanced">Balanced - Mix of detail and breathing room</option>
+                        <option value="Focused Essentials">Focused Essentials - Key points only, minimal tangents</option>
+                        <option value="Story-Rich">Story-Rich - Fewer facts, more extended examples and narratives</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ProfileModel.InformationDensity)" class="text-danger" />
+                    <div class="form-text">
+                        How much detail and evidence goes into each section.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="rhetoricalStyle" class="form-label">Rhetorical Style</label>
+                    <InputSelect @bind-Value="ProfileModel.RhetoricalStyle" class="form-select" id="rhetoricalStyle">
+                        <option value="Extended Metaphors">Extended Metaphors - Carries analogies across sections for cohesion</option>
+                        <option value="Direct and Punchy">Direct and Punchy - Short statements, active voice, minimal filler</option>
+                        <option value="Socratic">Socratic - Guides the viewer through rhetorical questions</option>
+                        <option value="Parenthetical Asides">Parenthetical Asides - Conversational interjections that add personality</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ProfileModel.RhetoricalStyle)" class="text-danger" />
+                    <div class="form-text">
+                        The rhetorical devices and writing techniques used throughout the script.
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3">Additional</h5>
 
                 <div class="mb-3">
                     <label for="customInstructions" class="form-label">Custom Instructions (Optional)</label>
@@ -75,7 +155,7 @@
                                    class="form-control"
                                    id="customInstructions"
                                    rows="4"
-                                   placeholder="e.g., 'Always use analogies', 'Include real-world examples', 'Avoid jargon'" />
+                                   placeholder="e.g., 'Always reference specific tools by name', 'Include common mistakes to avoid', 'End each section with a key takeaway'" />
                     <ValidationMessage For="@(() => ProfileModel.CustomInstructions)" class="text-danger" />
                     <div class="form-text">
                         Additional instructions for script generation (max 2000 characters).
@@ -107,19 +187,27 @@
             <div class="card-body">
                 <h6>Tone Examples:</h6>
                 <ul class="small">
-                    <li><strong>Casual:</strong> "Let's dive into..."</li>
-                    <li><strong>Professional:</strong> "In this tutorial, we will examine..."</li>
-                    <li><strong>Enthusiastic:</strong> "This is so cool! Let me show you..."</li>
-                    <li><strong>Technical:</strong> "We'll implement the observer pattern..."</li>
+                    <li><strong>Insider Conversational:</strong> "I'm gonna let you in on a secret..."</li>
+                    <li><strong>Informed Skeptic:</strong> "Everyone tells you to do X, but here's why that's wrong..."</li>
+                    <li><strong>Enthusiastic Guide:</strong> "This is the part that changed everything for me..."</li>
+                    <li><strong>Authoritative Expert:</strong> "The data is clear: three factors determine the outcome..."</li>
+                </ul>
+
+                <h6 class="mt-3">Powerful Combinations:</h6>
+                <ul class="small">
+                    <li><strong>YouTube Explainer:</strong> Insider Conversational + Build-Release + Layered Progressive + Enumerated Scaffolding</li>
+                    <li><strong>Documentary Style:</strong> Informed Skeptic + Steady Cruise + Assumes Competence + Narrative Flow</li>
+                    <li><strong>Tutorial:</strong> Enthusiastic Guide + Deliberate Deep-Dive + Ground-Up + Preview-Deliver-Recap</li>
+                    <li><strong>Expert Analysis:</strong> Authoritative Expert + Rapid-Fire + Technical Immersion + Comparative Framework</li>
                 </ul>
 
                 <h6 class="mt-3">Custom Instructions Ideas:</h6>
                 <ul class="small">
-                    <li>"Always include practical examples"</li>
-                    <li>"Use analogies to explain complex concepts"</li>
-                    <li>"Keep sentences short and simple"</li>
-                    <li>"Include common mistakes to avoid"</li>
-                    <li>"End each section with a key takeaway"</li>
+                    <li>"Always reference specific tools and features by name"</li>
+                    <li>"Include common mistakes to avoid after each major point"</li>
+                    <li>"Use real-world analogies from everyday life"</li>
+                    <li>"End each section with a one-sentence takeaway"</li>
+                    <li>"Mention competing approaches and why this one wins"</li>
                 </ul>
             </div>
         </div>

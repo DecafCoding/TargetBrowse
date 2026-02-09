@@ -307,6 +307,11 @@ namespace TargetBrowse.Features.Projects.Services
                     Tone = profile.Tone,
                     Pacing = profile.Pacing,
                     Complexity = profile.Complexity,
+                    StructureStyle = profile.StructureStyle,
+                    HookStrategy = profile.HookStrategy,
+                    AudienceRelationship = profile.AudienceRelationship,
+                    InformationDensity = profile.InformationDensity,
+                    RhetoricalStyle = profile.RhetoricalStyle,
                     CustomInstructions = profile.CustomInstructions
                 };
 
@@ -338,7 +343,8 @@ namespace TargetBrowse.Features.Projects.Services
                 var outline = ParseOutlineResponse(response);
                 if (outline == null)
                 {
-                    return CreateFailedOutlineResult("Failed to parse outline response");
+                    var parseDetail = _lastParseError != null ? $": {_lastParseError}" : "";
+                    return CreateFailedOutlineResult($"Failed to parse outline response{parseDetail}");
                 }
 
                 // Step 8: Save outline to ScriptContent entity
@@ -375,6 +381,150 @@ namespace TargetBrowse.Features.Projects.Services
                 }
 
                 return CreateFailedOutlineResult($"Outline generation failed: {errorMessage}");
+            }
+        }
+
+        /// <summary>
+        /// Generates the final script based on outline and video transcripts (Phase 5).
+        /// </summary>
+        public async Task<ScriptGenerationResult> GenerateScriptAsync(Guid projectId, string userId)
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                _logger.LogInformation($"Starting script generation for project {projectId}, user {userId}");
+
+                // Step 1: Get script content with outline
+                var scriptContent = await _context.ScriptContents
+                    .FirstOrDefaultAsync(sc => sc.ProjectId == projectId && !sc.IsDeleted);
+
+                if (scriptContent == null || string.IsNullOrEmpty(scriptContent.OutlineJsonStructure))
+                {
+                    return CreateFailedScriptResult("No outline found. Please generate an outline first.");
+                }
+
+                // Step 2: Get user profile for style preferences
+                var profile = await _context.UserScriptProfiles
+                    .FirstOrDefaultAsync(p => p.UserId == userId && !p.IsDeleted);
+
+                if (profile == null)
+                {
+                    return CreateFailedScriptResult("User script profile not found. Please set up your profile.");
+                }
+
+                // Step 3: Get project videos with transcripts
+                var project = await _context.Projects
+                    .Include(p => p.ProjectVideos)
+                        .ThenInclude(pv => pv.Video)
+                            .ThenInclude(v => v.Summary)
+                    .FirstOrDefaultAsync(p => p.Id == projectId && !p.IsDeleted);
+
+                if (project == null)
+                {
+                    return CreateFailedScriptResult("Project not found");
+                }
+
+                // Step 4: Check daily limit
+                var dailyCount = await GetDailyAICallCountAsync(userId);
+                if (dailyCount >= DailyAICallLimit)
+                {
+                    return CreateFailedScriptResult($"Daily AI call limit reached ({DailyAICallLimit}/day)");
+                }
+
+                // Step 5: Build video transcripts list (use raw transcript, fallback to summary)
+                var videoTranscripts = project.ProjectVideos
+                    .Where(pv => pv.Video != null)
+                    .Select(pv => new VideoTranscriptData
+                    {
+                        VideoId = pv.Video.YouTubeVideoId,
+                        Title = pv.Video.Title,
+                        Transcript = !string.IsNullOrEmpty(pv.Video.RawTranscript)
+                            ? pv.Video.RawTranscript
+                            : pv.Video.Summary?.Content ?? string.Empty
+                    })
+                    .Where(vt => !string.IsNullOrEmpty(vt.Transcript))
+                    .ToList();
+
+                // Step 6: Build script prompt
+                var userProfileData = new UserProfileData
+                {
+                    Tone = profile.Tone,
+                    Pacing = profile.Pacing,
+                    Complexity = profile.Complexity,
+                    StructureStyle = profile.StructureStyle,
+                    HookStrategy = profile.HookStrategy,
+                    AudienceRelationship = profile.AudienceRelationship,
+                    InformationDensity = profile.InformationDensity,
+                    RhetoricalStyle = profile.RhetoricalStyle,
+                    CustomInstructions = profile.CustomInstructions
+                };
+
+                var scriptPrompt = ScriptPromptBuilder.BuildScriptPrompt(
+                    scriptContent.OutlineJsonStructure,
+                    userProfileData,
+                    videoTranscripts);
+
+                // Step 7: Call OpenAI API (higher token limit for full script)
+                var request = CreateScriptRequest(scriptPrompt);
+                var response = await CallOpenAiApiAsync(request);
+
+                stopwatch.Stop();
+
+                // Step 8: Track API call
+                var aiCall = await TrackApiCallAsync(
+                    scriptPrompt,
+                    response,
+                    stopwatch.ElapsedMilliseconds,
+                    userId,
+                    response == null ? "Failed to get response from OpenAI API" : null);
+
+                if (response == null)
+                {
+                    return CreateFailedScriptResult("Failed to get response from OpenAI API");
+                }
+
+                // Step 9: Parse response
+                var script = ParseScriptResponse(response);
+                if (script == null)
+                {
+                    return CreateFailedScriptResult("Failed to parse script response");
+                }
+
+                // Step 10: Save to ScriptContent entity
+                await SaveScriptToScriptContentAsync(projectId, script, aiCall.Id);
+
+                // Step 11: Calculate costs
+                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(scriptPrompt);
+                var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(JsonConvert.SerializeObject(script));
+                var totalCost = CalculateCost(inputTokens, outputTokens);
+
+                _logger.LogInformation(
+                    $"Successfully generated script for project {projectId}. " +
+                    $"Tokens: {inputTokens} input, {outputTokens} output. Cost: ${totalCost:F6}");
+
+                return new ScriptGenerationResult
+                {
+                    Success = true,
+                    Script = script,
+                    InputTokens = inputTokens,
+                    OutputTokens = outputTokens,
+                    TotalCost = totalCost,
+                    DurationMs = stopwatch.ElapsedMilliseconds
+                };
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, $"Error generating script for project {projectId}: {ex.Message}");
+
+                var errorMessage = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $" Inner Exception: {ex.InnerException.Message}";
+                }
+
+                return CreateFailedScriptResult($"Script generation failed: {errorMessage}");
             }
         }
 
@@ -731,14 +881,20 @@ namespace TargetBrowse.Features.Projects.Services
 
         /// <summary>
         /// Parses the OpenAI response into ScriptOutlineModel.
+        /// Stores last parse error for surfacing in error messages.
         /// </summary>
+        private string? _lastParseError;
+
         private ScriptOutlineModel? ParseOutlineResponse(OpenAiResponse response)
         {
+            _lastParseError = null;
+
             try
             {
                 if (response.Choices == null || !response.Choices.Any())
                 {
-                    _logger.LogWarning("No choices returned from OpenAI API");
+                    _lastParseError = "No choices returned from OpenAI API";
+                    _logger.LogWarning(_lastParseError);
                     return null;
                 }
 
@@ -746,14 +902,26 @@ namespace TargetBrowse.Features.Projects.Services
 
                 if (messageContent is string jsonContent && !string.IsNullOrWhiteSpace(jsonContent))
                 {
-                    return JsonConvert.DeserializeObject<ScriptOutlineModel>(jsonContent);
+                    _logger.LogInformation($"Outline response JSON (first 500 chars): {jsonContent.Substring(0, Math.Min(500, jsonContent.Length))}");
+
+                    var outline = JsonConvert.DeserializeObject<ScriptOutlineModel>(jsonContent);
+
+                    if (outline == null)
+                    {
+                        _lastParseError = "Deserialization returned null";
+                        _logger.LogWarning($"Outline deserialization returned null. JSON: {jsonContent.Substring(0, Math.Min(1000, jsonContent.Length))}");
+                    }
+
+                    return outline;
                 }
 
-                _logger.LogWarning("Unexpected response content format from OpenAI API");
+                _lastParseError = $"Unexpected response content type: {messageContent?.GetType().Name ?? "null"}";
+                _logger.LogWarning(_lastParseError);
                 return null;
             }
             catch (Exception ex)
             {
+                _lastParseError = $"{ex.Message}";
                 _logger.LogError(ex, $"Error parsing OpenAI outline response: {ex.Message}");
                 return null;
             }
@@ -806,6 +974,103 @@ namespace TargetBrowse.Features.Projects.Services
         private ScriptOutlineResult CreateFailedOutlineResult(string errorMessage)
         {
             return new ScriptOutlineResult
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        /// <summary>
+        /// Creates the OpenAI API request for script generation.
+        /// Uses higher token limit than analysis/outline since full scripts are longer.
+        /// </summary>
+        private OpenAiRequest CreateScriptRequest(string scriptPrompt)
+        {
+            return new OpenAiRequest
+            {
+                Model = DefaultModel,
+                Messages = new List<OpenAiMessage>
+                {
+                    new OpenAiMessage
+                    {
+                        Role = "system",
+                        Content = "You are an expert video script writer. Generate engaging, well-structured video scripts based on outlines and source transcripts."
+                    },
+                    new OpenAiMessage
+                    {
+                        Role = "user",
+                        Content = scriptPrompt
+                    }
+                },
+                MaxTokens = 8000,
+                Temperature = 0.7m,
+                ResponseFormat = new OpenAiResponseFormat { Type = "json_object" }
+            };
+        }
+
+        /// <summary>
+        /// Parses the OpenAI response into ScriptModel.
+        /// </summary>
+        private ScriptModel? ParseScriptResponse(OpenAiResponse response)
+        {
+            try
+            {
+                if (response.Choices == null || !response.Choices.Any())
+                {
+                    _logger.LogWarning("No choices returned from OpenAI API");
+                    return null;
+                }
+
+                var messageContent = response.Choices.First().Message.Content;
+
+                if (messageContent is string jsonContent && !string.IsNullOrWhiteSpace(jsonContent))
+                {
+                    return JsonConvert.DeserializeObject<ScriptModel>(jsonContent);
+                }
+
+                _logger.LogWarning("Unexpected response content format from OpenAI API");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error parsing OpenAI script response: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Saves generated script to ScriptContent entity.
+        /// </summary>
+        private async Task SaveScriptToScriptContentAsync(
+            Guid projectId,
+            ScriptModel script,
+            Guid aiCallId)
+        {
+            var scriptContent = await _context.ScriptContents
+                .FirstOrDefaultAsync(sc => sc.ProjectId == projectId && !sc.IsDeleted);
+
+            if (scriptContent == null)
+            {
+                throw new InvalidOperationException("Script content not found");
+            }
+
+            scriptContent.ScriptText = script.ScriptText;
+            scriptContent.WordCount = script.WordCount;
+            scriptContent.EstimatedDurationSeconds = script.EstimatedDurationSeconds;
+            scriptContent.InternalNotesJson = JsonConvert.SerializeObject(script.InternalNotes);
+            scriptContent.ScriptStatus = "Complete";
+            scriptContent.ScriptAICallId = aiCallId;
+            scriptContent.GeneratedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Creates a failed script generation result.
+        /// </summary>
+        private ScriptGenerationResult CreateFailedScriptResult(string errorMessage)
+        {
+            return new ScriptGenerationResult
             {
                 Success = false,
                 ErrorMessage = errorMessage

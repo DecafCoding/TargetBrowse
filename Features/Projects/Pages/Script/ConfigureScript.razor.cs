@@ -36,6 +36,11 @@ namespace TargetBrowse.Features.Projects.Pages.Script
         private string _profileTone = string.Empty;
         private string _profilePacing = string.Empty;
         private string _profileComplexity = string.Empty;
+        private string _profileStructureStyle = string.Empty;
+        private string _profileHookStrategy = string.Empty;
+        private string _profileAudienceRelationship = string.Empty;
+        private string _profileInformationDensity = string.Empty;
+        private string _profileRhetoricalStyle = string.Empty;
         private string? _profileInstructions;
 
         protected override async Task OnInitializedAsync()
@@ -74,6 +79,11 @@ namespace TargetBrowse.Features.Projects.Pages.Script
                     _profileTone = profile.Tone;
                     _profilePacing = profile.Pacing;
                     _profileComplexity = profile.Complexity;
+                    _profileStructureStyle = profile.StructureStyle;
+                    _profileHookStrategy = profile.HookStrategy;
+                    _profileAudienceRelationship = profile.AudienceRelationship;
+                    _profileInformationDensity = profile.InformationDensity;
+                    _profileRhetoricalStyle = profile.RhetoricalStyle;
                     _profileInstructions = profile.CustomInstructions;
                 }
 
