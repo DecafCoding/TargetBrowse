@@ -237,7 +237,7 @@ public class LibraryDataService : ILibraryDataService
                 VideoId = videoEntity.Id,
                 AddedToLibraryAt = DateTime.UtcNow,
                 Status = WatchStatus.NotWatched,
-                Notes = string.IsNullOrEmpty(notes) ? $"Added to library on {DateTime.Now:yyyy-MM-dd}" : notes
+                Notes = string.IsNullOrEmpty(notes) ? null : notes
             };
 
             context.UserVideos.Add(userVideoEntity);
@@ -286,7 +286,7 @@ public class LibraryDataService : ILibraryDataService
                 VideoId = videoEntity.Id,
                 AddedToLibraryAt = DateTime.UtcNow,
                 Status = WatchStatus.NotWatched,
-                Notes = string.IsNullOrEmpty(notes) ? $"Added existing video on {DateTime.Now:yyyy-MM-dd}" : notes
+                Notes = string.IsNullOrEmpty(notes) ? null : notes
             };
 
             context.UserVideos.Add(userVideoEntity);

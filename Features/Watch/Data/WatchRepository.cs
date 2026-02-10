@@ -231,5 +231,34 @@ namespace TargetBrowse.Features.Watch.Data
                 return false;
             }
         }
+
+        public async Task<bool> UpdateVideoNotesAsync(string userId, Guid videoId, string? notes)
+        {
+            try
+            {
+                var userVideo = await _context.UserVideos
+                    .Where(uv => !uv.IsDeleted)
+                    .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.VideoId == videoId);
+
+                if (userVideo == null)
+                {
+                    _logger.LogWarning("UserVideo not found for user {UserId} and video {VideoId}", userId, videoId);
+                    return false;
+                }
+
+                userVideo.Notes = notes;
+                userVideo.LastModifiedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated notes for video {VideoId}", videoId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating notes for video {VideoId}", videoId);
+                return false;
+            }
+        }
     }
 }

@@ -79,6 +79,16 @@ public partial class Watch : ComponentBase
     /// </summary>
     protected ContentViewMode CurrentViewMode { get; set; } = ContentViewMode.Summary;
 
+    /// <summary>
+    /// Whether the notes field is in edit mode.
+    /// </summary>
+    protected bool IsEditingNotes { get; set; } = false;
+
+    /// <summary>
+    /// Holds the in-progress notes value while editing.
+    /// </summary>
+    protected string? NotesEditValue { get; set; }
+
     #endregion
 
     #region Lifecycle Methods
@@ -399,6 +409,58 @@ public partial class Watch : ComponentBase
             Logger.LogError(ex, "Unexpected error updating video type for video {VideoId}", Model.VideoId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
         }
+    }
+
+    /// <summary>
+    /// Enters edit mode for the video notes, pre-populating the editor with existing notes.
+    /// </summary>
+    protected void HandleEditNotes()
+    {
+        NotesEditValue = Model.VideoNotes;
+        IsEditingNotes = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Saves the edited notes to the database and exits edit mode.
+    /// </summary>
+    protected async Task HandleSaveNotes()
+    {
+        try
+        {
+            // Treat empty/whitespace as null to clear notes
+            var notesToSave = string.IsNullOrWhiteSpace(NotesEditValue) ? null : NotesEditValue.Trim();
+
+            var success = await WatchService.UpdateVideoNotesAsync(CurrentUserId!, Model.VideoId, notesToSave);
+
+            if (success)
+            {
+                Model.VideoNotes = notesToSave;
+                IsEditingNotes = false;
+                await MessageCenter.ShowSuccessAsync("Notes saved.");
+            }
+            else
+            {
+                await MessageCenter.ShowErrorAsync("Failed to save notes. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error saving notes for video {VideoId}", Model.VideoId);
+            await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Cancels the notes edit and returns to read-only view.
+    /// </summary>
+    protected void HandleCancelNotes()
+    {
+        IsEditingNotes = false;
+        NotesEditValue = null;
+        StateHasChanged();
     }
 
     #endregion

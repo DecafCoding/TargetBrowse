@@ -124,8 +124,7 @@ public partial class VideoCard : ComponentBase
 
             var success = await LibraryDataService.AddVideoToLibraryAsync(
                 CurrentUserId,
-                videoInfo,
-                $"Added from {DisplayMode.ToString().ToLower()} on {DateTime.Now:yyyy-MM-dd}");
+                videoInfo);
 
 
             if (success)

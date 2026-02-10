@@ -123,6 +123,11 @@ namespace TargetBrowse.Features.Watch.Models
         public string? RatingNotes { get; set; }
 
         /// <summary>
+        /// User's personal notes about this video (stored on UserVideoEntity)
+        /// </summary>
+        public string? VideoNotes { get; set; }
+
+        /// <summary>
         /// Whether a transcript is available for this video
         /// </summary>
         public bool HasTranscript { get; set; }

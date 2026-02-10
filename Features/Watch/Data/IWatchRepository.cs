@@ -87,5 +87,14 @@ namespace TargetBrowse.Features.Watch.Data
         /// <param name="videoTypeId">The new video type ID, or null to clear the type</param>
         /// <returns>True if update was successful, false otherwise</returns>
         Task<bool> UpdateVideoTypeAsync(Guid videoId, Guid? videoTypeId);
+
+        /// <summary>
+        /// Updates the user's personal notes for a video.
+        /// </summary>
+        /// <param name="userId">The user's ID</param>
+        /// <param name="videoId">The database video ID (Guid)</param>
+        /// <param name="notes">The notes text, or null to clear notes</param>
+        /// <returns>True if update was successful, false otherwise</returns>
+        Task<bool> UpdateVideoNotesAsync(string userId, Guid videoId, string? notes);
     }
 }
