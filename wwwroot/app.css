@@ -335,6 +335,13 @@ html, body {
     color: white;
 }
 
+/* Override bg-light in dark mode so panels/cards adapt to the theme.
+   Excludes .badge so intentional light-on-dark contrast badges are unaffected. */
+[data-bs-theme="dark"] .bg-light:not(.badge) {
+    background-color: var(--custom-sidebar-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
 /*********************** Skeleton section START *******************************/
 /* Skeleton loading cards */
 .skeleton-card {

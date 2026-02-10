@@ -141,6 +141,7 @@ export function initializeTheme() {
     }
 })();
 
+
 // Auto-initialize when module loads
 if (typeof window !== 'undefined') {
     // Initialize immediately if DOM is ready

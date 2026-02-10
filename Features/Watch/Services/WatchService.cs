@@ -84,6 +84,7 @@ namespace TargetBrowse.Features.Watch.Services
                 {
                     model.IsInLibrary = true;
                     model.WatchStatus = userVideo.Status;
+                    model.VideoNotes = userVideo.Notes;
                 }
                 else
                 {
@@ -165,6 +166,30 @@ namespace TargetBrowse.Features.Watch.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating video type for video {VideoId}", videoId);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateVideoNotesAsync(string userId, Guid videoId, string? notes)
+        {
+            try
+            {
+                var result = await _watchRepository.UpdateVideoNotesAsync(userId, videoId, notes);
+
+                if (result)
+                {
+                    _logger.LogInformation("Successfully updated notes for video {VideoId}", videoId);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update notes for video {VideoId}", videoId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating notes for video {VideoId}", videoId);
                 return false;
             }
         }
