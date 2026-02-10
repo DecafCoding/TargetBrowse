@@ -44,7 +44,7 @@ namespace TargetBrowse.Data.Entities
         /// Video description from YouTube API.
         /// Stored for search and display purposes.
         /// </summary>
-        [StringLength(2000)]
+        [StringLength(5000)]
         public string Description { get; set; } = string.Empty;
 
         /// <summary>

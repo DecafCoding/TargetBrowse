@@ -14,12 +14,12 @@ namespace TargetBrowse.Services.DataServices;
 /// </summary>
 public class VideoDataService : IVideoDataService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly ILogger<VideoDataService> _logger;
 
-    public VideoDataService(ApplicationDbContext context, ILogger<VideoDataService> logger)
+    public VideoDataService(IDbContextFactory<ApplicationDbContext> contextFactory, ILogger<VideoDataService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
@@ -33,8 +33,10 @@ public class VideoDataService : IVideoDataService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
             // First try to find existing video
-            var existingVideo = await _context.Videos
+            var existingVideo = await context.Videos
                 .Include(v => v.Channel)
                 .FirstOrDefaultAsync(v => v.YouTubeVideoId == video.YouTubeVideoId);
 
@@ -45,8 +47,13 @@ public class VideoDataService : IVideoDataService
                 return existingVideo;
             }
 
-            // Ensure channel exists first
+            // Ensure channel exists first (uses its own context internally)
             var channel = await EnsureChannelExistsAsync(video.ChannelId, video.ChannelName);
+
+            // Truncate description to stay within DB column limit
+            var description = video.Description?.Length > 5000
+                ? video.Description[..5000]
+                : video.Description ?? string.Empty;
 
             // Create new video entity
             var videoEntity = new VideoEntity
@@ -60,15 +67,15 @@ public class VideoDataService : IVideoDataService
                 CommentCount = video.CommentCount,
                 Duration = video.Duration,
                 ThumbnailUrl = video.ThumbnailUrl,
-                Description = video.Description,
+                Description = description,
                 RawTranscript = string.Empty // Will be populated later if needed
             };
 
-            _context.Videos.Add(videoEntity);
-            await _context.SaveChangesAsync();
+            context.Videos.Add(videoEntity);
+            await context.SaveChangesAsync();
 
             // Load the channel relationship for return
-            await _context.Entry(videoEntity)
+            await context.Entry(videoEntity)
                 .Reference(v => v.Channel)
                 .LoadAsync();
 
@@ -91,7 +98,9 @@ public class VideoDataService : IVideoDataService
     {
         try
         {
-            var existingChannel = await _context.Channels
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var existingChannel = await context.Channels
                 .FirstOrDefaultAsync(c => c.YouTubeChannelId == channelId);
 
             if (existingChannel != null)
@@ -101,7 +110,7 @@ public class VideoDataService : IVideoDataService
                 {
                     existingChannel.Name = channelName;
                     existingChannel.LastModifiedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                 }
                 return existingChannel;
             }
@@ -117,8 +126,8 @@ public class VideoDataService : IVideoDataService
                 PublishedAt = DateTime.UtcNow // Default value, will be updated when we have real data
             };
 
-            _context.Channels.Add(channelEntity);
-            await _context.SaveChangesAsync();
+            context.Channels.Add(channelEntity);
+            await context.SaveChangesAsync();
 
             _logger.LogDebug("Created new channel entity for {ChannelId}: {Name}", channelId, channelName);
 
@@ -210,7 +219,9 @@ public class VideoDataService : IVideoDataService
                 return new Dictionary<string, VideoEntity>();
             }
 
-            var videos = await _context.Videos
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var videos = await context.Videos
                 .Include(v => v.Channel)
                 .Where(v => youTubeVideoIds.Contains(v.YouTubeVideoId))
                 .ToListAsync();
