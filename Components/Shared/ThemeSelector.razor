@@ -2,6 +2,7 @@
 @using TargetBrowse.Services
 @using TargetBrowse.Services.Interfaces
 @inject IThemeService ThemeService
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="dropdown-submenu">
@@ -12,21 +13,25 @@
 
     @foreach (var theme in _themes)
     {
-        <a class="dropdown-item d-flex align-items-center @(theme.Value == _currentTheme ? "active" : "")"
-           href="#" @onclick="() => ChangeTheme(theme.Value)" @onclick:preventDefault="true">
+        @* Use a button with both a Blazor handler (interactive pages) and an inline JS onclick
+           (SSR pages like Account/Manage where Blazor events don't wire up).
+           tbSetTheme() is a global helper defined in theme.js, always loaded. *@
+        <button class="dropdown-item d-flex align-items-center @(theme.Value == _currentTheme ? "active" : "")"
+                type="button"
+                onclick="tbSetTheme('@theme.Value')">
             <i class="@theme.Icon me-2"></i>
             @theme.Name
             @if (theme.Value == _currentTheme)
             {
                 <i class="bi bi-check ms-auto"></i>
             }
-        </a>
+        </button>
     }
 </div>
 
 @code {
     private string _currentTheme = "auto";
-    private bool _hasRendered = false;
+    private DotNetObjectReference<ThemeSelector>? _selfRef;
 
     private readonly List<ThemeOption> _themes = new()
     {
@@ -37,32 +42,32 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get initial theme (will use cached value during pre-rendering)
+        // Get initial theme (uses cached value during pre-rendering)
         _currentTheme = await ThemeService.GetThemeAsync();
-        ThemeService.ThemeChanged += OnThemeChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _hasRendered = true;
-            // Now we can safely call JavaScript - refresh theme from localStorage
+            // Read actual theme from localStorage now that JS is available
             var actualTheme = await ThemeService.GetThemeAsync();
             if (actualTheme != _currentTheme)
             {
                 _currentTheme = actualTheme;
                 StateHasChanged();
             }
+
+            // Register a JS listener for the themeChanged event dispatched by tbSetTheme,
+            // so the checkmark stays in sync when the button's inline onclick fires
+            _selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("tbRegisterThemeListener", _selfRef);
         }
     }
 
-    private async Task ChangeTheme(string theme)
-    {
-        await ThemeService.SetThemeAsync(theme);
-    }
-
-    private void OnThemeChanged(string newTheme)
+    // Called from JS when the themeChanged event fires
+    [JSInvokable]
+    public void OnThemeChangedFromJs(string newTheme)
     {
         _currentTheme = newTheme;
         InvokeAsync(StateHasChanged);
@@ -76,7 +81,7 @@
 
     public void Dispose()
     {
-        ThemeService.ThemeChanged -= OnThemeChanged;
+        _selfRef?.Dispose();
     }
 
     private record ThemeOption(string Name, string Value, string Icon);

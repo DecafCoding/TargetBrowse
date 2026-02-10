@@ -33,6 +33,36 @@
                 // Ignore errors in case localStorage is not available
             }
         })();
+
+        // Global theme setter called by ThemeSelector buttons via inline onclick.
+        // Plain script (not a module) so it works on SSR pages where Blazor
+        // interactivity is unavailable (e.g. Account/Manage).
+        window.tbSetTheme = function(theme) {
+            try {
+                var THEME_KEY = 'targetbrowse-theme';
+                var h = document.documentElement;
+                localStorage.setItem(THEME_KEY, theme);
+                if (theme === 'auto') {
+                    h.removeAttribute('data-bs-theme');
+                    h.classList.add('theme-auto');
+                    h.classList.remove('theme-light', 'theme-dark');
+                } else {
+                    h.setAttribute('data-bs-theme', theme);
+                    h.classList.remove('theme-auto');
+                    h.classList.add('theme-' + theme);
+                    h.classList.remove('theme-' + (theme === 'light' ? 'dark' : 'light'));
+                }
+                window.dispatchEvent(new CustomEvent('themeChanged', { detail: theme }));
+            } catch (e) {}
+        };
+
+        // Called by ThemeSelector.OnAfterRenderAsync on interactive pages to keep
+        // the Blazor checkmark in sync when tbSetTheme fires the themeChanged event.
+        window.tbRegisterThemeListener = function(dotNetRef) {
+            window.addEventListener('themeChanged', function(e) {
+                dotNetRef.invokeMethodAsync('OnThemeChangedFromJs', e.detail);
+            });
+        };
     </script>
 </head>
 
