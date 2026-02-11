@@ -34,8 +34,9 @@ export function setTheme(theme) {
             theme = THEMES.AUTO;
         }
 
-        // Save to localStorage
+        // Save to localStorage and cookie (cookie allows server-side rendering of the theme)
         localStorage.setItem(THEME_KEY, theme);
+        document.cookie = THEME_KEY + '=' + theme + ';path=/;max-age=31536000;SameSite=Lax';
 
         // Apply theme to document
         applyTheme(theme);

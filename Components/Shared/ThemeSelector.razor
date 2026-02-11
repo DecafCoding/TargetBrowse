@@ -1,4 +1,5 @@
 ﻿@* Components/Shared/ThemeSelector.razor *@
+@using Microsoft.AspNetCore.Http
 @using TargetBrowse.Services
 @using TargetBrowse.Services.Interfaces
 @inject IThemeService ThemeService
@@ -33,6 +34,9 @@
     private string _currentTheme = "auto";
     private DotNetObjectReference<ThemeSelector>? _selfRef;
 
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
     private readonly List<ThemeOption> _themes = new()
     {
         new("Auto", "auto", "bi-circle-half"),
@@ -42,8 +46,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Get initial theme (uses cached value during pre-rendering)
-        _currentTheme = await ThemeService.GetThemeAsync();
+        // On SSR pages, ThemeService can't access localStorage — read from cookie instead
+        if (HttpContext?.Request.Cookies.TryGetValue("targetbrowse-theme", out var cookieTheme) == true
+            && !string.IsNullOrEmpty(cookieTheme))
+        {
+            _currentTheme = cookieTheme;
+        }
+        else
+        {
+            _currentTheme = await ThemeService.GetThemeAsync();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
