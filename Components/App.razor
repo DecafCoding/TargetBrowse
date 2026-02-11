@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" @ServerThemeAttributes>
 
 <head>
     <meta charset="utf-8" />
@@ -42,6 +42,7 @@
                 var THEME_KEY = 'targetbrowse-theme';
                 var h = document.documentElement;
                 localStorage.setItem(THEME_KEY, theme);
+                document.cookie = THEME_KEY + '=' + theme + ';path=/;max-age=31536000;SameSite=Lax';
                 if (theme === 'auto') {
                     h.removeAttribute('data-bs-theme');
                     h.classList.add('theme-auto');
@@ -63,6 +64,28 @@
                 dotNetRef.invokeMethodAsync('OnThemeChangedFromJs', e.detail);
             });
         };
+
+        // Re-apply theme after Blazor enhanced navigation completes.
+        // Enhanced nav patches the DOM without re-executing inline scripts,
+        // and may strip data-bs-theme from <html> during the diff.
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof Blazor !== 'undefined') {
+                Blazor.addEventListener('enhancedload', function() {
+                    var theme = localStorage.getItem('targetbrowse-theme') || 'auto';
+                    var h = document.documentElement;
+                    if (theme === 'auto') {
+                        h.removeAttribute('data-bs-theme');
+                        h.classList.add('theme-auto');
+                        h.classList.remove('theme-light', 'theme-dark');
+                    } else {
+                        h.setAttribute('data-bs-theme', theme);
+                        h.classList.remove('theme-auto');
+                        h.classList.add('theme-' + theme);
+                        h.classList.remove('theme-' + (theme === 'light' ? 'dark' : 'light'));
+                    }
+                });
+            }
+        });
     </script>
 </head>
 
@@ -86,4 +109,26 @@
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+
+    // Read theme from cookie so the server renders data-bs-theme on <html> directly.
+    // This avoids the issue where Blazor enhanced navigation patches the DOM without
+    // re-executing inline <script> tags, which would otherwise lose the theme.
+    private string? ServerTheme =>
+        HttpContext.Request.Cookies.TryGetValue("targetbrowse-theme", out var theme)
+            ? theme : null;
+
+    private MarkupString ServerThemeAttributes
+    {
+        get
+        {
+            var theme = ServerTheme;
+            // Only allow known values to prevent injection via tampered cookie
+            return theme switch
+            {
+                "light" => new MarkupString("data-bs-theme=\"light\" class=\"theme-light\""),
+                "dark" => new MarkupString("data-bs-theme=\"dark\" class=\"theme-dark\""),
+                _ => new MarkupString("class=\"theme-auto\"")
+            };
+        }
+    }
 }
