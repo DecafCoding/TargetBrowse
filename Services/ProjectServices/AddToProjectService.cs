@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 using TargetBrowse.Services.ProjectServices.Models;
 
 namespace TargetBrowse.Services.ProjectServices
@@ -17,17 +18,20 @@ namespace TargetBrowse.Services.ProjectServices
         private readonly ProjectSettings _projectSettings;
         private readonly ILogger<AddToProjectService> _logger;
         private readonly IVideoDataService _videoDataService;
+        private readonly ISharedYouTubeService _sharedYouTubeService;
 
         public AddToProjectService(
             ApplicationDbContext context,
             IOptions<ProjectSettings> projectSettings,
             ILogger<AddToProjectService> logger,
-            IVideoDataService videoDataService)
+            IVideoDataService videoDataService,
+            ISharedYouTubeService sharedYouTubeService)
         {
             _context = context;
             _projectSettings = projectSettings.Value;
             _logger = logger;
             _videoDataService = videoDataService;
+            _sharedYouTubeService = sharedYouTubeService;
         }
 
         /// <inheritdoc />
@@ -76,6 +80,12 @@ namespace TargetBrowse.Services.ProjectServices
             // If VideoInfo is provided, ensure video exists in database (create if needed)
             if (request.VideoInfo != null)
             {
+                // Enrich stats from YouTube API if missing (e.g. videos added from search results)
+                if (request.VideoInfo.ViewCount == 0 && request.VideoInfo.LikeCount == 0 && request.VideoInfo.Duration == 0)
+                {
+                    await EnrichVideoStatsAsync(request.VideoInfo);
+                }
+
                 try
                 {
                     var videoEntity = await _videoDataService.EnsureVideoExistsAsync(request.VideoInfo);
@@ -210,6 +220,42 @@ namespace TargetBrowse.Services.ProjectServices
             }
 
             return (true, null);
+        }
+
+        /// <summary>
+        /// Fetches full video details from YouTube API and merges stats into the VideoInfo.
+        /// Used when videos come from search results which only include snippet data.
+        /// </summary>
+        private async Task EnrichVideoStatsAsync(VideoInfo videoInfo)
+        {
+            try
+            {
+                var result = await _sharedYouTubeService.GetVideoDetailsByIdsAsync(
+                    new List<string> { videoInfo.YouTubeVideoId });
+
+                if (result.IsSuccess && result.Data?.Count > 0)
+                {
+                    var details = result.Data[0];
+                    videoInfo.ViewCount = details.ViewCount;
+                    videoInfo.LikeCount = details.LikeCount;
+                    videoInfo.CommentCount = details.CommentCount;
+                    videoInfo.Duration = details.Duration;
+
+                    _logger.LogInformation(
+                        "Enriched video {YouTubeVideoId} with stats: {Views} views, {Likes} likes, {Duration}s duration",
+                        videoInfo.YouTubeVideoId, details.ViewCount, details.LikeCount, details.Duration);
+                }
+                else
+                {
+                    _logger.LogWarning("Could not fetch stats for video {YouTubeVideoId}, saving with zero stats",
+                        videoInfo.YouTubeVideoId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enrich stats for video {YouTubeVideoId}, saving with zero stats",
+                    videoInfo.YouTubeVideoId);
+            }
         }
     }
 }
