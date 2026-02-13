@@ -2,19 +2,21 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using TargetBrowse.Services.ProjectServices;
 using TargetBrowse.Services.ProjectServices.Models;
+using TargetBrowse.Services.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace TargetBrowse.Components.Shared
 {
     /// <summary>
-    /// Modal component for adding a video to one or more projects.
-    /// Shared component used across multiple features.
+    /// Modal component for adding a video to a project.
+    /// User clicks a project card to immediately add the video and close the modal.
     /// </summary>
     public partial class AddToProjectModal : ComponentBase
     {
         [Inject] private IAddToProjectService AddToProjectService { get; set; } = default!;
         [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
         [Inject] private IOptions<ProjectSettings> ProjectSettings { get; set; } = default!;
+        [Inject] private IMessageCenterService MessageCenter { get; set; } = default!;
         [Inject] private ILogger<AddToProjectModal> Logger { get; set; } = default!;
 
         /// <summary>
@@ -23,7 +25,7 @@ namespace TargetBrowse.Components.Shared
         [Parameter] public bool IsVisible { get; set; }
 
         /// <summary>
-        /// The ID of the video to add to projects.
+        /// The ID of the video to add to a project.
         /// Required if VideoInfo is not provided.
         /// </summary>
         [Parameter] public Guid VideoId { get; set; }
@@ -40,21 +42,22 @@ namespace TargetBrowse.Components.Shared
         [Parameter] public EventCallback OnClose { get; set; }
 
         /// <summary>
-        /// Callback when the video is successfully added to projects.
+        /// Callback when the video is successfully added to a project.
         /// Passes the result with details about the operation.
         /// </summary>
         [Parameter] public EventCallback<AddToProjectResult> OnSuccess { get; set; }
 
         /// <summary>
-        /// Whether to allow clicking backdrop to close modal.
+        /// Whether to allow clicking the backdrop to close the modal.
         /// </summary>
         [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
 
         private List<ProjectInfo> Projects { get; set; } = new();
-        private HashSet<Guid> SelectedProjectIds { get; set; } = new();
+
+        // Tracks which project card is currently being submitted — null means idle
+        private Guid? SubmittingProjectId { get; set; }
+
         private bool IsLoading { get; set; }
-        private bool IsSubmitting { get; set; }
-        private string? ErrorMessage { get; set; }
         private string? CurrentUserId { get; set; }
         private int MaxVideosPerProject => ProjectSettings.Value.MaxVideosPerProject;
 
@@ -70,8 +73,8 @@ namespace TargetBrowse.Components.Shared
             else if (!IsVisible)
             {
                 // Reset state when modal is closed
-                SelectedProjectIds.Clear();
-                ErrorMessage = null;
+                Projects.Clear();
+                SubmittingProjectId = null;
             }
         }
 
@@ -83,20 +86,18 @@ namespace TargetBrowse.Components.Shared
             try
             {
                 IsLoading = true;
-                ErrorMessage = null;
                 StateHasChanged();
 
-                // Get current user ID
                 var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
                 CurrentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
                 if (string.IsNullOrEmpty(CurrentUserId))
                 {
-                    ErrorMessage = "Unable to identify current user.";
+                    await MessageCenter.ShowErrorAsync("Unable to identify current user.");
+                    await CloseModal();
                     return;
                 }
 
-                // Load projects with video context
                 Projects = await AddToProjectService.GetUserProjectsAsync(CurrentUserId, VideoId);
 
                 Logger.LogInformation("Loaded {Count} projects for user {UserId}", Projects.Count, CurrentUserId);
@@ -104,7 +105,8 @@ namespace TargetBrowse.Components.Shared
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error loading projects for user {UserId}", CurrentUserId);
-                ErrorMessage = "Failed to load projects. Please try again.";
+                await MessageCenter.ShowErrorAsync("Failed to load projects. Please try again.");
+                await CloseModal();
             }
             finally
             {
@@ -114,44 +116,24 @@ namespace TargetBrowse.Components.Shared
         }
 
         /// <summary>
-        /// Toggles a project's selection state.
+        /// Handles a project card click — immediately adds the video to the selected project.
         /// </summary>
-        private void ToggleProjectSelection(Guid projectId, ChangeEventArgs e)
+        private async Task HandleProjectClick(Guid projectId)
         {
-            var isChecked = e.Value is bool value && value;
-
-            if (isChecked)
-            {
-                SelectedProjectIds.Add(projectId);
-            }
-            else
-            {
-                SelectedProjectIds.Remove(projectId);
-            }
-
-            ErrorMessage = null;
-            StateHasChanged();
-        }
-
-        /// <summary>
-        /// Handles form submission to add video to selected projects.
-        /// </summary>
-        private async Task HandleSubmit()
-        {
-            if (IsSubmitting || !SelectedProjectIds.Any() || string.IsNullOrEmpty(CurrentUserId))
+            // Guard: ignore clicks while another submission is in flight
+            if (SubmittingProjectId.HasValue || string.IsNullOrEmpty(CurrentUserId))
                 return;
 
             try
             {
-                IsSubmitting = true;
-                ErrorMessage = null;
+                SubmittingProjectId = projectId;
                 StateHasChanged();
 
                 var request = new AddToProjectRequest
                 {
                     VideoId = VideoId,
                     VideoInfo = VideoInfo,
-                    ProjectIds = SelectedProjectIds.ToList(),
+                    ProjectIds = new List<Guid> { projectId },
                     UserId = CurrentUserId
                 };
 
@@ -159,51 +141,46 @@ namespace TargetBrowse.Components.Shared
 
                 if (result.Success)
                 {
-                    Logger.LogInformation("Successfully added video {VideoId} to {Count} projects",
-                        VideoId, result.AddedToProjectsCount);
+                    Logger.LogInformation("Successfully added video {VideoId} to project {ProjectId}",
+                        VideoId, projectId);
 
-                    // Notify parent component of success
                     await OnSuccess.InvokeAsync(result);
-
-                    // Close modal
                     await CloseModal();
                 }
                 else
                 {
-                    ErrorMessage = result.ErrorMessage ?? "Failed to add video to projects.";
+                    var errorMessage = result.ProjectErrors.Any()
+                        ? string.Join("; ", result.ProjectErrors.Values.Take(3))
+                        : result.ErrorMessage ?? "Failed to add video to project.";
 
-                    // Show specific errors if available
-                    if (result.ProjectErrors.Any())
-                    {
-                        var errorDetails = string.Join("; ", result.ProjectErrors.Values.Take(3));
-                        ErrorMessage = $"{ErrorMessage} Details: {errorDetails}";
-                    }
+                    Logger.LogWarning("Failed to add video {VideoId} to project {ProjectId}: {Error}",
+                        VideoId, projectId, errorMessage);
 
-                    Logger.LogWarning("Failed to add video {VideoId} to some projects: {Error}",
-                        VideoId, ErrorMessage);
+                    await MessageCenter.ShowErrorAsync(errorMessage);
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error adding video {VideoId} to projects", VideoId);
-                ErrorMessage = "An unexpected error occurred. Please try again.";
+                Logger.LogError(ex, "Error adding video {VideoId} to project {ProjectId}", VideoId, projectId);
+                await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
             }
             finally
             {
-                IsSubmitting = false;
+                SubmittingProjectId = null;
                 StateHasChanged();
             }
         }
 
         /// <summary>
-        /// Closes the modal.
+        /// Closes the modal and resets state.
         /// </summary>
         private async Task CloseModal()
         {
-            if (IsSubmitting) return;
+            // Don't allow closing while a submission is in flight
+            if (SubmittingProjectId.HasValue) return;
 
-            SelectedProjectIds.Clear();
-            ErrorMessage = null;
+            Projects.Clear();
+            SubmittingProjectId = null;
             await OnClose.InvokeAsync();
         }
 
@@ -212,7 +189,7 @@ namespace TargetBrowse.Components.Shared
         /// </summary>
         private async Task HandleBackdropClick()
         {
-            if (CloseOnBackdropClick && !IsSubmitting && !IsLoading)
+            if (CloseOnBackdropClick && !SubmittingProjectId.HasValue && !IsLoading)
             {
                 await CloseModal();
             }
