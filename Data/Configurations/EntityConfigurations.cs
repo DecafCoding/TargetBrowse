@@ -333,6 +333,40 @@ namespace TargetBrowse.Data.Configurations
     }
 
     /// <summary>
+    /// Entity configuration for TopicVideoEntity junction table.
+    /// Caches topic-to-video relationships to reduce YouTube API calls.
+    /// </summary>
+    public class TopicVideoEntityConfiguration : IEntityTypeConfiguration<TopicVideoEntity>
+    {
+        public void Configure(EntityTypeBuilder<TopicVideoEntity> builder)
+        {
+            builder.ToTable("TopicVideos");
+
+            // Configure relationships
+            builder.HasOne(tv => tv.Topic)
+                   .WithMany(t => t.TopicVideos)
+                   .HasForeignKey(tv => tv.TopicId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(tv => tv.Video)
+                   .WithMany(v => v.TopicVideos)
+                   .HasForeignKey(tv => tv.VideoId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            // Prevent duplicate topic-video combinations
+            builder.HasIndex(tv => new { tv.TopicId, tv.VideoId })
+                   .IsUnique()
+                   .HasDatabaseName("IX_TopicVideos_TopicId_VideoId");
+
+            // Configure properties
+            builder.Property(tv => tv.TopicId).IsRequired();
+            builder.Property(tv => tv.VideoId).IsRequired();
+            builder.Property(tv => tv.RelevanceScore).IsRequired();
+            builder.Property(tv => tv.MatchedKeywords).HasMaxLength(500);
+        }
+    }
+
+    /// <summary>
     /// Entity configuration for ModelEntity.
     /// Configures AI models with provider and cost tracking.
     /// </summary>

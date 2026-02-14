@@ -98,5 +98,26 @@ namespace TargetBrowse.Services.DataServices
                 throw;
             }
         }
+
+        /// <summary>
+        /// Updates the LastCheckedDate on a topic after a successful API search.
+        /// </summary>
+        public async Task UpdateLastCheckedDateAsync(Guid topicId, DateTime checkedDate)
+        {
+            try
+            {
+                var topic = await _context.Topics.FindAsync(topicId);
+                if (topic != null)
+                {
+                    topic.LastCheckedDate = checkedDate;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating LastCheckedDate for topic {TopicId}", topicId);
+                throw;
+            }
+        }
     }
 }

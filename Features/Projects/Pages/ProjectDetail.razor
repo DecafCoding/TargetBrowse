@@ -316,6 +316,37 @@
                     </div>
                 </div>
 
+                @* Add Video by URL *@
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Add Video by URL</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" placeholder="YouTube URL"
+                                   @bind="YouTubeUrlInput" @bind:event="oninput"
+                                   @onkeydown="HandleUrlKeyDown"
+                                   disabled="@IsAddingByUrl" />
+                            <button class="btn btn-primary" type="button"
+                                    @onclick="HandleAddByUrl"
+                                    disabled="@(IsAddingByUrl || string.IsNullOrWhiteSpace(YouTubeUrlInput))">
+                                @if (IsAddingByUrl)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-plus-lg"></i>
+                                }
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(AddByUrlError))
+                        {
+                            <small class="text-danger mt-1 d-block">@AddByUrlError</small>
+                        }
+                    </div>
+                </div>
+
                 @* Message Center *@
                 <MessageSidebar />
             </div>
