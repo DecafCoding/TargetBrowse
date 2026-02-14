@@ -26,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SummaryEntity> Summaries { get; set; }
     public DbSet<SummaryGenerationRequestEntity> SummaryGenerationRequests { get; set; }
     public DbSet<SuggestionTopicEntity> SuggestionTopics { get; set; }
+    public DbSet<TopicVideoEntity> TopicVideos { get; set; }
 
     // AI Tracking DbSets
     public DbSet<ModelEntity> Models { get; set; }
@@ -57,6 +58,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new SummaryEntityConfiguration());
         builder.ApplyConfiguration(new SummaryGenerationRequestEntityConfiguration());
         builder.ApplyConfiguration(new SuggestionTopicEntityConfiguration());
+        builder.ApplyConfiguration(new TopicVideoEntityConfiguration());
 
         // Apply AI tracking configurations
         builder.ApplyConfiguration(new ModelEntityConfiguration());

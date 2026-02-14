@@ -75,9 +75,9 @@ else
                             <button type="button"
                                     class="btn btn-primary btn-sm"
                                     @onclick="RefreshVideos"
-                                    disabled="@(TopicVideosListComponent?.IsLoading ?? false)"
+                                    disabled="@IsRefreshing"
                                     title="Search for new videos">
-                                @if (TopicVideosListComponent?.IsLoading ?? false)
+                                @if (IsRefreshing)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                                 }
@@ -85,10 +85,38 @@ else
                                 {
                                     <i class="bi bi-search me-2"></i>
                                 }
-                                @((TopicVideosListComponent?.IsLoading ?? false) ? "Searching..." : "Search YouTube")
+                                @(IsRefreshing ? "Searching..." : "Search YouTube")
                             </button>
                         </div>
                     }
+                </div>
+            </div>
+
+            <!-- About Topic Video Search -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        About Topic Video Search
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div class="mb-2">
+                        <strong class="small">Last Updated:</strong>
+                        <span class="small text-muted">@CurrentTopic?.LastCheckedDateDisplay</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong class="small">Check Frequency:</strong>
+                        <span class="small text-muted">@CurrentTopic?.CheckFrequencyDisplay</span>
+                    </div>
+                    <hr class="my-2" />
+                    <div class="mb-2">
+                        <strong class="small">Search Scope:</strong>
+                        <span class="small text-muted">Past 12 Months</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="small">Age:</strong>
+                        <span class="small text-muted">Newest First</span>
+                    </div>
                 </div>
             </div>
 
@@ -103,45 +131,6 @@ else
                              TopicName="@CurrentTopic?.Name"
                              MaxResults="50"
                              OnVideoAdded="@HandleVideoAdded" />
-        </div>
-    </div>
-}
-
-<!-- Help Section -->
-@if (!HasError && CurrentTopic != null)
-{
-    <div class="row mt-5">
-        <div class="col-lg-8 offset-lg-2">
-            <div class="card border-0">
-                <div class="card-body">
-                    <h6 class="card-title mb-3">
-                        <i class="bi bi-lightbulb me-2 text-warning"></i>
-                        About Topic Video Search
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-2">
-                                <strong>Search Scope:</strong>
-                                <span class="text-muted small">Past 12 months of YouTube content</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Relevance:</strong>
-                                <span class="text-muted small">Videos ranked by topic keyword matching</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-2">
-                                <strong>Save Videos:</strong>
-                                <span class="text-muted small">Add interesting videos to your library</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Fresh Content:</strong>
-                                <span class="text-muted small">Click "Search YouTube" for latest results</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 }

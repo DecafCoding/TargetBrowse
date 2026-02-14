@@ -1,22 +1,26 @@
+using Microsoft.EntityFrameworkCore;
+using TargetBrowse.Data;
+using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.TopicVideos.Models;
 using TargetBrowse.Features.Topics.Services;
-using TargetBrowse.Services.Models;
 using TargetBrowse.Features.Videos.Services;
-using TargetBrowse.Data.Entities;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.Models;
 
 namespace TargetBrowse.Features.TopicVideos.Services;
 
 /// <summary>
 /// Service implementation for topic-based video discovery.
-/// Updated to use shared TopicDataService for improved performance and consistency.
+/// Uses DB-first caching to reduce YouTube API quota usage.
 /// </summary>
 public class TopicVideosService : ITopicVideosService
 {
     private readonly ISharedYouTubeService _youTubeService;
-    private readonly ITopicDataService _topicDataService; // Use data service instead of business service
+    private readonly ITopicDataService _topicDataService;
+    private readonly IVideoDataService _videoDataService;
     private readonly IVideoService _videoService;
     private readonly IMessageCenterService _messageCenterService;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly ILogger<TopicVideosService> _logger;
 
     // Constants for video discovery
@@ -25,30 +29,32 @@ public class TopicVideosService : ITopicVideosService
 
     public TopicVideosService(
         ISharedYouTubeService youTubeService,
-        ITopicDataService topicDataService, // Inject data service
+        ITopicDataService topicDataService,
+        IVideoDataService videoDataService,
         IVideoService videoService,
         IMessageCenterService messageCenterService,
+        IDbContextFactory<ApplicationDbContext> contextFactory,
         ILogger<TopicVideosService> logger)
     {
         _youTubeService = youTubeService;
-        _topicDataService = topicDataService; // Use data service
+        _topicDataService = topicDataService;
+        _videoDataService = videoDataService;
         _videoService = videoService;
         _messageCenterService = messageCenterService;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
     /// <summary>
-    /// Gets recent videos from YouTube for a specific topic.
-    /// Now uses TopicDataService for more efficient topic retrieval.
+    /// Gets recent videos for a topic. Checks DB cache first; calls YouTube API only if stale.
     /// </summary>
-    public async Task<List<TopicVideoDisplayModel>> GetRecentVideosAsync(Guid topicId, string currentUserId, int maxResults = DEFAULT_MAX_RESULTS)
+    public async Task<List<TopicVideoDisplayModel>> GetRecentVideosAsync(Guid topicId, string currentUserId, int maxResults = DEFAULT_MAX_RESULTS, bool forceRefresh = false)
     {
         try
         {
-            _logger.LogInformation("Getting recent videos for topic {TopicId} with max results {MaxResults}",
-                topicId, maxResults);
+            _logger.LogInformation("Getting recent videos for topic {TopicId} (forceRefresh: {ForceRefresh})",
+                topicId, forceRefresh);
 
-            // Get specific topic using data service for better performance
             var topic = await _topicDataService.GetTopicByIdAsync(topicId, currentUserId);
 
             if (topic == null)
@@ -58,7 +64,22 @@ public class TopicVideosService : ITopicVideosService
                 return new List<TopicVideoDisplayModel>();
             }
 
-            return await GetRecentVideosByNameAsync(topic.Name, maxResults);
+            bool shouldSearch = forceRefresh || ShouldSearchYouTube(topic.CheckDays, topic.LastCheckedDate);
+
+            if (shouldSearch)
+            {
+                var results = await SearchAndCacheVideosAsync(topic, currentUserId, maxResults);
+
+                // If API call returned results, return them
+                if (results.Any())
+                    return results;
+
+                // If API failed (quota exceeded, error), fall back to cached results
+                _logger.LogInformation("API returned no results for topic {TopicId}, falling back to cache", topicId);
+            }
+
+            // Return cached results from DB
+            return await GetCachedVideosAsync(topicId, topic.Name, currentUserId);
         }
         catch (Exception ex)
         {
@@ -69,7 +90,211 @@ public class TopicVideosService : ITopicVideosService
     }
 
     /// <summary>
+    /// Determines if a YouTube API search is needed based on CheckDays and LastCheckedDate.
+    /// </summary>
+    private bool ShouldSearchYouTube(int checkDays, DateTime? lastCheckedDate)
+    {
+        if (!lastCheckedDate.HasValue)
+            return true;
+
+        var daysSinceCheck = (DateTime.UtcNow - lastCheckedDate.Value).TotalDays;
+        return daysSinceCheck >= checkDays;
+    }
+
+    /// <summary>
+    /// Searches YouTube, saves results to DB, and returns display models.
+    /// </summary>
+    private async Task<List<TopicVideoDisplayModel>> SearchAndCacheVideosAsync(TopicEntity topic, string currentUserId, int maxResults)
+    {
+        var publishedAfter = DateTime.UtcNow.AddYears(-LOOKBACK_YEARS);
+        var youTubeResult = await _youTubeService.SearchVideosByTopicAsync(topic.Name, publishedAfter);
+
+        if (!youTubeResult.IsSuccess)
+        {
+            _logger.LogWarning("YouTube search failed for topic '{TopicName}': {Error}",
+                topic.Name, youTubeResult.ErrorMessage);
+
+            if (youTubeResult.IsQuotaExceeded)
+            {
+                await _messageCenterService.ShowApiLimitAsync("YouTube API", DateTime.UtcNow.Date.AddDays(1));
+            }
+            else
+            {
+                await _messageCenterService.ShowErrorAsync($"Failed to search YouTube: {youTubeResult.ErrorMessage}");
+            }
+
+            return new List<TopicVideoDisplayModel>();
+        }
+
+        var videos = youTubeResult.Data ?? new List<VideoInfo>();
+
+        if (!videos.Any())
+        {
+            _logger.LogInformation("No videos found for topic '{TopicName}'", topic.Name);
+            await _messageCenterService.ShowInfoAsync($"No recent videos found for '{topic.Name}'. Try adjusting your topic or searching for a broader term.");
+            // Still update LastCheckedDate so we don't re-query immediately
+            await _topicDataService.UpdateLastCheckedDateAsync(topic.Id, DateTime.UtcNow);
+            return new List<TopicVideoDisplayModel>();
+        }
+
+        // Get user's library video IDs for IsInLibrary check
+        var libraryVideoIds = await GetUserLibraryVideoIdsAsync(currentUserId);
+
+        // Save videos to DB and create junction records
+        var topicVideos = new List<TopicVideoDisplayModel>();
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        foreach (var video in videos)
+        {
+            try
+            {
+                // Ensure video exists in Videos table (deduplicates with suggestions, etc.)
+                var videoEntity = await _videoDataService.EnsureVideoExistsAsync(video);
+
+                // Calculate relevance
+                var (relevanceScore, matchedKeywords) = CalculateRelevanceScoreInternal(
+                    video.Title, video.Description ?? string.Empty, topic.Name);
+
+                // Create or update junction record
+                var existingJunction = await context.TopicVideos
+                    .FirstOrDefaultAsync(tv => tv.TopicId == topic.Id && tv.VideoId == videoEntity.Id);
+
+                if (existingJunction == null)
+                {
+                    var junction = new TopicVideoEntity
+                    {
+                        TopicId = topic.Id,
+                        VideoId = videoEntity.Id,
+                        RelevanceScore = relevanceScore,
+                        MatchedKeywords = string.Join(",", matchedKeywords)
+                    };
+                    context.TopicVideos.Add(junction);
+                }
+                else
+                {
+                    // Update cached scores on refresh
+                    existingJunction.RelevanceScore = relevanceScore;
+                    existingJunction.MatchedKeywords = string.Join(",", matchedKeywords);
+                }
+
+                var displayModel = new TopicVideoDisplayModel
+                {
+                    YouTubeVideoId = video.YouTubeVideoId,
+                    Title = video.Title,
+                    Description = video.Description ?? "No description available",
+                    ThumbnailUrl = video.ThumbnailUrl,
+                    PublishedAt = video.PublishedAt,
+                    ChannelId = video.ChannelId,
+                    ChannelTitle = video.ChannelName,
+                    ViewCount = (ulong?)video.ViewCount,
+                    Duration = ConvertSecondsToISO8601(video.Duration),
+                    TopicName = topic.Name,
+                    TopicId = topic.Id,
+                    RelevanceScore = relevanceScore,
+                    MatchedKeywords = matchedKeywords,
+                    IsInLibrary = libraryVideoIds.Contains(videoEntity.YouTubeVideoId),
+                    WatchStatus = WatchStatus.NotWatched
+                };
+
+                topicVideos.Add(displayModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process video {VideoId} for topic {TopicId}",
+                    video.YouTubeVideoId, topic.Id);
+            }
+        }
+
+        await context.SaveChangesAsync();
+        await _topicDataService.UpdateLastCheckedDateAsync(topic.Id, DateTime.UtcNow);
+
+        var sortedVideos = topicVideos
+            .OrderByDescending(v => v.PublishedAt)
+            .ToList();
+
+        _logger.LogInformation("Found {Count} videos for topic '{TopicName}' with average relevance {AvgRelevance:F1}",
+            sortedVideos.Count, topic.Name, sortedVideos.Any() ? sortedVideos.Average(v => v.RelevanceScore) : 0);
+
+        var highRelevanceCount = sortedVideos.Count(v => v.IsHighRelevance);
+        var messageText = highRelevanceCount > 0
+            ? $"Found {sortedVideos.Count} videos for '{topic.Name}' ({highRelevanceCount} highly relevant)"
+            : $"Found {sortedVideos.Count} videos for '{topic.Name}'";
+
+        await _messageCenterService.ShowSuccessAsync(messageText);
+
+        return sortedVideos;
+    }
+
+    /// <summary>
+    /// Returns cached topic videos from the DB junction table.
+    /// </summary>
+    private async Task<List<TopicVideoDisplayModel>> GetCachedVideosAsync(Guid topicId, string topicName, string currentUserId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var cachedRecords = await context.TopicVideos
+            .Where(tv => tv.TopicId == topicId)
+            .Include(tv => tv.Video)
+                .ThenInclude(v => v.Channel)
+            .ToListAsync();
+
+        if (!cachedRecords.Any())
+        {
+            _logger.LogInformation("No cached videos for topic {TopicId}", topicId);
+            return new List<TopicVideoDisplayModel>();
+        }
+
+        var libraryVideoIds = await GetUserLibraryVideoIdsAsync(currentUserId);
+
+        var displayModels = cachedRecords.Select(tv => new TopicVideoDisplayModel
+        {
+            YouTubeVideoId = tv.Video.YouTubeVideoId,
+            Title = tv.Video.Title,
+            Description = tv.Video.Description,
+            ThumbnailUrl = tv.Video.ThumbnailUrl,
+            PublishedAt = tv.Video.PublishedAt,
+            ChannelId = tv.Video.Channel.YouTubeChannelId,
+            ChannelTitle = tv.Video.Channel.Name,
+            ViewCount = (ulong?)tv.Video.ViewCount,
+            Duration = ConvertSecondsToISO8601(tv.Video.Duration),
+            TopicName = topicName,
+            TopicId = topicId,
+            RelevanceScore = tv.RelevanceScore,
+            MatchedKeywords = string.IsNullOrEmpty(tv.MatchedKeywords)
+                ? new List<string>()
+                : tv.MatchedKeywords.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+            IsInLibrary = libraryVideoIds.Contains(tv.Video.YouTubeVideoId),
+            WatchStatus = WatchStatus.NotWatched
+        })
+        .OrderByDescending(v => v.PublishedAt)
+        .ToList();
+
+        _logger.LogInformation("Loaded {Count} cached videos for topic '{TopicName}'", displayModels.Count, topicName);
+        await _messageCenterService.ShowSuccessAsync($"Loaded {displayModels.Count} cached videos for '{topicName}'");
+
+        return displayModels;
+    }
+
+    /// <summary>
+    /// Gets YouTube video IDs that are in the user's library.
+    /// </summary>
+    private async Task<HashSet<string>> GetUserLibraryVideoIdsAsync(string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var ids = await context.UserVideos
+            .Where(uv => uv.UserId == userId)
+            .Include(uv => uv.Video)
+            .Select(uv => uv.Video.YouTubeVideoId)
+            .ToListAsync();
+
+        return ids.ToHashSet();
+    }
+
+    /// <summary>
     /// Gets recent videos from YouTube for a specific topic by name.
+    /// No caching — used for ad-hoc searches without a topic entity.
     /// </summary>
     public async Task<List<TopicVideoDisplayModel>> GetRecentVideosByNameAsync(string topicName, int maxResults = DEFAULT_MAX_RESULTS)
     {
@@ -78,10 +303,7 @@ public class TopicVideosService : ITopicVideosService
             _logger.LogInformation("Searching YouTube for topic '{TopicName}' with max results {MaxResults}",
                 topicName, maxResults);
 
-            // Calculate the lookback date (1 year from now)
             var publishedAfter = DateTime.UtcNow.AddYears(-LOOKBACK_YEARS);
-
-            // Search YouTube using the shared service
             var youTubeResult = await _youTubeService.SearchVideosByTopicAsync(topicName, publishedAfter);
 
             if (!youTubeResult.IsSuccess)
@@ -110,19 +332,17 @@ public class TopicVideosService : ITopicVideosService
                 return new List<TopicVideoDisplayModel>();
             }
 
-            // Convert to TopicVideoDisplayModel with relevance scoring
             var topicVideos = new List<TopicVideoDisplayModel>();
 
             foreach (var video in videos)
             {
-                var (relevanceScore, matchedKeywords) = await CalculateRelevanceScore(
+                var (relevanceScore, matchedKeywords) = CalculateRelevanceScoreInternal(
                     video.Title,
                     video.Description ?? string.Empty,
                     topicName);
 
                 var topicVideo = new TopicVideoDisplayModel
                 {
-                    // Basic video information
                     YouTubeVideoId = video.YouTubeVideoId,
                     Title = video.Title,
                     Description = video.Description ?? "No description available",
@@ -132,13 +352,9 @@ public class TopicVideosService : ITopicVideosService
                     ChannelTitle = video.ChannelName,
                     ViewCount = (ulong?)video.ViewCount,
                     Duration = ConvertSecondsToISO8601(video.Duration),
-
-                    // Topic-specific information
                     TopicName = topicName,
                     RelevanceScore = relevanceScore,
                     MatchedKeywords = matchedKeywords,
-
-                    // Default values for inherited properties
                     IsInLibrary = false,
                     WatchStatus = WatchStatus.NotWatched
                 };
@@ -146,16 +362,13 @@ public class TopicVideosService : ITopicVideosService
                 topicVideos.Add(topicVideo);
             }
 
-            // Sort by relevance score (highest first), then by publish date (newest first)
             var sortedVideos = topicVideos
-                .OrderByDescending(v => v.RelevanceScore)
-                .ThenByDescending(v => v.PublishedAt)
+                .OrderByDescending(v => v.PublishedAt)
                 .ToList();
 
             _logger.LogInformation("Found {Count} videos for topic '{TopicName}' with average relevance {AvgRelevance:F1}",
                 sortedVideos.Count, topicName, sortedVideos.Any() ? sortedVideos.Average(v => v.RelevanceScore) : 0);
 
-            // Show success message to user
             var highRelevanceCount = sortedVideos.Count(v => v.IsHighRelevance);
             var messageText = highRelevanceCount > 0
                 ? $"Found {sortedVideos.Count} videos for '{topicName}' ({highRelevanceCount} highly relevant)"
@@ -176,29 +389,34 @@ public class TopicVideosService : ITopicVideosService
     /// <summary>
     /// Calculates relevance score for a video based on topic matching.
     /// </summary>
-    public async Task<(double Score, List<string> MatchedKeywords)> CalculateRelevanceScore(
+    public Task<(double Score, List<string> MatchedKeywords)> CalculateRelevanceScore(
+        string videoTitle, string videoDescription, string topicName)
+    {
+        var result = CalculateRelevanceScoreInternal(videoTitle, videoDescription, topicName);
+        return Task.FromResult(result);
+    }
+
+    private (double Score, List<string> MatchedKeywords) CalculateRelevanceScoreInternal(
         string videoTitle, string videoDescription, string topicName)
     {
         try
         {
-            // Basic keyword matching algorithm
             var topicWords = topicName.ToLowerInvariant()
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Where(word => word.Length > 2) // Ignore short words like "a", "an", "the"
+                .Where(word => word.Length > 2)
                 .ToList();
 
             if (!topicWords.Any())
             {
-                return (5.0, new List<string>()); // Neutral score if no meaningful words
+                return (5.0, new List<string>());
             }
 
             var titleLower = videoTitle.ToLowerInvariant();
             var descriptionLower = videoDescription.ToLowerInvariant();
             var matchedKeywords = new List<string>();
 
-            double score = 5.0; // Base neutral score
+            double score = 5.0;
             int titleMatches = 0;
-            int descriptionMatches = 0;
 
             foreach (var word in topicWords)
             {
@@ -209,32 +427,28 @@ public class TopicVideosService : ITopicVideosService
                 {
                     titleMatches++;
                     matchedKeywords.Add(word);
-                    score += 1.5; // Title matches are more valuable
+                    score += 1.5;
                 }
                 else if (foundInDescription)
                 {
-                    descriptionMatches++;
                     if (!matchedKeywords.Contains(word))
                     {
                         matchedKeywords.Add(word);
                     }
-                    score += 0.5; // Description matches are less valuable
+                    score += 0.5;
                 }
             }
 
-            // Bonus for multiple word matches
             if (titleMatches > 1)
             {
                 score += titleMatches * 0.5;
             }
 
-            // Exact phrase match bonus
             if (titleLower.Contains(topicName.ToLowerInvariant()))
             {
                 score += 2.0;
             }
 
-            // Cap the score at 10.0
             score = Math.Min(score, 10.0);
 
             return (score, matchedKeywords);
@@ -243,10 +457,8 @@ public class TopicVideosService : ITopicVideosService
         {
             _logger.LogError(ex, "Error calculating relevance score for video '{Title}' and topic '{Topic}'",
                 videoTitle, topicName);
-            return (5.0, new List<string>()); // Return neutral score on error
+            return (5.0, new List<string>());
         }
-
-        await Task.CompletedTask; // This method is synchronous but interface requires async
     }
 
     /// <summary>
@@ -273,13 +485,12 @@ public class TopicVideosService : ITopicVideosService
         }
         catch
         {
-            return "PT0S"; // Return zero duration on error
+            return "PT0S";
         }
     }
 
     /// <summary>
     /// Checks if the topic exists and the user has access to it.
-    /// Updated to use TopicDataService for direct database access.
     /// </summary>
     public async Task<bool> ValidateTopicAccess(string userId, Guid topicId)
     {
@@ -290,7 +501,6 @@ public class TopicVideosService : ITopicVideosService
                 return false;
             }
 
-            // Use data service for efficient single topic lookup
             var topic = await _topicDataService.GetTopicByIdAsync(topicId, userId);
             return topic != null;
         }
@@ -304,7 +514,6 @@ public class TopicVideosService : ITopicVideosService
 
     /// <summary>
     /// Gets topic information for display purposes.
-    /// Updated to use TopicDataService and convert to display model.
     /// </summary>
     public async Task<Topics.Models.TopicDisplayModel?> GetTopicAsync(string userId, Guid topicId)
     {
@@ -315,20 +524,20 @@ public class TopicVideosService : ITopicVideosService
                 return null;
             }
 
-            // Get topic using data service
             var topicEntity = await _topicDataService.GetTopicByIdAsync(topicId, userId);
-            
+
             if (topicEntity == null)
             {
                 return null;
             }
 
-            // Convert entity to display model
             return new Topics.Models.TopicDisplayModel
             {
                 Id = topicEntity.Id,
                 Name = topicEntity.Name,
-                CreatedAt = topicEntity.CreatedAt
+                CreatedAt = topicEntity.CreatedAt,
+                LastCheckedDate = topicEntity.LastCheckedDate,
+                CheckDays = topicEntity.CheckDays
             };
         }
         catch (Exception ex)

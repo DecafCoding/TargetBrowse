@@ -1,8 +1,12 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using TargetBrowse.Features.Projects.Models;
 using TargetBrowse.Features.Projects.Services;
 using TargetBrowse.Services.Interfaces;
+using TargetBrowse.Services.ProjectServices;
+using TargetBrowse.Services.ProjectServices.Models;
 using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.Projects.Pages;
@@ -32,6 +36,12 @@ public partial class ProjectDetail : ComponentBase
     [Inject]
     private ILogger<ProjectDetail> Logger { get; set; } = default!;
 
+    [Inject]
+    private IAddToProjectService AddToProjectService { get; set; } = default!;
+
+    [Inject]
+    private ISharedYouTubeService SharedYouTubeService { get; set; } = default!;
+
     #endregion
 
     #region Route Parameters
@@ -60,6 +70,11 @@ public partial class ProjectDetail : ComponentBase
     private bool IsRemovingVideo = false;
     private ProjectEditViewModel? ProjectToEdit = null;
     private ProjectDeleteViewModel? ProjectToDelete = null;
+
+    // Add by URL state
+    private string YouTubeUrlInput = string.Empty;
+    private bool IsAddingByUrl = false;
+    private string? AddByUrlError = null;
 
     #endregion
 
@@ -438,6 +453,96 @@ public partial class ProjectDetail : ComponentBase
             IsGeneratingGuide = false;
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region Add Video by URL
+
+    private async Task HandleUrlKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(YouTubeUrlInput) && !IsAddingByUrl)
+        {
+            await HandleAddByUrl();
+        }
+    }
+
+    private async Task HandleAddByUrl()
+    {
+        if (string.IsNullOrWhiteSpace(YouTubeUrlInput) || string.IsNullOrEmpty(CurrentUserId) || Project == null)
+            return;
+
+        AddByUrlError = null;
+
+        var videoId = ExtractYouTubeVideoId(YouTubeUrlInput.Trim());
+        if (string.IsNullOrEmpty(videoId))
+        {
+            AddByUrlError = "Invalid YouTube URL.";
+            return;
+        }
+
+        try
+        {
+            IsAddingByUrl = true;
+            StateHasChanged();
+
+            // Fetch video details from YouTube API
+            var detailsResult = await SharedYouTubeService.GetVideoDetailsByIdsAsync(new List<string> { videoId });
+            if (!detailsResult.IsSuccess || detailsResult.Data == null || detailsResult.Data.Count == 0)
+            {
+                AddByUrlError = "Could not find video. Check the URL and try again.";
+                return;
+            }
+
+            var videoInfo = detailsResult.Data[0];
+
+            // Add to the current project via the shared service
+            var request = new AddToProjectRequest
+            {
+                VideoInfo = videoInfo,
+                ProjectIds = new List<Guid> { Id },
+                UserId = CurrentUserId
+            };
+
+            var result = await AddToProjectService.AddVideoToProjectsAsync(request);
+
+            if (result.Success && result.AddedToProjectsCount > 0)
+            {
+                YouTubeUrlInput = string.Empty;
+                await MessageCenter.ShowSuccessAsync($"'{videoInfo.Title}' added to project.");
+                await LoadProjectAsync();
+            }
+            else
+            {
+                AddByUrlError = result.ErrorMessage ?? result.ProjectErrors.Values.FirstOrDefault() ?? "Failed to add video.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding video by URL to project {ProjectId}", Id);
+            AddByUrlError = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            IsAddingByUrl = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Extracts the video ID from various YouTube URL formats.
+    /// </summary>
+    private static string? ExtractYouTubeVideoId(string input)
+    {
+        // Handle plain video ID (11 characters)
+        if (Regex.IsMatch(input, @"^[a-zA-Z0-9_-]{11}$"))
+            return input;
+
+        // Match common YouTube URL patterns
+        var match = Regex.Match(input,
+            @"(?:youtube\.com/watch\?.*v=|youtu\.be/|youtube\.com/embed/|youtube\.com/shorts/)([a-zA-Z0-9_-]{11})");
+
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     #endregion

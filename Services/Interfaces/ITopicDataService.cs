@@ -37,5 +37,10 @@ namespace TargetBrowse.Services.Interfaces
         /// <param name="userId">The user ID</param>
         /// <returns>Number of topics the user has</returns>
         Task<int> GetUserTopicCountAsync(string userId);
+
+        /// <summary>
+        /// Updates the LastCheckedDate on a topic after a successful API search.
+        /// </summary>
+        Task UpdateLastCheckedDateAsync(Guid topicId, DateTime checkedDate);
     }
 }

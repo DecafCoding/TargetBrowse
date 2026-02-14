@@ -55,9 +55,9 @@ public partial class TopicVideosList : ComponentBase
     }
 
     /// <summary>
-    /// Loads videos for the current topic from YouTube.
+    /// Loads videos for the current topic, using DB cache or YouTube API.
     /// </summary>
-    public async Task LoadVideosAsync()
+    public async Task LoadVideosAsync(bool forceRefresh = false)
     {
         try
         {
@@ -71,7 +71,7 @@ public partial class TopicVideosList : ComponentBase
                 return;
             }
 
-            Videos = await TopicVideosService.GetRecentVideosAsync(TopicId, CurrentUserId, MaxResults);
+            Videos = await TopicVideosService.GetRecentVideosAsync(TopicId, CurrentUserId, MaxResults, forceRefresh);
 
             // Update TopicName if we don't have it and we got results
             if (string.IsNullOrEmpty(TopicName) && Videos.Any())
@@ -116,9 +116,10 @@ public partial class TopicVideosList : ComponentBase
 
     /// <summary>
     /// Public method to refresh videos (called from parent component).
+    /// Forces a fresh YouTube API call, bypassing the cache.
     /// </summary>
     public async Task RefreshAsync()
     {
-        await LoadVideosAsync();
+        await LoadVideosAsync(forceRefresh: true);
     }
 }

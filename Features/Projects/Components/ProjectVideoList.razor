@@ -25,7 +25,7 @@
                             {
                                 <img src="@video.ThumbnailUrl"
                                      class="card-img-top video-thumbnail"
-                                     alt="@video.Title thumbnail"
+                                     alt="@(WebUtility.HtmlDecode(video.Title)) thumbnail"
                                      loading="lazy"
                                      onerror="this.src='/images/video-placeholder.jpg'" />
                             }
@@ -64,8 +64,8 @@
                             <h6 class="card-title video-title mb-2">
                                 <a href="/watch/@video.YouTubeVideoId"
                                    class="text-decoration-none title-link"
-                                   title="@video.Title" target="_blank">
-                                    @video.Title
+                                   title="@(WebUtility.HtmlDecode(video.Title))">
+                                    @((MarkupString)WebUtility.HtmlDecode(video.Title))
                                 </a>
                             </h6>
 

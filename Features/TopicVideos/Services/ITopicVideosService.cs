@@ -10,12 +10,12 @@ public interface ITopicVideosService
 {
     /// <summary>
     /// Gets recent videos from YouTube for a specific topic.
-    /// Searches for videos published within the last year and returns them sorted by relevance.
+    /// Searches for videos published within the last year and returns them sorted by publish date (newest first).
     /// </summary>
     /// <param name="topicId">Unique identifier of the topic</param>
     /// <param name="maxResults">Maximum number of videos to return (default: 50)</param>
     /// <returns>List of videos related to the topic, or empty list if no videos found</returns>
-    Task<List<TopicVideoDisplayModel>> GetRecentVideosAsync(Guid topicId, string currentUserId, int maxResults = 50);
+    Task<List<TopicVideoDisplayModel>> GetRecentVideosAsync(Guid topicId, string currentUserId, int maxResults = 50, bool forceRefresh = false);
 
     /// <summary>
     /// Gets recent videos from YouTube for a specific topic by topic name.

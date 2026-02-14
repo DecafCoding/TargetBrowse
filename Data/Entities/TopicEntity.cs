@@ -32,5 +32,6 @@ namespace TargetBrowse.Data.Entities
         public virtual ApplicationUser User { get; set; } = null!;
 
         public virtual ICollection<SuggestionTopicEntity> SuggestionTopics { get; set; } = new List<SuggestionTopicEntity>();
+        public virtual ICollection<TopicVideoEntity> TopicVideos { get; set; } = new List<TopicVideoEntity>();
     }
 }
