@@ -17,6 +17,7 @@ public class ChannelVideosService : IChannelVideosService
     private readonly IMessageCenterService _messageCenter;
     private readonly IVideoDataService _videoDataService;
     private readonly IChannelRepository _channelRepository;
+    private readonly ILibraryDataService _libraryDataService;
     private readonly ILogger<ChannelVideosService> _logger;
 
     public ChannelVideosService(
@@ -25,6 +26,7 @@ public class ChannelVideosService : IChannelVideosService
         IMessageCenterService messageCenter,
         IChannelRepository channelRepository,
         IVideoDataService videoDataService,
+        ILibraryDataService libraryDataService,
         ILogger<ChannelVideosService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -32,6 +34,7 @@ public class ChannelVideosService : IChannelVideosService
         _messageCenter = messageCenter ?? throw new ArgumentNullException(nameof(messageCenter));
         _channelRepository = channelRepository ?? throw new ArgumentNullException(nameof(channelRepository));
         _videoDataService = videoDataService ?? throw new ArgumentNullException(nameof(videoDataService));
+        _libraryDataService = libraryDataService ?? throw new ArgumentNullException(nameof(libraryDataService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -134,6 +137,16 @@ public class ChannelVideosService : IChannelVideosService
 
             _logger.LogInformation("Successfully loaded {Count} videos for channel {ChannelName} (from {Source})",
                 model.Videos.Count, channelInfo.Name, shouldUpdateFromAPI ? "API" : "database");
+
+            // Batch check library status in a single query instead of per-card
+            if (!string.IsNullOrWhiteSpace(userId) && model.Videos.Any())
+            {
+                var libraryVideoIds = await _libraryDataService.GetLibraryVideoIdsAsync(userId);
+                foreach (var video in model.Videos)
+                {
+                    video.IsInLibrary = libraryVideoIds.Contains(video.YouTubeVideoId);
+                }
+            }
 
             model.IsLoading = false;
             return model;

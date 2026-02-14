@@ -14,7 +14,8 @@
       "Bash(dotnet ef migrations:*)",
       "Bash(taskkill:*)",
       "Bash(Select-String -Pattern \"error CS|Build FAILED|Build succeeded\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -111,6 +111,29 @@ public class LibraryDataService : ILibraryDataService
     }
 
     /// <summary>
+    /// Gets the set of YouTube video IDs in the user's library.
+    /// Single query for batch checking library status.
+    /// </summary>
+    public async Task<HashSet<string>> GetLibraryVideoIdsAsync(string userId)
+    {
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var ids = await context.UserVideos
+                .Where(uv => uv.UserId == userId)
+                .Select(uv => uv.Video.YouTubeVideoId)
+                .ToListAsync();
+
+            return ids.ToHashSet();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting library video IDs for user {UserId}", userId);
+            return new HashSet<string>();
+        }
+    }
+
+    /// <summary>
     /// Removes a video from the user's library.
     /// </summary>
     public async Task<bool> RemoveVideoFromLibraryAsync(string userId, Guid videoId)

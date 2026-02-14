@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using TargetBrowse.Features.ChannelVideos.Models;
 using TargetBrowse.Features.ChannelVideos.Services;
@@ -40,7 +40,7 @@ public partial class Index : ComponentBase
     /// <summary>
     /// The main data model containing channel and video information.
     /// </summary>
-    protected ChannelVideosModel Model { get; set; } = new();
+    protected ChannelVideosModel Model { get; set; } = new() { IsLoading = true };
 
     /// <summary>
     /// The current authenticated user's ID.
@@ -184,10 +184,7 @@ public partial class Index : ComponentBase
 
     /// <summary>
     /// Gets the appropriate CSS class for individual stars in the channel rating.
-    /// All filled stars are yellow (text-warning), empty stars are muted.
     /// </summary>
-    /// <param name="starNumber">The position of the star (1-5)</param>
-    /// <returns>Bootstrap CSS class for the star color</returns>
     protected string GetStarClass(int starNumber)
     {
         if (!Model.UserRating.HasValue) return "text-muted";
@@ -198,13 +195,27 @@ public partial class Index : ComponentBase
     /// <summary>
     /// Gets the star fill type (filled or empty) for the channel rating.
     /// </summary>
-    /// <param name="starNumber">The position of the star (1-5)</param>
-    /// <returns>String suffix for Bootstrap icon class</returns>
     protected string GetStarFill(int starNumber)
     {
         if (!Model.UserRating.HasValue) return "";
 
         return starNumber <= Model.UserRating.Value ? "-fill" : "";
+    }
+
+    /// <summary>
+    /// Gets the refresh frequency based on the user's star rating.
+    /// </summary>
+    protected string GetRefreshFrequency()
+    {
+        return Model.UserRating switch
+        {
+            5 => "Every 5 days",
+            4 => "Every 7 days",
+            3 => "Every 10 days",
+            2 => "Every 14 days",
+            1 => "Never",
+            _ => "Never (unrated)"
+        };
     }
 
     #endregion

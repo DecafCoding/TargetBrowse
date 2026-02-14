@@ -11,15 +11,41 @@
 
 <PageTitle>@GetPageTitle()</PageTitle>
 
-<!-- Loading State -->
+<!-- Loading State with Skeleton Cards -->
 @if (Model.IsLoading)
 {
-    <div class="loading-container d-flex justify-content-center align-items-center py-5">
-        <div class="text-center">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Loading...</span>
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="card mb-4">
+                <div class="card-header mb-3">
+                    <h5 class="mb-0">Recent Videos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column align-items-center text-center mb-3">
+                        <div class="skeleton-thumbnail rounded-circle mb-3" style="width: 80px; height: 80px;"></div>
+                        <div class="skeleton-text skeleton-title mx-auto"></div>
+                        <div class="skeleton-text skeleton-channel mx-auto"></div>
+                        <div class="skeleton-text skeleton-metadata mx-auto"></div>
+                    </div>
+                </div>
             </div>
-            <p class="text-muted">Loading channel videos...</p>
+        </div>
+        <div class="col-lg-9">
+            <div class="row g-2">
+                @for (int i = 0; i < 12; i++)
+                {
+                    <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
+                        <div class="card skeleton-card h-100">
+                            <div class="skeleton-thumbnail"></div>
+                            <div class="card-body">
+                                <div class="skeleton-text skeleton-title"></div>
+                                <div class="skeleton-text skeleton-channel"></div>
+                                <div class="skeleton-text skeleton-metadata"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 }
@@ -73,7 +99,7 @@ else
                                 <h1 class="channel-name h4 mb-1">
                                     @Model.Channel.Name
                                 </h1>
-                                @* Star Rating Display *@
+                                @* Star Rating Display (read-only) *@
                                 <div class="mb-2">
                                     @for (int i = 1; i <= 5; i++)
                                     {
@@ -102,10 +128,14 @@ else
                                         </div>
                                     }
 
-                                    <!-- Add LastCheckDate display -->
                                     <div class="mb-2">
                                         <i class="bi bi-clock-history me-1"></i>
                                         Last checked: @Model.Channel.LastCheckDateDisplay
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <i class="bi bi-arrow-repeat me-1"></i>
+                                        Updates: @GetRefreshFrequency()
                                     </div>
 
                                     @if (Model.IsTrackedByUser)
@@ -147,7 +177,7 @@ else
                         @foreach (var video in Model.Videos)
                         {
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-1">
-                                <ChannelVideoCard Video="@video" />
+                                <ChannelVideoCard Video="@video" CurrentUserId="@CurrentUserId" />
                             </div>
                         }
                     </div>

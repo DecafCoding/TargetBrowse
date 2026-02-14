@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
 using TargetBrowse.Features.ChannelVideos.Models;
-using TargetBrowse.Features.Videos.Services;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
-using TargetBrowse.Services.Utilities;
 
 namespace TargetBrowse.Features.ChannelVideos.Components;
 
@@ -17,49 +14,25 @@ public partial class ChannelVideoCard : ComponentBase
     public ChannelVideoModel Video { get; set; } = default!;
 
     /// <summary>
+    /// The current user's ID, passed from the parent to avoid per-card auth lookups.
+    /// </summary>
+    [Parameter]
+    public string? CurrentUserId { get; set; }
+
+    /// <summary>
     /// Event callback fired when a video is successfully added to the library.
     /// </summary>
     [Parameter]
     public EventCallback<ChannelVideoModel> OnVideoAdded { get; set; }
 
     // Injected Services
-    [Inject] protected IVideoDataService VideoDataService { get; set; } = default!;
     [Inject] protected ILibraryDataService LibraryDataService { get; set; } = default!;
     [Inject] protected IMessageCenterService MessageCenter { get; set; } = default!;
     [Inject] protected ILogger<ChannelVideoCard> Logger { get; set; } = default!;
 
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
-
     // State management
     private bool IsAddingToLibrary = false;
-    private bool IsInLibrary = false;
-    private string? CurrentUserId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        CurrentUserId = await AuthenticationHelper.GetCurrentUserIdAsync(AuthenticationStateTask, Logger);
-        await CheckLibraryStatus();
-    }
-
-    /// <summary>
-    /// Checks if the video is already in the user's library.
-    /// </summary>
-    private async Task CheckLibraryStatus()
-    {
-        if (string.IsNullOrEmpty(CurrentUserId))
-            return;
-
-        try
-        {
-            IsInLibrary = await LibraryDataService.IsVideoInLibraryAsync(CurrentUserId, Video.YouTubeVideoId);
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error checking library status for video {VideoId}", Video.YouTubeVideoId);
-        }
-    }
+    private bool IsInLibrary => Video.IsInLibrary;
 
     /// <summary>
     /// Adds the video to the user's library.
@@ -104,7 +77,7 @@ public partial class ChannelVideoCard : ComponentBase
 
             if (success)
             {
-                IsInLibrary = true;
+                Video.IsInLibrary = true;
                 await MessageCenter.ShowSuccessAsync($"Added '{Video.ShortTitle}' to your library!");
                 await OnVideoAdded.InvokeAsync(Video);
             }
