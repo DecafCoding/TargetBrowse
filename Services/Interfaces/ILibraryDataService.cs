@@ -37,6 +37,14 @@ public interface ILibraryDataService
     Task<bool> IsVideoInLibraryAsync(string userId, string youTubeVideoId);
 
     /// <summary>
+    /// Gets the set of YouTube video IDs in the user's library.
+    /// Used for batch checking library status across multiple videos.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <returns>HashSet of YouTube video IDs in the user's library</returns>
+    Task<HashSet<string>> GetLibraryVideoIdsAsync(string userId);
+
+    /// <summary>
     /// Removes a video from the user's library.
     /// </summary>
     /// <param name="userId">User identifier</param>

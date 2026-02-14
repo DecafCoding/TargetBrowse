@@ -33,6 +33,7 @@ public class ChannelVideosRepository : BaseRepository<VideoEntity>, IChannelVide
                 .Where(c => c.YouTubeChannelId == youTubeChannelId)
                 .Select(c => new ChannelInfoModel
                 {
+                    Id = c.Id,
                     YouTubeChannelId = c.YouTubeChannelId,
                     Name = c.Name,
                     ThumbnailUrl = c.ThumbnailUrl,
@@ -117,6 +118,7 @@ public class ChannelVideosRepository : BaseRepository<VideoEntity>, IChannelVide
                 .Where(c => c.Id == channelId)
                 .Select(c => new ChannelInfoModel
                 {
+                    Id = c.Id,
                     YouTubeChannelId = c.YouTubeChannelId,
                     Name = c.Name,
                     ThumbnailUrl = c.ThumbnailUrl,
@@ -158,6 +160,7 @@ public class ChannelVideosRepository : BaseRepository<VideoEntity>, IChannelVide
                 .Where(c => validChannelIds.Contains(c.YouTubeChannelId))
                 .Select(c => new ChannelInfoModel
                 {
+                    Id = c.Id,
                     YouTubeChannelId = c.YouTubeChannelId,
                     Name = c.Name,
                     ThumbnailUrl = c.ThumbnailUrl,

@@ -64,6 +64,11 @@ public class ChannelVideoModel
     public DateTime PublishedAt { get; set; }
 
     /// <summary>
+    /// Whether this video is in the user's library.
+    /// </summary>
+    public bool IsInLibrary { get; set; }
+
+    /// <summary>
     /// YouTube URL for this video.
     /// </summary>
     public string YouTubeUrl => $"https://www.youtube.com/watch?v={YouTubeVideoId}";

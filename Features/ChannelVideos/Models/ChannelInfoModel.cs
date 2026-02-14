@@ -8,6 +8,11 @@ namespace TargetBrowse.Features.ChannelVideos.Models;
 public class ChannelInfoModel
 {
     /// <summary>
+    /// Internal database ID for the channel.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
     /// YouTube channel ID.
     /// </summary>
     public string YouTubeChannelId { get; set; } = string.Empty;
@@ -60,7 +65,7 @@ public class ChannelInfoModel
     /// <summary>
     /// Formatted display text for the last check date.
     /// </summary>
-    public string LastCheckDateDisplay => FormatHelper.FormatUpdateDateDisplay(LastCheckDate);
+    public string LastCheckDateDisplay => FormatHelper.FormatDateDisplay(LastCheckDate);
 
     /// <summary>
     /// Number of videos from this channel that exist in our database.
