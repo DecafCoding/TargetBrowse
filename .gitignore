@@ -365,3 +365,4 @@ FodyWeavers.xsd
 
 # Step prompts for feature implementation (not part of codebase)
 step-*-prompt.txt
+/nul
