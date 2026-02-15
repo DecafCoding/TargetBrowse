@@ -55,7 +55,7 @@ namespace TargetBrowse.Features.Watch.Services
 
                 // Add " views" suffix for view count
                 var viewCountFormatted = FormatHelper.FormatCount((ulong)video.ViewCount);
-                model.ViewCountDisplay = string.IsNullOrEmpty(viewCountFormatted) ? "0 views" : $"{viewCountFormatted} views";
+                model.ViewCountDisplay = string.IsNullOrEmpty(viewCountFormatted) ? "0" : viewCountFormatted;
 
                 model.Duration = video.Duration;
                 model.DurationDisplay = FormatHelper.FormatDuration(video.Duration);

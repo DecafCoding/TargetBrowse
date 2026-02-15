@@ -4,35 +4,42 @@
 <div class="card shadow-sm mb-3">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0">
-            <i class="bi bi-info-circle me-2"></i>
             Video Details
         </h5>
     </div>
     <div class="card-body">
         <!-- Video Title -->
-        <h6 class="fw-semibold lh-sm mb-3">
+        <h6 class="fw-semibold lh-sm mb-2">
             @Model.Title
         </h6>
 
-        <!-- Duration Badge -->
-        @if (!string.IsNullOrEmpty(Model.DurationDisplay))
-        {
-            <div class="mb-3">
-                <span class="badge bg-secondary fs-6">
-                    <i class="bi bi-clock me-1"></i>
-                    @Model.DurationDisplay
-                </span>
-            </div>
-        }
+        <!-- Channel Name -->
+        <div class="mb-2">
+            <span class="fw-semibold">@Model.ChannelName</span>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="d-flex justify-content-between text-muted mb-2" style="font-size: 0.9rem;">
+            @if (!string.IsNullOrEmpty(Model.ViewCountDisplay))
+            {
+                <span><i class="bi bi-eye me-1"></i>@Model.ViewCountDisplay</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.LikeCountDisplay))
+            {
+                <span><i class="bi bi-hand-thumbs-up me-1"></i>@Model.LikeCountDisplay</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.CommentCountDisplay))
+            {
+                <span><i class="bi bi-chat me-1"></i>@Model.CommentCountDisplay</span>
+            }
+            <span><i class="bi bi-calendar me-1"></i>@Model.PublishedDisplay</span>
+        </div>
 
         <!-- Video Type Dropdown -->
-        <div class="mb-3">
-            <label for="videoTypeSelect" class="form-label fw-semibold">
-                <i class="bi bi-tag me-1"></i>
-                Video Type
-            </label>
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <label for="videoTypeSelect" class="form-label fw-semibold mb-0 text-nowrap">Video Type</label>
             <select id="videoTypeSelect"
-                    class="form-select"
+                    class="form-select form-select-sm"
                     value="@Model.VideoTypeId"
                     @onchange="HandleVideoTypeChange">
                 <option value="">-- Select Type --</option>
@@ -41,60 +48,6 @@
                     <option value="@videoType.Id">@videoType.Name</option>
                 }
             </select>
-        </div>
-
-        <!-- Channel Information -->
-        <div class="mb-3">
-            <div class="d-flex align-items-center mb-2">
-                @if (!string.IsNullOrEmpty(Model.ChannelThumbnailUrl))
-                {
-                    <div class="me-2">
-                        <img src="@Model.ChannelThumbnailUrl"
-                             class="rounded-circle"
-                             alt="@Model.ChannelName"
-                             loading="lazy"
-                             width="40"
-                             height="40"
-                             style="object-fit: cover;"
-                             onerror="handleChannelThumbnailError(this)" />
-                    </div>
-                }
-                <div>
-                    <div class="fw-semibold">@Model.ChannelName</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Video Statistics -->
-        <div class="mb-3">
-            @if (!string.IsNullOrEmpty(Model.ViewCountDisplay))
-            {
-                <div class="d-flex align-items-center mb-2">
-                    <i class="bi bi-eye me-2 text-muted"></i>
-                    <span>@Model.ViewCountDisplay</span>
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(Model.LikeCountDisplay))
-            {
-                <div class="d-flex align-items-center mb-2">
-                    <i class="bi bi-hand-thumbs-up me-2 text-muted"></i>
-                    <span>@Model.LikeCountDisplay</span>
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(Model.CommentCountDisplay))
-            {
-                <div class="d-flex align-items-center mb-2">
-                    <i class="bi bi-chat me-2 text-muted"></i>
-                    <span>@Model.CommentCountDisplay</span>
-                </div>
-            }
-
-            <div class="d-flex align-items-center mb-2">
-                <i class="bi bi-calendar me-2 text-muted"></i>
-                <span>@Model.PublishedDisplay</span>
-            </div>
         </div>
 
         <!-- Status Badges -->
@@ -118,6 +71,14 @@
                 <span class="badge bg-warning">
                     <i class="bi bi-star-fill me-1"></i>
                     @Model.UserRating.Value @(Model.UserRating.Value == 1 ? "Star" : "Stars")
+                </span>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.DurationDisplay))
+            {
+                <span class="badge bg-secondary ms-auto">
+                    <i class="bi bi-clock me-1"></i>
+                    @Model.DurationDisplay
                 </span>
             }
         </div>
