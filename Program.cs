@@ -101,6 +101,9 @@ public class Program
         builder.Services.AddScoped<ILibraryVideoClassificationService, LibraryVideoClassificationService>();
         builder.Services.AddScoped<ITranscriptSummaryService, TranscriptSummaryService>();
 
+        // AI Services (Shared across features)
+        builder.Services.AddScoped<Services.AI.IPerplexityService, Services.AI.PerplexityService>();
+
         // Project Services (Shared across features)
         builder.Services.AddScoped<Services.ProjectServices.IAddToProjectService, Services.ProjectServices.AddToProjectService>();
 
@@ -153,6 +156,7 @@ public class Program
         builder.Services.AddScoped<Features.Projects.Services.IProjectGuideService, Features.Projects.Services.ProjectGuideService>();
         builder.Services.AddScoped<Features.Projects.Services.IScriptProfileService, Features.Projects.Services.ScriptProfileService>();
         builder.Services.AddScoped<Features.Projects.Services.IScriptGenerationService, Features.Projects.Services.ScriptGenerationService>();
+        builder.Services.AddScoped<Features.Projects.Services.IProjectVideoSearchService, Features.Projects.Services.ProjectVideoSearchService>();
 
         #endregion
 

@@ -96,15 +96,15 @@ public class VideoYouTubeService : IVideoYouTubeService, IDisposable
                     searchRequest.VideoDuration = apiDurationFilter.Value;
                 }
 
-                // Apply date filter
+                // Apply date filter using the typed DateTimeOffset properties
                 var dateRange = MapDateFilterToApi(dateFilter);
                 if (dateRange.publishedAfter.HasValue)
                 {
-                    searchRequest.PublishedAfter = dateRange.publishedAfter.Value;
+                    searchRequest.PublishedAfterDateTimeOffset = dateRange.publishedAfter.Value;
                 }
                 if (dateRange.publishedBefore.HasValue)
                 {
-                    searchRequest.PublishedBefore = dateRange.publishedBefore.Value;
+                    searchRequest.PublishedBeforeDateTimeOffset = dateRange.publishedBefore.Value;
                 }
 
                 // If channelId is specified, limit search to that channel
@@ -381,7 +381,7 @@ public class VideoYouTubeService : IVideoYouTubeService, IDisposable
         return dateFilter switch
         {
             VideoDateFilter.LastHour => (now.AddHours(-1), null),
-            VideoDateFilter.Today => (now.Date, null),
+            VideoDateFilter.Today => (new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero), null),
             VideoDateFilter.ThisWeek => (now.AddDays(-7), null),
             VideoDateFilter.ThisMonth => (now.AddDays(-30), null),
             VideoDateFilter.ThisYear => (now.AddDays(-365), null),

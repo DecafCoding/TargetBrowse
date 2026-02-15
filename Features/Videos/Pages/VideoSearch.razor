@@ -55,22 +55,6 @@
                                 <button class="btn btn-outline-secondary dropdown-toggle"
                                         type="button"
                                         data-bs-toggle="dropdown">
-                                    <i class="bi bi-funnel me-1"></i>
-                                    @CurrentSortOrderText
-                                </button>
-                                <ul class="dropdown-menu w-100">
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Relevance)'>Relevance</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.UploadDate)'>Upload Date</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.ViewCount)'>View Count</button></li>
-                                    <li><button class="dropdown-item" type="button" @onclick='() => SetSortOrder(VideoSortOrder.Rating)'>Rating</button></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="dropdown d-grid">
-                                <button class="btn btn-outline-secondary dropdown-toggle"
-                                        type="button"
-                                        data-bs-toggle="dropdown">
                                     <i class="bi bi-hourglass-split me-1"></i>
                                     @CurrentDurationText
                                 </button>
