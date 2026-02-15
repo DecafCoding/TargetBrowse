@@ -17,7 +17,8 @@
       "Bash(dir:*)",
       "Bash(find:*)",
       "WebSearch",
-      "WebFetch(domain:docs.perplexity.ai)"
+      "WebFetch(domain:docs.perplexity.ai)",
+      "Bash(sqlcmd:*)"
     ]
   }
 }

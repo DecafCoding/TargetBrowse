@@ -6,7 +6,6 @@ using System.Text;
 using TargetBrowse.Data;
 using TargetBrowse.Data.Entities;
 using TargetBrowse.Features.Projects.Models;
-using TargetBrowse.Services.AI;
 using TargetBrowse.Services.Interfaces;
 using TargetBrowse.Services.Models;
 
@@ -27,14 +26,10 @@ namespace TargetBrowse.Features.Projects.Services
         private const string OpenAiApiUrl = "https://api.openai.com/v1/chat/completions";
         private const int DailyAICallLimit = 10;
 
-        // MVP: Hard-coded model settings for script analysis
-        private const string DefaultModel = "gpt-4o-mini";
-        private const decimal InputCostPer1kTokens = 0.000150m; // gpt-4o-mini pricing
-        private const decimal OutputCostPer1kTokens = 0.000600m;
-
-        // MVP: Placeholder prompt ID for script generation (created on first use)
-        private static Guid? _scriptPromptId = null;
-        private static readonly SemaphoreSlim _promptLock = new SemaphoreSlim(1, 1);
+        // Prompt names matching database records
+        private const string AnalysisPromptName = "Script Analysis";
+        private const string OutlinePromptName = "Script Outline";
+        private const string ScriptPromptName = "Script Generation";
 
         public ScriptGenerationService(
             ApplicationDbContext context,
@@ -106,18 +101,27 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedResult($"Daily AI call limit reached ({DailyAICallLimit}/day)");
                 }
 
-                // Step 3: Build analysis prompt
-                var analysisPrompt = ScriptPromptBuilder.BuildAnalysisPrompt(videoSummaries);
+                // Step 3: Load prompt from database
+                var promptEntity = await _promptDataService.GetActivePromptByNameAsync(AnalysisPromptName);
+                if (promptEntity == null)
+                {
+                    return CreateFailedResult($"Prompt '{AnalysisPromptName}' not found or inactive");
+                }
 
-                // Step 4: Call OpenAI API
-                var request = CreateAnalysisRequest(analysisPrompt);
+                // Step 4: Format user prompt from template
+                var actualUserPrompt = ScriptPromptBuilder.FormatAnalysisPrompt(
+                    promptEntity.UserPromptTemplate, videoSummaries);
+
+                // Step 5: Call OpenAI API
+                var request = CreateRequestFromPrompt(promptEntity, actualUserPrompt);
                 var response = await CallOpenAiApiAsync(request);
 
                 stopwatch.Stop();
 
-                // Step 5: Track API call
+                // Step 6: Track API call
                 var aiCall = await TrackApiCallAsync(
-                    analysisPrompt,
+                    promptEntity,
+                    actualUserPrompt,
                     response,
                     stopwatch.ElapsedMilliseconds,
                     userId,
@@ -128,20 +132,21 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedResult("Failed to get response from OpenAI API");
                 }
 
-                // Step 6: Parse response
+                // Step 7: Parse response
                 var analysis = ParseAnalysisResponse(response);
                 if (analysis == null)
                 {
                     return CreateFailedResult("Failed to parse analysis response");
                 }
 
-                // Step 7: Create or update ScriptContent entity
+                // Step 8: Create or update ScriptContent entity
                 await SaveAnalysisToScriptContentAsync(projectId, analysis, aiCall.Id, project.ProjectVideos.Count);
 
-                // Step 8: Calculate costs
-                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(analysisPrompt);
+                // Step 9: Calculate costs
+                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(actualUserPrompt);
                 var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(JsonConvert.SerializeObject(analysis));
-                var totalCost = CalculateCost(inputTokens, outputTokens);
+                var totalCost = CalculateCost(inputTokens, promptEntity.Model.CostPer1kInputTokens,
+                    outputTokens, promptEntity.Model.CostPer1kOutputTokens);
 
                 _logger.LogInformation(
                     $"Successfully analyzed project {projectId}. " +
@@ -162,7 +167,6 @@ namespace TargetBrowse.Features.Projects.Services
                 stopwatch.Stop();
                 _logger.LogError(ex, $"Error analyzing project {projectId}: {ex.Message}");
 
-                // Include inner exception details for debugging
                 var errorMessage = ex.Message;
                 if (ex.InnerException != null)
                 {
@@ -301,7 +305,14 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedOutlineResult($"Daily AI call limit reached ({DailyAICallLimit}/day)");
                 }
 
-                // Step 4: Build outline prompt
+                // Step 4: Load prompt from database
+                var promptEntity = await _promptDataService.GetActivePromptByNameAsync(OutlinePromptName);
+                if (promptEntity == null)
+                {
+                    return CreateFailedOutlineResult($"Prompt '{OutlinePromptName}' not found or inactive");
+                }
+
+                // Step 5: Format user prompt from template
                 var userProfileData = new UserProfileData
                 {
                     Tone = profile.Tone,
@@ -315,20 +326,22 @@ namespace TargetBrowse.Features.Projects.Services
                     CustomInstructions = profile.CustomInstructions
                 };
 
-                var outlinePrompt = ScriptPromptBuilder.BuildOutlinePrompt(
+                var actualUserPrompt = ScriptPromptBuilder.FormatOutlinePrompt(
+                    promptEntity.UserPromptTemplate,
                     scriptContent.AnalysisJsonResult,
                     userProfileData,
                     scriptContent.TargetLengthMinutes.Value);
 
-                // Step 5: Call OpenAI API
-                var request = CreateAnalysisRequest(outlinePrompt);
+                // Step 6: Call OpenAI API
+                var request = CreateRequestFromPrompt(promptEntity, actualUserPrompt);
                 var response = await CallOpenAiApiAsync(request);
 
                 stopwatch.Stop();
 
-                // Step 6: Track API call
+                // Step 7: Track API call
                 var aiCall = await TrackApiCallAsync(
-                    outlinePrompt,
+                    promptEntity,
+                    actualUserPrompt,
                     response,
                     stopwatch.ElapsedMilliseconds,
                     userId,
@@ -339,7 +352,7 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedOutlineResult("Failed to get response from OpenAI API");
                 }
 
-                // Step 7: Parse response
+                // Step 8: Parse response
                 var outline = ParseOutlineResponse(response);
                 if (outline == null)
                 {
@@ -347,13 +360,14 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedOutlineResult($"Failed to parse outline response{parseDetail}");
                 }
 
-                // Step 8: Save outline to ScriptContent entity
+                // Step 9: Save outline to ScriptContent entity
                 await SaveOutlineToScriptContentAsync(projectId, outline, aiCall.Id);
 
-                // Step 9: Calculate costs
-                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(outlinePrompt);
+                // Step 10: Calculate costs
+                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(actualUserPrompt);
                 var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(JsonConvert.SerializeObject(outline));
-                var totalCost = CalculateCost(inputTokens, outputTokens);
+                var totalCost = CalculateCost(inputTokens, promptEntity.Model.CostPer1kInputTokens,
+                    outputTokens, promptEntity.Model.CostPer1kOutputTokens);
 
                 _logger.LogInformation(
                     $"Successfully generated outline for project {projectId}. " +
@@ -432,7 +446,14 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedScriptResult($"Daily AI call limit reached ({DailyAICallLimit}/day)");
                 }
 
-                // Step 5: Build video transcripts list (use raw transcript, fallback to summary)
+                // Step 5: Load prompt from database
+                var promptEntity = await _promptDataService.GetActivePromptByNameAsync(ScriptPromptName);
+                if (promptEntity == null)
+                {
+                    return CreateFailedScriptResult($"Prompt '{ScriptPromptName}' not found or inactive");
+                }
+
+                // Step 6: Build video transcripts list (use raw transcript, fallback to summary)
                 var videoTranscripts = project.ProjectVideos
                     .Where(pv => pv.Video != null)
                     .Select(pv => new VideoTranscriptData
@@ -446,7 +467,7 @@ namespace TargetBrowse.Features.Projects.Services
                     .Where(vt => !string.IsNullOrEmpty(vt.Transcript))
                     .ToList();
 
-                // Step 6: Build script prompt
+                // Step 7: Format user prompt from template
                 var userProfileData = new UserProfileData
                 {
                     Tone = profile.Tone,
@@ -460,20 +481,22 @@ namespace TargetBrowse.Features.Projects.Services
                     CustomInstructions = profile.CustomInstructions
                 };
 
-                var scriptPrompt = ScriptPromptBuilder.BuildScriptPrompt(
+                var actualUserPrompt = ScriptPromptBuilder.FormatScriptPrompt(
+                    promptEntity.UserPromptTemplate,
                     scriptContent.OutlineJsonStructure,
                     userProfileData,
                     videoTranscripts);
 
-                // Step 7: Call OpenAI API (higher token limit for full script)
-                var request = CreateScriptRequest(scriptPrompt);
+                // Step 8: Call OpenAI API
+                var request = CreateRequestFromPrompt(promptEntity, actualUserPrompt);
                 var response = await CallOpenAiApiAsync(request);
 
                 stopwatch.Stop();
 
-                // Step 8: Track API call
+                // Step 9: Track API call
                 var aiCall = await TrackApiCallAsync(
-                    scriptPrompt,
+                    promptEntity,
+                    actualUserPrompt,
                     response,
                     stopwatch.ElapsedMilliseconds,
                     userId,
@@ -484,20 +507,21 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedScriptResult("Failed to get response from OpenAI API");
                 }
 
-                // Step 9: Parse response
+                // Step 10: Parse response
                 var script = ParseScriptResponse(response);
                 if (script == null)
                 {
                     return CreateFailedScriptResult("Failed to parse script response");
                 }
 
-                // Step 10: Save to ScriptContent entity
+                // Step 11: Save to ScriptContent entity
                 await SaveScriptToScriptContentAsync(projectId, script, aiCall.Id);
 
-                // Step 11: Calculate costs
-                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(scriptPrompt);
+                // Step 12: Calculate costs
+                var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(actualUserPrompt);
                 var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(JsonConvert.SerializeObject(script));
-                var totalCost = CalculateCost(inputTokens, outputTokens);
+                var totalCost = CalculateCost(inputTokens, promptEntity.Model.CostPer1kInputTokens,
+                    outputTokens, promptEntity.Model.CostPer1kOutputTokens);
 
                 _logger.LogInformation(
                     $"Successfully generated script for project {projectId}. " +
@@ -593,103 +617,28 @@ namespace TargetBrowse.Features.Projects.Services
         #region Private Helper Methods
 
         /// <summary>
-        /// Gets or creates a placeholder prompt for script generation.
-        /// MVP: Creates a minimal prompt record in database for FK constraint.
+        /// Builds an OpenAI request from a prompt entity and formatted user prompt.
         /// </summary>
-        private async Task<Guid> GetOrCreateScriptPromptIdAsync()
-        {
-            if (_scriptPromptId.HasValue)
-            {
-                return _scriptPromptId.Value;
-            }
-
-            await _promptLock.WaitAsync();
-            try
-            {
-                // Double-check after acquiring lock
-                if (_scriptPromptId.HasValue)
-                {
-                    return _scriptPromptId.Value;
-                }
-
-                // Check if placeholder prompt already exists
-                var existingPrompt = await _context.Prompts
-                    .FirstOrDefaultAsync(p => p.Name == "Script Analysis (MVP)" && p.Version == "1.0");
-
-                if (existingPrompt != null)
-                {
-                    _scriptPromptId = existingPrompt.Id;
-                    return existingPrompt.Id;
-                }
-
-                // Get or create a model for gpt-4o-mini
-                var model = await _context.Models
-                    .FirstOrDefaultAsync(m => m.Name == DefaultModel);
-
-                if (model == null)
-                {
-                    // Create placeholder model
-                    model = new ModelEntity
-                    {
-                        Name = DefaultModel,
-                        Provider = "OpenAI",
-                        CostPer1kInputTokens = InputCostPer1kTokens,
-                        CostPer1kOutputTokens = OutputCostPer1kTokens,
-                        IsActive = true
-                    };
-                    _context.Models.Add(model);
-                    await _context.SaveChangesAsync();
-                }
-
-                // Create placeholder prompt
-                var prompt = new PromptEntity
-                {
-                    Name = "Script Analysis (MVP)",
-                    Version = "1.0",
-                    ModelId = model.Id,
-                    SystemPrompt = "You are an expert video content analyst.",
-                    UserPromptTemplate = "[Generated by ScriptPromptBuilder]",
-                    Temperature = 0.7m,
-                    MaxTokens = 2000,
-                    IsActive = true
-                };
-
-                _context.Prompts.Add(prompt);
-                await _context.SaveChangesAsync();
-
-                _scriptPromptId = prompt.Id;
-                return prompt.Id;
-            }
-            finally
-            {
-                _promptLock.Release();
-            }
-        }
-
-        /// <summary>
-        /// Creates the OpenAI API request for analysis.
-        /// MVP: Uses hard-coded model and settings.
-        /// </summary>
-        private OpenAiRequest CreateAnalysisRequest(string analysisPrompt)
+        private OpenAiRequest CreateRequestFromPrompt(PromptEntity promptEntity, string actualUserPrompt)
         {
             return new OpenAiRequest
             {
-                Model = DefaultModel,
+                Model = promptEntity.Model?.Name ?? "gpt-4o-mini",
                 Messages = new List<OpenAiMessage>
                 {
                     new OpenAiMessage
                     {
                         Role = "system",
-                        Content = "You are an expert video content analyst. Analyze video summaries to identify themes, conflicts, and create cohesive video scripts."
+                        Content = promptEntity.SystemPrompt
                     },
                     new OpenAiMessage
                     {
                         Role = "user",
-                        Content = analysisPrompt
+                        Content = actualUserPrompt
                     }
                 },
-                MaxTokens = 2000,
-                Temperature = 0.7m,
+                MaxTokens = promptEntity.MaxTokens ?? 2000,
+                Temperature = promptEntity.Temperature ?? 0.7m,
                 ResponseFormat = new OpenAiResponseFormat { Type = "json_object" }
             };
         }
@@ -800,9 +749,9 @@ namespace TargetBrowse.Features.Projects.Services
 
         /// <summary>
         /// Tracks API call for auditing and cost monitoring.
-        /// MVP: Uses Guid.Empty as placeholder for prompt ID.
         /// </summary>
         private async Task<AICallEntity> TrackApiCallAsync(
+            PromptEntity promptEntity,
             string actualUserPrompt,
             OpenAiResponse? response,
             long durationMs,
@@ -821,7 +770,9 @@ namespace TargetBrowse.Features.Projects.Services
                 {
                     inputTokens = response.Usage.PromptTokens;
                     outputTokens = response.Usage.CompletionTokens;
-                    totalCost = CalculateCost(inputTokens, outputTokens);
+                    totalCost = CalculateCost(
+                        inputTokens, promptEntity.Model.CostPer1kInputTokens,
+                        outputTokens, promptEntity.Model.CostPer1kOutputTokens);
 
                     if (response.Choices?.Any() == true)
                     {
@@ -831,18 +782,17 @@ namespace TargetBrowse.Features.Projects.Services
                 }
                 else
                 {
-                    inputTokens = EstimateTokenCount(actualUserPrompt);
+                    inputTokens = EstimateTokenCount(promptEntity.SystemPrompt + actualUserPrompt);
                     outputTokens = EstimateTokenCount(responseContent);
-                    totalCost = CalculateCost(inputTokens, outputTokens);
+                    totalCost = CalculateCost(
+                        inputTokens, promptEntity.Model.CostPer1kInputTokens,
+                        outputTokens, promptEntity.Model.CostPer1kOutputTokens);
                 }
 
-                // Get or create placeholder prompt ID for FK constraint
-                var promptId = await GetOrCreateScriptPromptIdAsync();
-
                 var aiCall = await _aiCallDataService.CreateAICallAsync(
-                    promptId: promptId,
+                    promptId: promptEntity.Id,
                     userId: userId,
-                    actualSystemPrompt: "You are an expert video content analyst.",
+                    actualSystemPrompt: promptEntity.SystemPrompt,
                     actualUserPrompt: actualUserPrompt,
                     response: responseContent,
                     inputTokens: inputTokens,
@@ -862,16 +812,15 @@ namespace TargetBrowse.Features.Projects.Services
         }
 
         /// <summary>
-        /// Calculates cost based on token usage.
-        /// MVP: Uses hard-coded pricing for gpt-4o-mini.
+        /// Calculates cost based on token usage and model pricing.
         /// </summary>
-        private decimal CalculateCost(int inputTokens, int outputTokens)
+        private decimal CalculateCost(int inputTokens, decimal inputCostPer1k, int outputTokens, decimal outputCostPer1k)
         {
-            return ((inputTokens * (InputCostPer1kTokens / 1000))) + (outputTokens * (OutputCostPer1kTokens / 1000));
+            return ((inputTokens * (inputCostPer1k / 1000))) + (outputTokens * (outputCostPer1k / 1000));
         }
 
         /// <summary>
-        /// Estimates token count (rough approximation: 1 token ≈ 4 characters).
+        /// Estimates token count (rough approximation: 1 token ~ 4 characters).
         /// </summary>
         private int EstimateTokenCount(string? text)
         {
@@ -1001,34 +950,6 @@ namespace TargetBrowse.Features.Projects.Services
             {
                 Success = false,
                 ErrorMessage = errorMessage
-            };
-        }
-
-        /// <summary>
-        /// Creates the OpenAI API request for script generation.
-        /// Uses higher token limit than analysis/outline since full scripts are longer.
-        /// </summary>
-        private OpenAiRequest CreateScriptRequest(string scriptPrompt)
-        {
-            return new OpenAiRequest
-            {
-                Model = DefaultModel,
-                Messages = new List<OpenAiMessage>
-                {
-                    new OpenAiMessage
-                    {
-                        Role = "system",
-                        Content = "You are an expert video script writer. Generate engaging, well-structured video scripts based on outlines and source transcripts."
-                    },
-                    new OpenAiMessage
-                    {
-                        Role = "user",
-                        Content = scriptPrompt
-                    }
-                },
-                MaxTokens = 8000,
-                Temperature = 0.7m,
-                ResponseFormat = new OpenAiResponseFormat { Type = "json_object" }
             };
         }
 
