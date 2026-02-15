@@ -18,15 +18,6 @@ public partial class VideoSearch : ComponentBase
     private string? CurrentUserId;
 
     // Display text for dropdown filters
-    private string CurrentSortOrderText => SearchModel.SortOrder switch
-    {
-        VideoSortOrder.Relevance => "Relevance",
-        VideoSortOrder.UploadDate => "Upload Date",
-        VideoSortOrder.ViewCount => "View Count",
-        VideoSortOrder.Rating => "Rating",
-        _ => "Sort By"
-    };
-
     private string CurrentDurationText => SearchModel.DurationFilter switch
     {
         VideoDurationFilter.Any => "Any Duration",
@@ -52,15 +43,6 @@ public partial class VideoSearch : ComponentBase
         // Get current user ID - this would come from authentication
         CurrentUserId = "temp-user-id"; // TODO: Get from AuthenticationStateProvider
         await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Sets the sort order filter.
-    /// </summary>
-    private void SetSortOrder(VideoSortOrder sortOrder)
-    {
-        SearchModel.SortOrder = sortOrder;
-        StateHasChanged();
     }
 
     /// <summary>

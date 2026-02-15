@@ -76,6 +76,9 @@ public partial class ProjectDetail : ComponentBase
     private bool IsAddingByUrl = false;
     private string? AddByUrlError = null;
 
+    // AI Search state
+    private string AISearchQuery = string.Empty;
+
     #endregion
 
     #region Lifecycle Methods
@@ -453,6 +456,20 @@ public partial class ProjectDetail : ComponentBase
             IsGeneratingGuide = false;
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region AI Video Search
+
+    private void NavigateToAISearch()
+    {
+        var url = $"/projects/{Id}/ai-search";
+        if (!string.IsNullOrWhiteSpace(AISearchQuery))
+        {
+            url += $"?q={Uri.EscapeDataString(AISearchQuery.Trim())}";
+        }
+        Navigation.NavigateTo(url);
     }
 
     #endregion

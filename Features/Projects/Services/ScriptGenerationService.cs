@@ -957,6 +957,30 @@ namespace TargetBrowse.Features.Projects.Services
         }
 
         /// <summary>
+        /// Updates the hook text in the script outline and saves to database.
+        /// </summary>
+        public async Task UpdateOutlineHookAsync(Guid projectId, string hook)
+        {
+            var scriptContent = await _context.ScriptContents
+                .FirstOrDefaultAsync(sc => sc.ProjectId == projectId && !sc.IsDeleted);
+
+            if (scriptContent == null || string.IsNullOrEmpty(scriptContent.OutlineJsonStructure))
+            {
+                throw new InvalidOperationException("No outline found for this project.");
+            }
+
+            var outline = JsonConvert.DeserializeObject<ScriptOutlineModel>(scriptContent.OutlineJsonStructure);
+            if (outline == null)
+            {
+                throw new InvalidOperationException("Failed to parse existing outline.");
+            }
+
+            outline.Hook = hook;
+            scriptContent.OutlineJsonStructure = JsonConvert.SerializeObject(outline);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
         /// Creates a failed analysis result.
         /// </summary>
         private ScriptAnalysisResult CreateFailedResult(string errorMessage)

@@ -347,6 +347,48 @@
                     </div>
                 </div>
 
+                @* AI Video Search *@
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">AI Video Search</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control form-control-sm mb-2" rows="3"
+                                  placeholder="Describe what videos to find, or leave blank to use AI Guidance"
+                                  @bind="AISearchQuery" @bind:event="oninput"
+                                  disabled="@(!CanGenerate)"></textarea>
+                        @if (string.IsNullOrWhiteSpace(Project.UserGuidance) && string.IsNullOrWhiteSpace(AISearchQuery))
+                        {
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Enter a search query or set AI Guidance in project settings.
+                            </p>
+                            <button class="btn btn-primary btn-sm" disabled>
+                                <i class="bi bi-search me-1"></i>
+                                Find Videos
+                            </button>
+                        }
+                        else if (!CanGenerate)
+                        {
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Daily AI limit reached. Try again tomorrow.
+                            </p>
+                            <button class="btn btn-primary btn-sm" disabled>
+                                <i class="bi bi-search me-1"></i>
+                                Find Videos
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary btn-sm" @onclick="NavigateToAISearch">
+                                <i class="bi bi-search me-1"></i>
+                                Find Videos
+                            </button>
+                        }
+                    </div>
+                </div>
+
                 @* Message Center *@
                 <MessageSidebar />
             </div>

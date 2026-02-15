@@ -1,0 +1,215 @@
+@page "/projects/{id:guid}/ai-search"
+@using Microsoft.AspNetCore.Authorization
+@using TargetBrowse.Features.Projects.Models
+@using TargetBrowse.Features.Projects.Services
+@using TargetBrowse.Components.Shared
+@using TargetBrowse.Services.Utilities
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>AI Video Search - @(Project?.Name ?? "Project")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                    <li class="breadcrumb-item"><a href="/projects/@Id">@(Project?.Name ?? "Project")</a></li>
+                    <li class="breadcrumb-item active">AI Video Search</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (IsSearching)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Searching...</span>
+            </div>
+            <div class="mt-4">
+                <h4>Searching for Videos</h4>
+                <p class="text-muted">Using AI to find relevant YouTube videos based on your project guidance...</p>
+                <p class="small text-muted">This may take 10-20 seconds.</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Search Failed
+            </h5>
+            <p class="mb-2">@ErrorMessage</p>
+            <a href="/projects/@Id" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Project
+            </a>
+        </div>
+    }
+    else if (SearchResults != null && SearchResults.Count > 0)
+    {
+        <div class="row">
+            @* Left Sidebar *@
+            <div class="col-lg-3">
+                @* Project Info *@
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Project Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="mb-2">@Project?.Name</h6>
+                        @if (!string.IsNullOrEmpty(CustomQuery))
+                        {
+                            <p class="small text-muted mb-0">
+                                <strong>Search:</strong> @CustomQuery
+                            </p>
+                        }
+                        else if (!string.IsNullOrEmpty(Project?.UserGuidance))
+                        {
+                            <p class="small text-muted mb-0">
+                                <strong>AI Guidance:</strong> @Project.UserGuidance
+                            </p>
+                        }
+                    </div>
+                </div>
+
+                @* Search Info *@
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Found @SearchResults.Count video(s). Click "Add to Project" to include them.
+                        </p>
+                        <a href="/projects/@Id" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Back to Project
+                        </a>
+                    </div>
+                </div>
+
+                @* AI Suggestion *@
+                @if (!string.IsNullOrEmpty(AISuggestion))
+                {
+                    <div class="card mb-2 border-info">
+                        <div class="card-header bg-info bg-opacity-10">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                AI Suggestion
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small mb-0">@AISuggestion</p>
+                        </div>
+                    </div>
+                }
+
+                <MessageSidebar />
+            </div>
+
+            @* Main Content *@
+            <div class="col-lg-9">
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+                    @foreach (var item in SearchResults)
+                    {
+                        <div class="col">
+                            <div class="card video-card h-100">
+                                @* Thumbnail *@
+                                <div class="position-relative video-thumbnail-container">
+                                    @if (!string.IsNullOrEmpty(item.VideoInfo.ThumbnailUrl))
+                                    {
+                                        <img src="@item.VideoInfo.ThumbnailUrl"
+                                             class="card-img-top video-thumbnail"
+                                             alt="@(System.Net.WebUtility.HtmlDecode(item.VideoInfo.Title)) thumbnail"
+                                             loading="lazy"
+                                             onerror="this.src='/images/video-placeholder.jpg'" />
+                                    }
+                                    else
+                                    {
+                                        <div class="card-img-top video-thumbnail bg-secondary d-flex align-items-center justify-content-center" style="height: 180px;">
+                                            <i class="bi bi-camera-video text-white" style="font-size: 2rem;"></i>
+                                        </div>
+                                    }
+
+                                    @* Duration Badge *@
+                                    @if (item.VideoInfo.Duration > 0)
+                                    {
+                                        <span class="badge bg-dark position-absolute duration-badge">
+                                            @FormatHelper.FormatDuration(item.VideoInfo.Duration)
+                                        </span>
+                                    }
+                                </div>
+
+                                @* Card Body *@
+                                <div class="card-body d-flex flex-column p-3">
+                                    <h6 class="card-title video-title mb-2">
+                                        <a href="https://youtube.com/watch?v=@item.VideoInfo.YouTubeVideoId"
+                                           target="_blank" class="text-decoration-none">
+                                            @((MarkupString)System.Net.WebUtility.HtmlDecode(item.VideoInfo.Title))
+                                        </a>
+                                    </h6>
+
+                                    @* Channel *@
+                                    <div class="video-channel mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            @item.VideoInfo.ChannelName
+                                        </small>
+                                    </div>
+
+                                    @* Metadata *@
+                                    <div class="video-metadata mb-2">
+                                        <small class="text-muted">
+                                            <span><i class="bi bi-eye me-1"></i>@FormatHelper.FormatCount(item.VideoInfo.ViewCount)</span>
+                                            <span class="mx-1">•</span>
+                                            <span>@FormatHelper.FormatDateDisplay(item.VideoInfo.PublishedAt)</span>
+                                        </small>
+                                    </div>
+
+                                    @* Relevance Reason *@
+                                    @if (!string.IsNullOrEmpty(item.Reason))
+                                    {
+                                        <div class="mb-2">
+                                            <small class="text-muted fst-italic">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                @item.Reason
+                                            </small>
+                                        </div>
+                                    }
+
+                                    @* Add Button (pushed to bottom) *@
+                                    <div class="mt-auto">
+                                        @if (AddedVideoIds.Contains(item.VideoInfo.YouTubeVideoId))
+                                        {
+                                            <button class="btn btn-success btn-sm w-100" disabled>
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Added
+                                            </button>
+                                        }
+                                        else if (AddingVideoId == item.VideoInfo.YouTubeVideoId)
+                                        {
+                                            <button class="btn btn-primary btn-sm w-100" disabled>
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                Adding...
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-primary btn-sm w-100"
+                                                    @onclick="() => HandleAddToProject(item)">
+                                                <i class="bi bi-plus-lg me-1"></i>
+                                                Add to Project
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
