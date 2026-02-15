@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TargetBrowse.Data;
 using TargetBrowse.Features.Projects.Models;
 using TargetBrowse.Features.Projects.Services;
+using TargetBrowse.Services.Interfaces;
 
 namespace TargetBrowse.Features.Projects.Pages.Script
 {
@@ -19,6 +20,7 @@ namespace TargetBrowse.Features.Projects.Pages.Script
         [Inject] private ApplicationDbContext Context { get; set; } = default!;
         [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
         [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+        [Inject] private IMessageCenterService MessageCenter { get; set; } = default!;
         [Inject] private ILogger<OutlineReview> Logger { get; set; } = default!;
 
         private string? ProjectName { get; set; }
@@ -30,6 +32,12 @@ namespace TargetBrowse.Features.Projects.Pages.Script
         private long _durationMs;
         private int _estimatedMinutes;
         private int _targetMinutes;
+
+        // Hook editing state
+        private string _editableHook = string.Empty;
+        private string _originalHook = string.Empty;
+        private bool _isSavingHook;
+        private bool _hookDirty => _editableHook != _originalHook;
 
         protected override async Task OnInitializedAsync()
         {
@@ -73,6 +81,7 @@ namespace TargetBrowse.Features.Projects.Pages.Script
                     _outline = Newtonsoft.Json.JsonConvert.DeserializeObject<ScriptOutlineModel>(existingScript.OutlineJsonStructure);
                     _targetMinutes = existingScript.TargetLengthMinutes ?? 15;
                     _estimatedMinutes = existingScript.EstimatedLengthMinutes ?? _targetMinutes;
+                    InitializeHookEditor();
                     _isGenerating = false;
                     Logger.LogInformation($"Loaded existing outline for project {Id}");
                 }
@@ -116,6 +125,7 @@ namespace TargetBrowse.Features.Projects.Pages.Script
                     var scriptContent = await ScriptGenerationService.GetScriptContentAsync(Id);
                     _targetMinutes = scriptContent?.TargetLengthMinutes ?? 15;
 
+                    InitializeHookEditor();
                     Logger.LogInformation($"Successfully generated outline for project {Id}");
                 }
                 else
@@ -142,6 +152,53 @@ namespace TargetBrowse.Features.Projects.Pages.Script
         private async Task HandleRetryOutline()
         {
             await GenerateOutlineAsync();
+        }
+
+        /// <summary>
+        /// Initializes the hook editor with the current outline hook text.
+        /// </summary>
+        private void InitializeHookEditor()
+        {
+            _editableHook = _outline?.Hook ?? string.Empty;
+            _originalHook = _editableHook;
+        }
+
+        /// <summary>
+        /// Saves the edited hook text to the database.
+        /// </summary>
+        private async Task HandleSaveHook()
+        {
+            try
+            {
+                _isSavingHook = true;
+                StateHasChanged();
+
+                await ScriptGenerationService.UpdateOutlineHookAsync(Id, _editableHook);
+                _originalHook = _editableHook;
+
+                if (_outline != null)
+                    _outline.Hook = _editableHook;
+
+                await MessageCenter.ShowSuccessAsync("Hook updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error saving hook for project {Id}");
+                await MessageCenter.ShowErrorAsync($"Failed to save hook: {ex.Message}");
+            }
+            finally
+            {
+                _isSavingHook = false;
+                StateHasChanged();
+            }
+        }
+
+        /// <summary>
+        /// Resets the hook text to the original value.
+        /// </summary>
+        private void HandleResetHook()
+        {
+            _editableHook = _originalHook;
         }
     }
 }

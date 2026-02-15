@@ -71,16 +71,31 @@
                             <p class="lead">@_outline.Title</p>
                         </div>
 
-                        @if (!string.IsNullOrEmpty(_outline.Hook))
-                        {
-                            <div class="mb-4">
-                                <h5>Opening Hook</h5>
-                                <div class="alert alert-info">
-                                    <i class="bi bi-lightbulb me-2"></i>
-                                    @_outline.Hook
-                                </div>
-                            </div>
-                        }
+                        <div class="mb-4">
+                            <h5>Opening Hook</h5>
+                            <textarea class="form-control mb-2" rows="3"
+                                      @bind="_editableHook" @bind:event="oninput"
+                                      disabled="@_isSavingHook"></textarea>
+                            @if (_hookDirty)
+                            {
+                                <button class="btn btn-primary btn-sm me-2" @onclick="HandleSaveHook" disabled="@_isSavingHook">
+                                    @if (_isSavingHook)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-lg me-1"></i>
+                                        <span>Save Hook</span>
+                                    }
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="HandleResetHook" disabled="@_isSavingHook">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                    Reset
+                                </button>
+                            }
+                        </div>
 
                         @if (_outline.Sections.Any())
                         {

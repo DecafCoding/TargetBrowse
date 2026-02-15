@@ -70,5 +70,12 @@ namespace TargetBrowse.Features.Projects.Services
         /// <param name="userId">User ID to check</param>
         /// <returns>Number of AI calls today</returns>
         Task<int> GetDailyAICallCountAsync(string userId);
+
+        /// <summary>
+        /// Updates the hook text in the script outline.
+        /// </summary>
+        /// <param name="projectId">Project ID</param>
+        /// <param name="hook">New hook text</param>
+        Task UpdateOutlineHookAsync(Guid projectId, string hook);
     }
 }
