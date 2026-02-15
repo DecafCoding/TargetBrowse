@@ -64,6 +64,14 @@ Key files: `Services/AI/ScriptPromptBuilder.cs`, `Features/Projects/Services/Scr
 - Use `EditForm` with `DataAnnotationsValidator` for forms (see parent `CLAUDE.md` for pattern)
 - Use Bootstrap 5 classes for UI; prefer Blazor built-in components over custom CSS
 
+## Database
+
+SQL Server LocalDB. Query via:
+
+```bash
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d "TargetBrowse" -Q "SELECT ..."
+```
+
 ## Configuration
 
 - `appsettings.json` contains YouTube API settings (`YouTube` section) and project settings (`ProjectSettings` section)
