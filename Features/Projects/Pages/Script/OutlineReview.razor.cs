@@ -119,7 +119,7 @@ namespace TargetBrowse.Features.Projects.Pages.Script
                     _durationMs = result.DurationMs;
 
                     // Calculate estimated length
-                    _estimatedMinutes = result.Outline.Sections.Sum(s => s.EstimatedMinutes);
+                    _estimatedMinutes = (int)Math.Round(result.Outline.Sections.Sum(s => s.EstimatedMinutes));
 
                     // Get target length from script content
                     var scriptContent = await ScriptGenerationService.GetScriptContentAsync(Id);

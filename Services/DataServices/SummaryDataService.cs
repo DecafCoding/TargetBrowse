@@ -28,16 +28,35 @@ namespace TargetBrowse.Services.DataServices
         {
             try
             {
-                var summaryEntity = new SummaryEntity
-                {
-                    VideoId = videoId,
-                    Content = content,
-                    Summary = summary,
-                    AICallId = aiCallId,
-                    GenerationCount = 1
-                };
+                // Check for soft-deleted row (unique index includes deleted rows)
+                var existing = await _context.Summaries
+                    .FirstOrDefaultAsync(s => s.VideoId == videoId && s.IsDeleted);
 
-                _context.Summaries.Add(summaryEntity);
+                SummaryEntity summaryEntity;
+
+                if (existing != null)
+                {
+                    // Re-use the soft-deleted row
+                    existing.Content = content;
+                    existing.Summary = summary;
+                    existing.AICallId = aiCallId;
+                    existing.GenerationCount += 1;
+                    existing.IsDeleted = false;
+                    summaryEntity = existing;
+                }
+                else
+                {
+                    summaryEntity = new SummaryEntity
+                    {
+                        VideoId = videoId,
+                        Content = content,
+                        Summary = summary,
+                        AICallId = aiCallId,
+                        GenerationCount = 1
+                    };
+                    _context.Summaries.Add(summaryEntity);
+                }
+
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation(
@@ -68,7 +87,7 @@ namespace TargetBrowse.Services.DataServices
             try
             {
                 return await _context.Summaries
-                    .FirstOrDefaultAsync(s => s.VideoId == videoId);
+                    .FirstOrDefaultAsync(s => s.VideoId == videoId && !s.IsDeleted);
             }
             catch (Exception ex)
             {

@@ -31,6 +31,9 @@ namespace TargetBrowse.Features.Projects.Pages.Script
         private decimal _totalCost;
         private long _durationMs;
         private string _copyButtonText = "Copy";
+        private bool _isEditing;
+        private string _editText = string.Empty;
+        private bool _isSaving;
 
         protected override async Task OnInitializedAsync()
         {
@@ -211,6 +214,64 @@ namespace TargetBrowse.Features.Projects.Pages.Script
             {
                 Logger.LogError(ex, "Error downloading script");
             }
+        }
+
+        /// <summary>
+        /// Enters edit mode with the current script text.
+        /// </summary>
+        private void HandleEditScript()
+        {
+            if (_script == null) return;
+            _editText = _script.ScriptText;
+            _isEditing = true;
+        }
+
+        /// <summary>
+        /// Saves edited script text to the database and updates local model.
+        /// </summary>
+        private async Task HandleSaveScript()
+        {
+            if (_script == null) return;
+
+            try
+            {
+                _isSaving = true;
+                StateHasChanged();
+
+                var success = await ScriptGenerationService.UpdateScriptTextAsync(Id, _editText);
+
+                if (success)
+                {
+                    _script.ScriptText = _editText;
+                    var wordCount = _editText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+                    _script.WordCount = wordCount;
+                    _script.EstimatedDurationSeconds = (int)Math.Round(wordCount / 150.0 * 60);
+                    _isEditing = false;
+                }
+                else
+                {
+                    _errorMessage = "Failed to save script changes";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error saving script edits");
+                _errorMessage = $"Error saving changes: {ex.Message}";
+            }
+            finally
+            {
+                _isSaving = false;
+                StateHasChanged();
+            }
+        }
+
+        /// <summary>
+        /// Cancels editing and discards changes.
+        /// </summary>
+        private void HandleCancelEdit()
+        {
+            _isEditing = false;
+            _editText = string.Empty;
         }
 
         /// <summary>

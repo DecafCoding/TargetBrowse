@@ -34,7 +34,7 @@ namespace TargetBrowse.Features.Projects.Models
         public List<string> KeyPoints { get; set; } = new();
 
         [JsonProperty("estimatedMinutes")]
-        public int EstimatedMinutes { get; set; }
+        public decimal EstimatedMinutes { get; set; }
 
         /// <summary>
         /// Source videos for this section. Uses a custom converter because

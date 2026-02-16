@@ -133,9 +133,9 @@ namespace TargetBrowse.Features.Watch.Models
         public bool HasTranscript { get; set; }
 
         /// <summary>
-        /// Whether the user has generated a summary for this video
+        /// Whether the user has generated an analysis for this video
         /// </summary>
-        public bool HasSummary { get; set; }
+        public bool HasAnalysis { get; set; }
 
         // URLs
         /// <summary>
@@ -175,9 +175,9 @@ namespace TargetBrowse.Features.Watch.Models
         public string? RawTranscript { get; set; }
 
         /// <summary>
-        /// AI-generated summary content (if available)
+        /// AI-generated analysis content (if available)
         /// </summary>
-        public string? SummaryContent { get; set; }
+        public string? AnalysisContent { get; set; }
 
         // Video Type Information
         /// <summary>

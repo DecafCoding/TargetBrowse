@@ -67,18 +67,51 @@
                             Generated Script
                         </h4>
                         <div>
-                            <button class="btn btn-outline-secondary btn-sm me-1" @onclick="HandleCopyScript">
-                                <i class="bi bi-clipboard me-1"></i>
-                                @(_copyButtonText)
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" @onclick="HandleDownloadScript">
-                                <i class="bi bi-download me-1"></i>
-                                Download .txt
-                            </button>
+                            @if (_isEditing)
+                            {
+                                <button class="btn btn-success btn-sm me-1" @onclick="HandleSaveScript" disabled="@_isSaving">
+                                    @if (_isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-lg me-1"></i>
+                                    }
+                                    Save
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="HandleCancelEdit" disabled="@_isSaving">
+                                    <i class="bi bi-x-lg me-1"></i>
+                                    Cancel
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-primary btn-sm me-1" @onclick="HandleEditScript">
+                                    <i class="bi bi-pencil me-1"></i>
+                                    Edit
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm me-1" @onclick="HandleCopyScript">
+                                    <i class="bi bi-clipboard me-1"></i>
+                                    @(_copyButtonText)
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="HandleDownloadScript">
+                                    <i class="bi bi-download me-1"></i>
+                                    Download .txt
+                                </button>
+                            }
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="script-text" style="white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; line-height: 1.8;">@_script.ScriptText</div>
+                        @if (_isEditing)
+                        {
+                            <textarea @bind="_editText" class="form-control" rows="30"
+                                      style="font-family: 'Segoe UI', sans-serif; line-height: 1.8; resize: vertical;"></textarea>
+                        }
+                        else
+                        {
+                            <div class="script-text" style="white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; line-height: 1.8;">@_script.ScriptText</div>
+                        }
                     </div>
                     <div class="card-footer">
                         <div class="d-flex justify-content-between align-items-center">

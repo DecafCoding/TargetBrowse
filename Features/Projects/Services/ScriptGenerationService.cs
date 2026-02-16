@@ -898,7 +898,7 @@ namespace TargetBrowse.Features.Projects.Services
             var estimatedMinutes = outline.Sections.Sum(s => s.EstimatedMinutes);
 
             scriptContent.OutlineJsonStructure = outlineJson;
-            scriptContent.EstimatedLengthMinutes = estimatedMinutes;
+            scriptContent.EstimatedLengthMinutes = (int)Math.Round(estimatedMinutes);
             scriptContent.ScriptStatus = "OutlineGenerated";
             scriptContent.OutlineAICallId = aiCallId;
 
@@ -927,6 +927,39 @@ namespace TargetBrowse.Features.Projects.Services
             outline.Hook = hook;
             scriptContent.OutlineJsonStructure = JsonConvert.SerializeObject(outline);
             await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Updates the script text and recalculates word count and estimated duration.
+        /// </summary>
+        public async Task<bool> UpdateScriptTextAsync(Guid projectId, string scriptText)
+        {
+            try
+            {
+                var scriptContent = await _context.ScriptContents
+                    .FirstOrDefaultAsync(sc => sc.ProjectId == projectId && !sc.IsDeleted);
+
+                if (scriptContent == null)
+                {
+                    _logger.LogWarning($"No script content found for project {projectId}");
+                    return false;
+                }
+
+                scriptContent.ScriptText = scriptText;
+                var wordCount = scriptText.Split((char[])null!, StringSplitOptions.RemoveEmptyEntries).Length;
+                scriptContent.WordCount = wordCount;
+                scriptContent.EstimatedDurationSeconds = (int)Math.Round(wordCount / 150.0 * 60);
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Updated script text for project {projectId}. Word count: {wordCount}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating script text for project {projectId}");
+                return false;
+            }
         }
 
         /// <summary>

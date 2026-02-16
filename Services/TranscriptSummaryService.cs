@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using TargetBrowse.Data;
@@ -95,15 +94,9 @@ public class TranscriptSummaryService : ITranscriptSummaryService
                 return CreateSkippedResult(videoId, "No transcript available");
             }
 
-            if (video.VideoType == null)
-            {
-                _logger.LogInformation($"Video {videoId} has no VideoType, skipping summarization");
-                return CreateSkippedResult(videoId, "No VideoType assigned");
-            }
-
-            // Step 4: Determine prompt name based on VideoType.Code
-            var promptName = DeterminePromptName(video.VideoType.Code);
-            _logger.LogInformation($"Using prompt '{promptName}' for video type '{video.VideoType.Code}'");
+            // Step 4: Use the unified Video Analysis prompt
+            var promptName = "Video Analysis";
+            _logger.LogInformation($"Using prompt '{promptName}' for video {videoId}");
 
             // Step 5: Retrieve prompt with Model navigation property
             var promptEntity = await _promptDataService.GetActivePromptByNameAsync(promptName);
@@ -129,7 +122,7 @@ public class TranscriptSummaryService : ITranscriptSummaryService
 
             // Step 7: Replace placeholder in prompt template
             var actualUserPrompt = promptEntity.UserPromptTemplate
-                .Replace("[Paste-full-transcript-here]", preparedTranscript);
+                .Replace("{transcript}", preparedTranscript);
 
             // Step 8: Create and send OpenAI request
             var request = CreateSummaryRequest(promptEntity, actualUserPrompt);
@@ -151,25 +144,26 @@ public class TranscriptSummaryService : ITranscriptSummaryService
                 return CreateFailedResult(videoId, "Failed to get response from OpenAI API");
             }
 
-            // Step 10: Parse response
-            var summaryResponse = ParseSummaryResponse(response);
-            if (summaryResponse == null ||
-                string.IsNullOrWhiteSpace(summaryResponse.ShortSummary) ||
-                string.IsNullOrWhiteSpace(summaryResponse.LongSummary))
+            // Step 10: Parse response into structured analysis and render as HTML
+            var analysisResponse = ParseAnalysisResponse(response);
+            if (analysisResponse == null)
             {
                 return CreateFailedResult(videoId, "Empty or invalid response from OpenAI API");
             }
 
-            // Step 11: Store summary
+            var renderedHtml = RenderAnalysisAsHtml(analysisResponse);
+            var coreThesis = analysisResponse.CoreThesis ?? "Video analysis";
+
+            // Step 11: Store analysis (Content = rendered HTML, Summary = core thesis)
             var summary = await _summaryDataService.CreateSummaryAsync(
                 videoId,
-                summaryResponse.LongSummary,
-                summaryResponse.ShortSummary,
+                renderedHtml,
+                coreThesis,
                 aiCall.Id);
 
             // Step 12: Calculate costs and build result
             var inputTokens = response.Usage?.PromptTokens ?? EstimateTokenCount(promptEntity.SystemPrompt + actualUserPrompt);
-            var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(summaryResponse.LongSummary + summaryResponse.ShortSummary);
+            var outputTokens = response.Usage?.CompletionTokens ?? EstimateTokenCount(renderedHtml);
             var totalCost = CalculateCost(
                 inputTokens,
                 promptEntity.Model.CostPer1kInputTokens,
@@ -183,7 +177,7 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             return CreateSuccessResult(
                 videoId,
                 summary.Id,
-                summaryResponse.LongSummary,
+                renderedHtml,
                 inputTokens,
                 outputTokens,
                 totalCost,
@@ -196,22 +190,6 @@ public class TranscriptSummaryService : ITranscriptSummaryService
             _logger.LogError(ex, $"Error summarizing video {videoId}: {ex.Message}");
             return CreateFailedResult(videoId, $"Summarization failed: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Determines the appropriate prompt name based on video type code.
-    /// Returns "Entertainment Summary" for UNKNOWN or uses "{Code} Summary" pattern.
-    /// </summary>
-    private string DeterminePromptName(string videoTypeCode)
-    {
-        if (string.Equals(videoTypeCode, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Entertainment Summary";
-        }
-
-        // Convert code to title case (e.g., "REVIEW" -> "Review")
-        var titleCase = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(videoTypeCode.ToLower());
-        return $"{titleCase} Summary";
     }
 
     /// <summary>
@@ -231,7 +209,7 @@ public class TranscriptSummaryService : ITranscriptSummaryService
 
         // Estimate tokens for system prompt and user prompt template (without transcript)
         var systemTokens = EstimateTokenCount(systemPrompt ?? string.Empty);
-        var templateTokens = EstimateTokenCount(userPromptTemplate?.Replace("[Paste-full-transcript-here]", "") ?? string.Empty);
+        var templateTokens = EstimateTokenCount(userPromptTemplate?.Replace("{transcript}", "") ?? string.Empty);
         var transcriptTokens = EstimateTokenCount(rawTranscript);
 
         // Calculate available tokens for transcript (reserve some for response)
@@ -311,10 +289,9 @@ public class TranscriptSummaryService : ITranscriptSummaryService
     }
 
     /// <summary>
-    /// Parses the OpenAI response and extracts the summary content.
-    /// Now expects JSON format with short_summary and long_summary fields.
+    /// Parses the OpenAI response into a structured VideoAnalysisResponse.
     /// </summary>
-    private SummaryResponse? ParseSummaryResponse(OpenAiResponse response)
+    private VideoAnalysisResponse? ParseAnalysisResponse(OpenAiResponse response)
     {
         try
         {
@@ -326,7 +303,6 @@ public class TranscriptSummaryService : ITranscriptSummaryService
 
             var messageContent = response.Choices.First().Message.Content;
 
-            // Content could be string or object, handle both cases
             if (messageContent is string jsonContent)
             {
                 if (string.IsNullOrWhiteSpace(jsonContent))
@@ -335,15 +311,14 @@ public class TranscriptSummaryService : ITranscriptSummaryService
                     return null;
                 }
 
-                // Parse JSON response
-                var summaryResponse = JsonConvert.DeserializeObject<SummaryResponse>(jsonContent);
-                if (summaryResponse == null)
+                var analysisResponse = JsonConvert.DeserializeObject<VideoAnalysisResponse>(jsonContent);
+                if (analysisResponse == null)
                 {
-                    _logger.LogWarning("Failed to deserialize summary response JSON");
+                    _logger.LogWarning("Failed to deserialize analysis response JSON");
                     return null;
                 }
 
-                return summaryResponse;
+                return analysisResponse;
             }
 
             _logger.LogWarning("Unexpected response content format from OpenAI API");
@@ -357,16 +332,236 @@ public class TranscriptSummaryService : ITranscriptSummaryService
     }
 
     /// <summary>
-    /// Model for the JSON response from OpenAI containing both summary types.
+    /// Renders the structured analysis response as Bootstrap-styled HTML.
+    /// Sections with no content are skipped entirely.
     /// </summary>
-    private class SummaryResponse
+    private string RenderAnalysisAsHtml(VideoAnalysisResponse analysis)
     {
-        [JsonProperty("short_summary")]
-        public string ShortSummary { get; set; } = string.Empty;
+        var sb = new StringBuilder();
 
-        [JsonProperty("long_summary")]
-        public string LongSummary { get; set; } = string.Empty;
+        // Core Thesis
+        if (!string.IsNullOrWhiteSpace(analysis.CoreThesis))
+        {
+            sb.Append("<h5>Core Thesis</h5>");
+            sb.Append($"<p>{Encode(analysis.CoreThesis)}</p>");
+        }
+
+        // Topics with nested subtopics
+        if (analysis.Topics?.Count > 0)
+        {
+            foreach (var topic in analysis.Topics)
+            {
+                sb.Append($"<h5>{Encode(topic.Topic)}</h5>");
+
+                if (topic.Subtopics?.Count > 0)
+                {
+                    foreach (var sub in topic.Subtopics)
+                    {
+                        sb.Append($"<h6>{Encode(sub.Subtopic)}</h6>");
+
+                        // Facts
+                        if (sub.Facts?.Count > 0)
+                        {
+                            sb.Append("<ul>");
+                            foreach (var fact in sub.Facts)
+                                sb.Append($"<li>{Encode(fact)}</li>");
+                            sb.Append("</ul>");
+                        }
+
+                        // Concrete Examples
+                        if (sub.ConcreteExamples?.Count > 0)
+                        {
+                            sb.Append("<strong>Examples:</strong><ul>");
+                            foreach (var ex in sub.ConcreteExamples)
+                            {
+                                sb.Append("<li>");
+                                if (!string.IsNullOrWhiteSpace(ex.Illustrates))
+                                    sb.Append($"<strong>{Encode(ex.Illustrates)}</strong>: ");
+                                sb.Append(Encode(ex.Example));
+                                sb.Append("</li>");
+                            }
+                            sb.Append("</ul>");
+                        }
+
+                        // Do This, Not That
+                        if (sub.DoThisNotThat?.Count > 0)
+                        {
+                            sb.Append("<table class=\"table table-sm table-bordered\"><thead><tr><th>Don't</th><th>Do</th><th>Why</th></tr></thead><tbody>");
+                            foreach (var item in sub.DoThisNotThat)
+                                sb.Append($"<tr><td>{Encode(item.Bad)}</td><td>{Encode(item.Good)}</td><td>{Encode(item.Why)}</td></tr>");
+                            sb.Append("</tbody></table>");
+                        }
+
+                        // Workflows
+                        if (sub.Workflows?.Count > 0)
+                        {
+                            foreach (var wf in sub.Workflows)
+                            {
+                                if (!string.IsNullOrWhiteSpace(wf.Description))
+                                    sb.Append($"<strong>{Encode(wf.Description)}</strong>");
+                                if (wf.Steps?.Count > 0)
+                                {
+                                    sb.Append("<ol>");
+                                    foreach (var step in wf.Steps)
+                                        sb.Append($"<li>{Encode(step)}</li>");
+                                    sb.Append("</ol>");
+                                }
+                            }
+                        }
+
+                        // People and Evidence
+                        if (sub.PeopleAndEvidence?.Count > 0)
+                        {
+                            sb.Append("<strong>Evidence:</strong><ul>");
+                            foreach (var pe in sub.PeopleAndEvidence.Where(p => !string.IsNullOrWhiteSpace(p.Detail)))
+                                sb.Append($"<li><strong>{Encode(pe.Detail)}</strong>: {Encode(pe.Context)}</li>");
+                            sb.Append("</ul>");
+                        }
+
+                        // Metaphors
+                        if (sub.Metaphors?.Count > 0)
+                        {
+                            sb.Append("<strong>Analogies:</strong><ul>");
+                            foreach (var m in sub.Metaphors)
+                                sb.Append($"<li><strong>{Encode(m.Metaphor)}</strong> &mdash; {Encode(m.Explains)}</li>");
+                            sb.Append("</ul>");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Limitations
+        if (analysis.Limitations?.Count > 0)
+        {
+            sb.Append("<h5>Limitations</h5><ul>");
+            foreach (var lim in analysis.Limitations)
+                sb.Append($"<li>{Encode(lim)}</li>");
+            sb.Append("</ul>");
+        }
+
+        // Calls to Action
+        if (analysis.CallsToAction?.Count > 0)
+        {
+            sb.Append("<h5>Calls to Action</h5><ul>");
+            foreach (var cta in analysis.CallsToAction)
+                sb.Append($"<li>{Encode(cta)}</li>");
+            sb.Append("</ul>");
+        }
+
+        return sb.ToString();
     }
+
+    /// <summary>
+    /// HTML-encodes a string to prevent XSS when rendering user/AI content.
+    /// </summary>
+    private static string Encode(string? value)
+    {
+        return System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
+    }
+
+    #region Analysis Response Models (v3 — topic-centric)
+
+    private class VideoAnalysisResponse
+    {
+        [JsonProperty("videoTitle")]
+        public string? VideoTitle { get; set; }
+
+        [JsonProperty("coreThesis")]
+        public string? CoreThesis { get; set; }
+
+        [JsonProperty("topics")]
+        public List<TopicItem>? Topics { get; set; }
+
+        [JsonProperty("limitations")]
+        public List<string>? Limitations { get; set; }
+
+        [JsonProperty("callsToAction")]
+        public List<string>? CallsToAction { get; set; }
+    }
+
+    private class TopicItem
+    {
+        [JsonProperty("topic")]
+        public string Topic { get; set; } = string.Empty;
+
+        [JsonProperty("subtopics")]
+        public List<SubtopicItem>? Subtopics { get; set; }
+    }
+
+    private class SubtopicItem
+    {
+        [JsonProperty("subtopic")]
+        public string Subtopic { get; set; } = string.Empty;
+
+        [JsonProperty("facts")]
+        public List<string>? Facts { get; set; }
+
+        [JsonProperty("concreteExamples")]
+        public List<ExampleItem>? ConcreteExamples { get; set; }
+
+        [JsonProperty("doThisNotThat")]
+        public List<DoThisNotThatItem>? DoThisNotThat { get; set; }
+
+        [JsonProperty("workflows")]
+        public List<WorkflowItem>? Workflows { get; set; }
+
+        [JsonProperty("peopleAndEvidence")]
+        public List<EvidenceItem>? PeopleAndEvidence { get; set; }
+
+        [JsonProperty("metaphors")]
+        public List<MetaphorItem>? Metaphors { get; set; }
+    }
+
+    private class ExampleItem
+    {
+        [JsonProperty("example")]
+        public string Example { get; set; } = string.Empty;
+
+        [JsonProperty("illustrates")]
+        public string? Illustrates { get; set; }
+    }
+
+    private class DoThisNotThatItem
+    {
+        [JsonProperty("bad")]
+        public string Bad { get; set; } = string.Empty;
+
+        [JsonProperty("good")]
+        public string Good { get; set; } = string.Empty;
+
+        [JsonProperty("why")]
+        public string Why { get; set; } = string.Empty;
+    }
+
+    private class WorkflowItem
+    {
+        [JsonProperty("description")]
+        public string? Description { get; set; }
+
+        [JsonProperty("steps")]
+        public List<string>? Steps { get; set; }
+    }
+
+    private class EvidenceItem
+    {
+        [JsonProperty("detail")]
+        public string Detail { get; set; } = string.Empty;
+
+        [JsonProperty("context")]
+        public string Context { get; set; } = string.Empty;
+    }
+
+    private class MetaphorItem
+    {
+        [JsonProperty("metaphor")]
+        public string Metaphor { get; set; } = string.Empty;
+
+        [JsonProperty("explains")]
+        public string Explains { get; set; } = string.Empty;
+    }
+
+    #endregion
 
     /// <summary>
     /// Tracks the API call in the database for auditing and cost monitoring.
