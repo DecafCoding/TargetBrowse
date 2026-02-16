@@ -15,7 +15,7 @@ public enum ContentViewMode
 {
     Description,
     Transcript,
-    Summary
+    Analysis
 }
 
 /// <summary>
@@ -72,12 +72,12 @@ public partial class Watch : ComponentBase
     /// <summary>
     /// Tracks whether summary generation is currently in progress.
     /// </summary>
-    protected bool IsGeneratingSummary { get; set; } = false;
+    protected bool IsGeneratingAnalysis { get; set; } = false;
 
     /// <summary>
     /// Tracks which content type is currently being displayed
     /// </summary>
-    protected ContentViewMode CurrentViewMode { get; set; } = ContentViewMode.Summary;
+    protected ContentViewMode CurrentViewMode { get; set; } = ContentViewMode.Analysis;
 
     /// <summary>
     /// Whether the notes field is in edit mode.
@@ -181,9 +181,9 @@ public partial class Watch : ComponentBase
     /// </summary>
     private void InitializeContentView()
     {
-        if (IsContentAvailable(ContentViewMode.Summary))
+        if (IsContentAvailable(ContentViewMode.Analysis))
         {
-            CurrentViewMode = ContentViewMode.Summary;
+            CurrentViewMode = ContentViewMode.Analysis;
         }
         else if (IsContentAvailable(ContentViewMode.Transcript))
         {
@@ -196,7 +196,7 @@ public partial class Watch : ComponentBase
         else
         {
             // Default to Summary if nothing is available
-            CurrentViewMode = ContentViewMode.Summary;
+            CurrentViewMode = ContentViewMode.Analysis;
         }
     }
 
@@ -261,31 +261,31 @@ public partial class Watch : ComponentBase
     }
 
     /// <summary>
-    /// Handles the user request to generate a video summary.
+    /// Handles the user request to generate a video analysis.
     /// Calls the TranscriptSummaryService and updates the UI accordingly.
     /// </summary>
-    protected async Task HandleGetSummary()
+    protected async Task HandleGetAnalysis()
     {
-        if (IsGeneratingSummary)
+        if (IsGeneratingAnalysis)
         {
-            Logger.LogInformation("Summary generation already in progress");
+            Logger.LogInformation("Analysis generation already in progress");
             return;
         }
 
         // Verify we have a video ID
         if (Model.VideoId == Guid.Empty)
         {
-            Logger.LogWarning("Cannot generate summary: Video ID is not set");
-            await MessageCenter.ShowErrorAsync("Unable to generate summary. Please try reloading the page.");
+            Logger.LogWarning("Cannot generate analysis: Video ID is not set");
+            await MessageCenter.ShowErrorAsync("Unable to generate analysis. Please try reloading the page.");
             return;
         }
 
         try
         {
-            IsGeneratingSummary = true;
+            IsGeneratingAnalysis = true;
             StateHasChanged();
 
-            Logger.LogInformation("User requested summary generation for video {VideoId}", Model.VideoId);
+            Logger.LogInformation("User requested analysis generation for video {VideoId}", Model.VideoId);
 
             // Call the transcript summary service
             var result = await TranscriptSummaryService.SummarizeVideoTranscriptAsync(Model.VideoId, CurrentUserId);
@@ -293,16 +293,16 @@ public partial class Watch : ComponentBase
             if (result.Success)
             {
                 // Update the model with the new summary
-                Model.SummaryContent = result.SummaryContent;
+                Model.AnalysisContent = result.SummaryContent;
 
                 // Switch to summary view
-                CurrentViewMode = ContentViewMode.Summary;
+                CurrentViewMode = ContentViewMode.Analysis;
 
                 // Show success message with cost information
-                var costMessage = $"Summary generated successfully! (Cost: ${result.TotalCost:F4})";
+                var costMessage = $"Analysis generated successfully! (Cost: ${result.TotalCost:F4})";
                 await MessageCenter.ShowSuccessAsync(costMessage);
 
-                Logger.LogInformation("Summary generated successfully for video {VideoId}. Cost: ${Cost:F4}",
+                Logger.LogInformation("Analysis generated successfully for video {VideoId}. Cost: ${Cost:F4}",
                     Model.VideoId, result.TotalCost);
             }
             else if (result.Skipped)
@@ -311,30 +311,30 @@ public partial class Watch : ComponentBase
                 if (result.SummaryContent != null)
                 {
                     // Update with existing summary
-                    Model.SummaryContent = result.SummaryContent;
-                    CurrentViewMode = ContentViewMode.Summary;
+                    Model.AnalysisContent = result.SummaryContent;
+                    CurrentViewMode = ContentViewMode.Analysis;
                 }
 
-                await MessageCenter.ShowWarningAsync($"Summary not generated: {result.SkipReason}");
-                Logger.LogInformation("Summary generation skipped for video {VideoId}: {Reason}",
+                await MessageCenter.ShowWarningAsync($"Analysis not generated: {result.SkipReason}");
+                Logger.LogInformation("Analysis generation skipped for video {VideoId}: {Reason}",
                     Model.VideoId, result.SkipReason);
             }
             else
             {
                 // Generation failed
-                await MessageCenter.ShowErrorAsync($"Failed to generate summary: {result.ErrorMessage}");
-                Logger.LogError("Summary generation failed for video {VideoId}: {Error}",
+                await MessageCenter.ShowErrorAsync($"Failed to generate analysis: {result.ErrorMessage}");
+                Logger.LogError("Analysis generation failed for video {VideoId}: {Error}",
                     Model.VideoId, result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Unexpected error during summary generation for video {VideoId}", Model.VideoId);
+            Logger.LogError(ex, "Unexpected error during analysis generation for video {VideoId}", Model.VideoId);
             await MessageCenter.ShowErrorAsync("An unexpected error occurred. Please try again.");
         }
         finally
         {
-            IsGeneratingSummary = false;
+            IsGeneratingAnalysis = false;
             StateHasChanged();
         }
     }
@@ -493,7 +493,7 @@ public partial class Watch : ComponentBase
         {
             ContentViewMode.Description => "Description",
             ContentViewMode.Transcript => "Transcript",
-            ContentViewMode.Summary => "Summary",
+            ContentViewMode.Analysis => "Analysis",
             _ => "Content"
         };
     }
@@ -507,7 +507,7 @@ public partial class Watch : ComponentBase
         {
             ContentViewMode.Description => !string.IsNullOrWhiteSpace(Model.Description),
             ContentViewMode.Transcript => !string.IsNullOrWhiteSpace(Model.RawTranscript),
-            ContentViewMode.Summary => !string.IsNullOrWhiteSpace(Model.SummaryContent),
+            ContentViewMode.Analysis => !string.IsNullOrWhiteSpace(Model.AnalysisContent),
             _ => false
         };
     }
@@ -538,7 +538,7 @@ public partial class Watch : ComponentBase
         {
             ContentViewMode.Description => "Description",
             ContentViewMode.Transcript => "Transcript",
-            ContentViewMode.Summary => "Summary",
+            ContentViewMode.Analysis => "Analysis",
             _ => "Content"
         };
 
@@ -557,7 +557,7 @@ public partial class Watch : ComponentBase
     protected bool IsButtonDisabled(ContentViewMode mode)
     {
         // Summary button is disabled during generation
-        if (mode == ContentViewMode.Summary && IsGeneratingSummary)
+        if (mode == ContentViewMode.Analysis && IsGeneratingAnalysis)
             return true;
 
         // Transcript button is disabled during retrieval
@@ -586,10 +586,10 @@ public partial class Watch : ComponentBase
             return;
         }
 
-        // If no content exists and it's Summary, generate it
-        if (mode == ContentViewMode.Summary && !IsGeneratingSummary)
+        // If no content exists and it's Analysis, generate it
+        if (mode == ContentViewMode.Analysis && !IsGeneratingAnalysis)
         {
-            await HandleGetSummary();
+            await HandleGetAnalysis();
             return;
         }
 

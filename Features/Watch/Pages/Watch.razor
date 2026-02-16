@@ -156,17 +156,17 @@ else
 
                         <!-- Summary Button -->
                         <button type="button"
-                                class="btn flex-fill @GetButtonClass(ContentViewMode.Summary)"
-                                @onclick="() => HandleContentButtonClick(ContentViewMode.Summary)"
-                                disabled="@(IsGeneratingSummary || IsButtonDisabled(ContentViewMode.Summary))">
-                            @if (IsGeneratingSummary && !IsContentAvailable(ContentViewMode.Summary))
+                                class="btn flex-fill @GetButtonClass(ContentViewMode.Analysis)"
+                                @onclick="() => HandleContentButtonClick(ContentViewMode.Analysis)"
+                                disabled="@(IsGeneratingAnalysis || IsButtonDisabled(ContentViewMode.Analysis))">
+                            @if (IsGeneratingAnalysis && !IsContentAvailable(ContentViewMode.Analysis))
                             {
                                 <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                <span>Generating...</span>
+                                <span>Analyzing...</span>
                             }
                             else
                             {
-                                <span>@GetButtonLabel(ContentViewMode.Summary)</span>
+                                <span>@GetButtonLabel(ContentViewMode.Analysis)</span>
                             }
                         </button>
                     </div>
@@ -174,10 +174,10 @@ else
                 </div>
 
                 <div class="card-body d-flex flex-column">
-                    @if (CurrentViewMode == ContentViewMode.Summary && !string.IsNullOrWhiteSpace(Model.SummaryContent))
+                    @if (CurrentViewMode == ContentViewMode.Analysis && !string.IsNullOrWhiteSpace(Model.AnalysisContent))
                     {
                         <div class="mb-3" style="line-height: 1.6;">
-                            @((MarkupString)WebUtility.HtmlDecode(Model.SummaryContent))
+                            @((MarkupString)WebUtility.HtmlDecode(Model.AnalysisContent))
                         </div>
                     }
                     else if (CurrentViewMode == ContentViewMode.Transcript && !string.IsNullOrWhiteSpace(Model.RawTranscript))

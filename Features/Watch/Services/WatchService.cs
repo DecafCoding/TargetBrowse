@@ -94,13 +94,13 @@ namespace TargetBrowse.Features.Watch.Services
 
                 model.HasTranscript = await _watchRepository.HasTranscriptAsync(video.Id);
 
-                model.HasSummary = await _watchRepository.HasSummaryAsync(video.Id);
+                model.HasAnalysis = await _watchRepository.HasSummaryAsync(video.Id);
 
-                if (model.HasSummary)
+                if (model.HasAnalysis)
                 {
                     // Load most recent summary if available
                     var summary = await _watchRepository.GetMostRecentSummaryAsync(video.Id);
-                    model.SummaryContent = summary?.Content;
+                    model.AnalysisContent = summary?.Content;
                 }
 
                 // Load user rating if exists

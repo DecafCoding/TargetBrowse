@@ -77,5 +77,13 @@ namespace TargetBrowse.Features.Projects.Services
         /// <param name="projectId">Project ID</param>
         /// <param name="hook">New hook text</param>
         Task UpdateOutlineHookAsync(Guid projectId, string hook);
+
+        /// <summary>
+        /// Updates the script text and recalculates word count and estimated duration.
+        /// </summary>
+        /// <param name="projectId">Project ID</param>
+        /// <param name="scriptText">Updated script text</param>
+        /// <returns>True if update succeeded</returns>
+        Task<bool> UpdateScriptTextAsync(Guid projectId, string scriptText);
     }
 }
