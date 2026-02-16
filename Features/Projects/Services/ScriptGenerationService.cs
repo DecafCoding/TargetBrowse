@@ -74,9 +74,9 @@ namespace TargetBrowse.Features.Projects.Services
                     return CreateFailedResult("Project not found");
                 }
 
-                if (project.ProjectVideos.Count < 3)
+                if (project.ProjectVideos.Count < 1)
                 {
-                    return CreateFailedResult("Project must have at least 3 videos");
+                    return CreateFailedResult("Project must have at least 1 video");
                 }
 
                 var videoSummaries = project.ProjectVideos
@@ -575,7 +575,7 @@ namespace TargetBrowse.Features.Projects.Services
                     .FirstOrDefaultAsync(p => p.Id == projectId && !p.IsDeleted);
 
                 if (project == null) return false;
-                if (project.ProjectVideos.Count < 3) return false;
+                if (project.ProjectVideos.Count < 1) return false;
                 if (project.ProjectVideos.Any(pv => pv.Video?.Summary == null)) return false;
 
                 var dailyCount = await GetDailyAICallCountAsync(userId);

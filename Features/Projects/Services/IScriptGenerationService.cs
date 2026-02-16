@@ -56,7 +56,7 @@ namespace TargetBrowse.Features.Projects.Services
 
         /// <summary>
         /// Checks if a project can generate a script.
-        /// Validates: min 3 videos, all have summaries, user has profile, daily limit not exceeded.
+        /// Validates: min 1 video, all have summaries, user has profile, daily limit not exceeded.
         /// </summary>
         /// <param name="projectId">Project ID to check</param>
         /// <param name="userId">User ID to check quota</param>

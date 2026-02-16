@@ -86,7 +86,7 @@
                         <div class="mt-2">
                             <small class="text-muted">
                                 <i class="bi bi-collection-play me-1"></i>
-                                @Project.Videos.Count / 10 videos
+                                @Project.Videos.Count / 5 videos
                             </small>
                         </div>
                     </div>
@@ -117,11 +117,11 @@
                         <div class="card-body">
                             <h6 class="mb-3">Prerequisites for Guide Generation</h6>
                             <ul class="list-unstyled mb-3">
-                                @if (Project.Videos.Count < 3)
+                                @if (Project.Videos.Count < 1)
                                 {
                                     <li class="mb-2">
                                         <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                                        <span>At least 3 videos in the project</span>
+                                        <span>At least 1 video in the project</span>
                                     </li>
                                 }
                                 @if (!Project.AllVideosHaveSummaries)
@@ -146,7 +146,7 @@
                             </ul>
                             <button class="btn btn-primary"
                                     @onclick="HandleGenerateGuide"
-                                    disabled="@(!CanGenerate || Project.Videos.Count < 3 || !Project.AllVideosHaveSummaries)">
+                                    disabled="@(!CanGenerate || Project.Videos.Count < 1 || !Project.AllVideosHaveSummaries)">
                                 <i class="bi bi-stars me-2"></i>
                                 Generate Project Guide
                             </button>
@@ -284,11 +284,11 @@
                         {
                             @* No script started - show initial state *@
                             <p class="text-muted small">Generate a video script from this project's videos.</p>
-                            @if (Project.Videos.Count < 3)
+                            @if (Project.Videos.Count < 1)
                             {
                                 <p class="text-muted small">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    Need at least 3 videos to generate a script.
+                                    Need at least 1 video to generate a script.
                                 </p>
                             }
                             else if (!Project.AllVideosHaveSummaries)
