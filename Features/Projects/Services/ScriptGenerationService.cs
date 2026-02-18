@@ -112,8 +112,9 @@ namespace TargetBrowse.Features.Projects.Services
                 var actualUserPrompt = ScriptPromptBuilder.FormatAnalysisPrompt(
                     promptEntity.UserPromptTemplate, videoSummaries);
 
-                // Step 5: Call OpenAI API
+                // Step 5: Call OpenAI API (analysis returns JSON)
                 var request = CreateRequestFromPrompt(promptEntity, actualUserPrompt);
+                request.ResponseFormat = new OpenAiResponseFormat { Type = "json_object" };
                 var response = await CallOpenAiApiAsync(request);
 
                 stopwatch.Stop();
@@ -332,8 +333,9 @@ namespace TargetBrowse.Features.Projects.Services
                     userProfileData,
                     scriptContent.TargetLengthMinutes.Value);
 
-                // Step 6: Call OpenAI API
+                // Step 6: Call OpenAI API (outline returns JSON)
                 var request = CreateRequestFromPrompt(promptEntity, actualUserPrompt);
+                request.ResponseFormat = new OpenAiResponseFormat { Type = "json_object" };
                 var response = await CallOpenAiApiAsync(request);
 
                 stopwatch.Stop();
@@ -638,8 +640,7 @@ namespace TargetBrowse.Features.Projects.Services
                     }
                 },
                 MaxTokens = promptEntity.MaxTokens ?? 2000,
-                Temperature = promptEntity.Temperature ?? 0.7m,
-                ResponseFormat = new OpenAiResponseFormat { Type = "json_object" }
+                Temperature = promptEntity.Temperature ?? 0.7m
             };
         }
 
@@ -1001,9 +1002,16 @@ namespace TargetBrowse.Features.Projects.Services
 
                 var messageContent = response.Choices.First().Message.Content;
 
-                if (messageContent is string jsonContent && !string.IsNullOrWhiteSpace(jsonContent))
+                if (messageContent is string scriptText && !string.IsNullOrWhiteSpace(scriptText))
                 {
-                    return JsonConvert.DeserializeObject<ScriptModel>(jsonContent);
+                    var wordCount = scriptText.Split((char[])null!, StringSplitOptions.RemoveEmptyEntries).Length;
+                    return new ScriptModel
+                    {
+                        ScriptText = scriptText,
+                        WordCount = wordCount,
+                        EstimatedDurationSeconds = (int)Math.Round(wordCount / 150.0 * 60),
+                        InternalNotes = new Dictionary<string, SectionNotes>()
+                    };
                 }
 
                 _logger.LogWarning("Unexpected response content format from OpenAI API");

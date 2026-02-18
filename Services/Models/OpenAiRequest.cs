@@ -16,8 +16,8 @@ internal class OpenAiRequest
     [JsonProperty("temperature")]
     public decimal Temperature { get; set; } = 0.3m;
 
-    [JsonProperty("response_format")]
-    public OpenAiResponseFormat ResponseFormat { get; set; } = new OpenAiResponseFormat();
+    [JsonProperty("response_format", NullValueHandling = NullValueHandling.Ignore)]
+    public OpenAiResponseFormat? ResponseFormat { get; set; }
 }
 
 internal class OpenAiMessage
