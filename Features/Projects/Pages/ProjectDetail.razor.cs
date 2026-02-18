@@ -25,9 +25,6 @@ public partial class ProjectDetail : ComponentBase
     private IProjectGuideService GuideService { get; set; } = default!;
 
     [Inject]
-    private IScriptGenerationService ScriptService { get; set; } = default!;
-
-    [Inject]
     private NavigationManager Navigation { get; set; } = default!;
 
     [Inject]
@@ -60,8 +57,6 @@ public partial class ProjectDetail : ComponentBase
     private int DailyCallCount = 0;
     private string? CurrentUserId;
     private string? ErrorMessage;
-    private string? ScriptStatus = null; // Track script generation status
-
     // Modal states
     private bool ShowEditModalState = false;
     private bool ShowDeleteModalState = false;
@@ -123,9 +118,6 @@ public partial class ProjectDetail : ComponentBase
             DailyCallCount = await GuideService.GetDailyAICallCountAsync(CurrentUserId);
             CanGenerate = DailyCallCount < 10;
 
-            // Load script status if exists
-            var scriptContent = await ScriptService.GetScriptContentAsync(Id);
-            ScriptStatus = scriptContent?.ScriptStatus;
         }
         catch (InvalidOperationException ex)
         {
